@@ -140,7 +140,9 @@ static inline int      hal_settings_load(void *data, uint16_t len) { (void)data;
 #else
 
 // Target build running inside Dinghy framework (platform.c already included in translation unit)
+#if !BOARD_SMK37
 #include "fm1_input.h"
+#endif
 
 static inline uint32_t hal_millis(void) { return fm1_ms; }
 static inline uint32_t hal_ticks(void) { return fm1_ticks(); }

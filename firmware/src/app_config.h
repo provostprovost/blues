@@ -5,7 +5,9 @@
 #define TB1_VERSION_MINOR         0
 #undef APP_NAME
 #define APP_NAME                  "BLUES BOX"
+#ifndef FELUCCA_ID
 #define FELUCCA_ID                "FM-1_960"
+#endif
 
 #define AUDIO_SAMPLE_RATE         44100
 #define AUDIO_BLOCK_SIZE          256
