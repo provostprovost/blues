@@ -243,85 +243,143 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB1 (Encoder 2): BPM / Swing
+    uint8_t is_mixer = (ui_screen && *ui_screen == 1);
+
+    // ENC_KNOB1 (Encoder 2): BPM / Swing (or Bass Vol / Reverb Mix on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB1)) != 0) {
-        if (glo_held) {
-            int32_t nsw = (int32_t)p->swing + (delta * 2);
-            if (nsw < 50) nsw = 50;
-            if (nsw > 80) nsw = 80;
-            p->swing = (uint8_t)nsw;
+        if (is_mixer) {
+            if (glo_held) {
+                int32_t nr = (int32_t)p->reverb_mix + (delta * 4);
+                if (nr < 0) nr = 0;
+                if (nr > 127) nr = 127;
+                p->reverb_mix = (uint8_t)nr;
+            } else {
+                int32_t nv = (int32_t)p->bass_vol + (delta * 4);
+                if (nv < 0) nv = 0;
+                if (nv > 127) nv = 127;
+                p->bass_vol = (uint8_t)nv;
+            }
         } else {
-            int32_t nb = (int32_t)p->bpm + (delta * 2);
-            if (nb < 40) nb = 40;
-            if (nb > 240) nb = 240;
-            p->bpm = (uint8_t)nb;
+            if (glo_held) {
+                int32_t nsw = (int32_t)p->swing + (delta * 2);
+                if (nsw < 50) nsw = 50;
+                if (nsw > 80) nsw = 80;
+                p->swing = (uint8_t)nsw;
+            } else {
+                int32_t nb = (int32_t)p->bpm + (delta * 2);
+                if (nb < 40) nb = 40;
+                if (nb > 240) nb = 240;
+                p->bpm = (uint8_t)nb;
+            }
         }
         hs->ui_dirty = 1;
         g_save_pending = 1;
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB2 (Encoder 3): Spice / Tuning
+    // ENC_KNOB2 (Encoder 3): Spice / Tuning (or Keys Vol / Spice on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB2)) != 0) {
-        if (glo_held) {
-            int32_t nt = (int32_t)p->master_tuning + delta;
-            while (nt < 0) nt += 3;
-            p->master_tuning = (uint8_t)(nt % 3);
+        if (is_mixer) {
+            if (glo_held) {
+                int32_t nsp = (int32_t)hs->spice_level + (delta * 5);
+                if (nsp < 0) nsp = 0;
+                if (nsp > 100) nsp = 100;
+                hs->spice_level = (uint8_t)nsp;
+                p->spice = hs->spice_level;
+            } else {
+                int32_t nv = (int32_t)p->keys_vol + (delta * 4);
+                if (nv < 0) nv = 0;
+                if (nv > 127) nv = 127;
+                p->keys_vol = (uint8_t)nv;
+            }
         } else {
-            int32_t nsp = (int32_t)hs->spice_level + (delta * 5);
-            if (nsp < 0) nsp = 0;
-            if (nsp > 100) nsp = 100;
-            hs->spice_level = (uint8_t)nsp;
-            p->spice = hs->spice_level;
+            if (glo_held) {
+                int32_t nt = (int32_t)p->master_tuning + delta;
+                while (nt < 0) nt += 3;
+                p->master_tuning = (uint8_t)(nt % 3);
+            } else {
+                int32_t nsp = (int32_t)hs->spice_level + (delta * 5);
+                if (nsp < 0) nsp = 0;
+                if (nsp > 100) nsp = 100;
+                hs->spice_level = (uint8_t)nsp;
+                p->spice = hs->spice_level;
+            }
         }
         hs->ui_dirty = 1;
         g_save_pending = 1;
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB3 (Encoder 4): Bass Volume (0..127) or Bass Instrument with GLO (0..3)
+    // ENC_KNOB3 (Encoder 4): Bass Vol / Bass Engine (or Drums Vol / Swing on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
-        if (glo_held) {
-            int32_t nb = (int32_t)p->bass_instrument + delta;
-            while (nb < 0) nb += 4;
-            p->bass_instrument = (uint8_t)(nb % 4);
+        if (is_mixer) {
+            if (glo_held) {
+                int32_t nsw = (int32_t)p->swing + (delta * 2);
+                if (nsw < 50) nsw = 50;
+                if (nsw > 80) nsw = 80;
+                p->swing = (uint8_t)nsw;
+            } else {
+                int32_t nv = (int32_t)p->drums_vol + (delta * 4);
+                if (nv < 0) nv = 0;
+                if (nv > 127) nv = 127;
+                p->drums_vol = (uint8_t)nv;
+            }
         } else {
-            int32_t nv = (int32_t)p->bass_vol + (delta * 4);
-            if (nv < 0) nv = 0;
-            if (nv > 127) nv = 127;
-            p->bass_vol = (uint8_t)nv;
+            if (glo_held) {
+                int32_t nb = (int32_t)p->bass_instrument + delta;
+                while (nb < 0) nb += 4;
+                p->bass_instrument = (uint8_t)(nb % 4);
+            } else {
+                int32_t nv = (int32_t)p->bass_vol + (delta * 4);
+                if (nv < 0) nv = 0;
+                if (nv > 127) nv = 127;
+                p->bass_vol = (uint8_t)nv;
+            }
         }
         hs->ui_dirty = 1;
         g_save_pending = 1;
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB4 (Encoder 5): Keys Volume (0..127) or Reverb Mix with GLO (0..127)
+    // ENC_KNOB4 (Encoder 5): Keys Vol / Reverb Mix (or Lead Vol / Tuning on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB4)) != 0) {
-        if (glo_held) {
-            int32_t nr = (int32_t)p->reverb_mix + (delta * 4);
-            if (nr < 0) nr = 0;
-            if (nr > 127) nr = 127;
-            p->reverb_mix = (uint8_t)nr;
+        if (is_mixer) {
+            if (glo_held) {
+                int32_t nt = (int32_t)p->master_tuning + delta;
+                while (nt < 0) nt += 3;
+                p->master_tuning = (uint8_t)(nt % 3);
+            } else {
+                int32_t nv = (int32_t)p->lead_vol + (delta * 4);
+                if (nv < 0) nv = 0;
+                if (nv > 127) nv = 127;
+                p->lead_vol = (uint8_t)nv;
+            }
         } else {
-            int32_t nv = (int32_t)p->keys_vol + (delta * 4);
-            if (nv < 0) nv = 0;
-            if (nv > 127) nv = 127;
-            p->keys_vol = (uint8_t)nv;
+            if (glo_held) {
+                int32_t nr = (int32_t)p->reverb_mix + (delta * 4);
+                if (nr < 0) nr = 0;
+                if (nr > 127) nr = 127;
+                p->reverb_mix = (uint8_t)nr;
+            } else {
+                int32_t nv = (int32_t)p->keys_vol + (delta * 4);
+                if (nv < 0) nv = 0;
+                if (nv > 127) nv = 127;
+                p->keys_vol = (uint8_t)nv;
+            }
         }
         hs->ui_dirty = 1;
         g_save_pending = 1;
         g_last_param_change_ms = ms_now;
     }
 
-    // 3. Silicone Keys: 27 Keys (Playable Solo Keyboard during Playback; Section Cues with SEL held or Stopped)
+    // 3. Silicone Keys: 27 Keys (Playable Lead Keyboard unless SEL is held)
     uint32_t curr_key_mask = hal_get_keys_mask();
     uint32_t pressed = curr_key_mask & ~g_prev_key_mask;
     uint32_t released = ~curr_key_mask & g_prev_key_mask;
     g_prev_key_mask = curr_key_mask;
 
-    if (hs->is_playing && !sel_held) {
-        // Idea A: 27 Silicone Keys are a playable monophonic solo lead keyboard (F4..G6)
+    if (!sel_held) {
+        // Pure Playable Keyboard: both when playing AND when stopped
         if (pressed) {
             for (uint8_t k = 0; k < 27; k++) {
                 if (pressed & (1u << k)) {
@@ -330,28 +388,15 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             }
         }
         if (released) {
-            if (curr_key_mask == 0) {
-                dsp_note_off_lead();
-            } else {
-                for (int8_t r = 26; r >= 0; r--) {
-                    if (curr_key_mask & (1u << r)) {
-                        dsp_note_on_lead((uint8_t)(KEY_LEAD_BASE + r), 115, p->master_tuning);
-                        break;
-                    }
+            for (uint8_t k = 0; k < 27; k++) {
+                if (released & (1u << k)) {
+                    dsp_note_off_lead((uint8_t)(KEY_LEAD_BASE + k));
                 }
             }
         }
     } else {
-        // SEL held or Stopped: Section Control, Key Selection, Cues & Form Modes
+        // SEL held: Section Control, Key Selection, Cues & Form Modes
         if (pressed) {
-            if (!hs->is_playing && !sel_held) {
-                for (uint8_t k = 0; k < 27; k++) {
-                    if (pressed & (1u << k)) {
-                        dsp_note_on_lead((uint8_t)(KEY_LEAD_BASE + k), 115, p->master_tuning);
-                    }
-                }
-            }
-
             for (uint8_t k = 0; k < 27; k++) {
                 if (pressed & (1u << k)) {
                     if (k < 12) {
@@ -411,11 +456,6 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                         hs->ui_dirty = 1;
                     }
                 }
-            }
-        }
-        if (released && !hs->is_playing) {
-            if (curr_key_mask == 0) {
-                dsp_note_off_lead();
             }
         }
     }

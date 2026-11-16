@@ -238,6 +238,9 @@ static void app_main(void) {
         if (flash_presets[0].magic == PRESET_MAGIC) {
             for (int i = 0; i < NUM_PRESET_SLOTS; i++) {
                 g_presets[i] = flash_presets[i];
+                if (g_presets[i].lead_vol == 0) {
+                    g_presets[i].lead_vol = 115;
+                }
             }
         }
     }

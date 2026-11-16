@@ -46,11 +46,12 @@ typedef struct {
     uint8_t  active;
 } KeysVoice;
 
+#define MAX_LEAD_VOICES 4
+
 typedef struct {
     uint32_t phase;
     uint32_t phase2;
     uint32_t phase_inc;
-    uint32_t target_inc;
     int32_t  env_q15;
     int32_t  target_env;
     uint32_t gate_samples;
@@ -63,7 +64,7 @@ typedef struct {
 
 static BassVoice g_bass;
 static KeysVoice g_keys[4];
-static LeadVoice g_lead;
+static LeadVoice g_lead[MAX_LEAD_VOICES];
 static int32_t   g_bass_lp = 0;
 static int32_t   g_drum_env[4];
 static uint16_t  g_drum_decay[4] = { 32000, 31000, 30000, 28000 };
@@ -86,16 +87,18 @@ void dsp_init(void) {
     g_bass.gate_samples = 0;
     g_bass_lp = 0;
     g_eq_lp = 0;
-    g_lead.active = 0;
-    g_lead.phase = 0;
-    g_lead.phase2 = 0;
-    g_lead.phase_inc = 0;
-    g_lead.target_inc = 0;
-    g_lead.env_q15 = 0;
-    g_lead.gate_samples = 0;
-    g_lead.filter_lp = 0;
-    g_lead.vib_phase = 0;
-    g_lead.vib_delay = 0;
+    for (int v = 0; v < MAX_LEAD_VOICES; v++) {
+        g_lead[v].active = 0;
+        g_lead[v].phase = 0;
+        g_lead[v].phase2 = 0;
+        g_lead[v].phase_inc = 0;
+        g_lead[v].env_q15 = 0;
+        g_lead[v].gate_samples = 0;
+        g_lead[v].filter_lp = 0;
+        g_lead[v].vib_phase = 0;
+        g_lead[v].vib_delay = 0;
+        g_lead[v].midi_note = 0xFF;
+    }
     for (int k = 0; k < 4; k++) {
         g_keys[k].active = 0;
         g_keys[k].phase_c = 0;
@@ -120,8 +123,10 @@ void dsp_all_notes_off(void) {
     g_bass.active = 0;
     for (int k = 0; k < 4; k++) g_keys[k].active = 0;
     for (int d = 0; d < 4; d++) g_drum_env[d] = 0;
-    g_lead.active = 0;
-    g_lead.env_q15 = 0;
+    for (int v = 0; v < MAX_LEAD_VOICES; v++) {
+        g_lead[v].active = 0;
+        g_lead[v].env_q15 = 0;
+    }
 }
 
 static inline uint32_t get_scaled_inc(uint8_t midi_note, uint8_t tuning_mode) {
@@ -163,28 +168,63 @@ void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_m
 }
 
 void dsp_note_on_lead(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) {
-    g_lead.target_inc = get_scaled_inc(midi_note, tuning_mode);
-    g_lead.midi_note = midi_note;
-    g_lead.target_env = (int32_t)velocity * 256;
-    if (!g_lead.active) {
-        g_lead.phase = 0;
-        g_lead.phase2 = 0;
-        g_lead.phase_inc = g_lead.target_inc;
-        g_lead.env_q15 = 0;
-        g_lead.vib_delay = 5500;
-        g_lead.vib_phase = 0;
-        g_lead.filter_lp = 0;
-    } else {
-        // Legato tie: blend envelope for expressive phrasing
-        g_lead.env_q15 = (g_lead.env_q15 * 3 + g_lead.target_env) / 4;
-        g_lead.vib_delay = 3000;
+    int target_v = -1;
+    // 1. Check if this exact note is already sounding
+    for (int v = 0; v < MAX_LEAD_VOICES; v++) {
+        if (g_lead[v].active && g_lead[v].midi_note == midi_note) {
+            target_v = v;
+            break;
+        }
     }
-    g_lead.gate_samples = 44100 * 10; // Sustained while key held
-    g_lead.active = 1;
+    // 2. Otherwise find an inactive voice slot
+    if (target_v < 0) {
+        for (int v = 0; v < MAX_LEAD_VOICES; v++) {
+            if (!g_lead[v].active) {
+                target_v = v;
+                break;
+            }
+        }
+    }
+    // 3. If all voices active, steal the quietest voice
+    if (target_v < 0) {
+        int32_t min_env = 0x7FFFFFFF;
+        target_v = 0;
+        for (int v = 0; v < MAX_LEAD_VOICES; v++) {
+            if (g_lead[v].env_q15 < min_env) {
+                min_env = g_lead[v].env_q15;
+                target_v = v;
+            }
+        }
+    }
+
+    LeadVoice *lv = &g_lead[target_v];
+    lv->phase_inc = get_scaled_inc(midi_note, tuning_mode);
+    lv->midi_note = midi_note;
+    lv->target_env = (int32_t)velocity * 256;
+    if (!lv->active) {
+        lv->phase = 0;
+        lv->phase2 = 0;
+        lv->env_q15 = 0;
+        lv->vib_delay = 1800; // ~40 ms delay before expressive blues vibrato onset
+        lv->vib_phase = 0;
+        lv->filter_lp = 0;
+    } else {
+        // Legato tie
+        lv->env_q15 = (lv->env_q15 * 3 + lv->target_env) / 4;
+        lv->vib_delay = 1200;
+    }
+    lv->gate_samples = 44100 * 10;
+    lv->active = 1;
 }
 
-void dsp_note_off_lead(void) {
-    g_lead.gate_samples = 0; // Release phase
+void dsp_note_off_lead(uint8_t midi_note) {
+    for (int v = 0; v < MAX_LEAD_VOICES; v++) {
+        if (g_lead[v].active) {
+            if (midi_note == 0xFF || g_lead[v].midi_note == midi_note) {
+                g_lead[v].gate_samples = 0; // Natural release phase
+            }
+        }
+    }
 }
 
 void dsp_trigger_drum(uint8_t mask, const uint8_t *drum_vel, uint8_t open_hat) {
@@ -429,84 +469,76 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             g_drum_env[3] = (g_drum_env[3] * g_drum_decay[3]) >> 15;
         }
 
-        // 4. Solo Lead Voice (Idea A): 4 Lead Instruments
-        if (g_lead.active) {
-            g_lead.phase_inc += (int32_t)(g_lead.target_inc - g_lead.phase_inc) >> 3;
+        // 4. Solo Lead Voice (4-Voice Polyphony across 4 Lead Instruments)
+        for (int v = 0; v < MAX_LEAD_VOICES; v++) {
+            if (g_lead[v].active) {
+                uint32_t cur_inc = g_lead[v].phase_inc;
+                if (g_lead[v].vib_delay > 0) {
+                    g_lead[v].vib_delay--;
+                } else {
+                    g_lead[v].vib_phase += 520000u; // ~5.3 Hz expressive blues vibrato
+                    int16_t vib = hal_sine_q15(g_lead[v].vib_phase);
+                    int32_t delta = (int32_t)((g_lead[v].phase_inc >> 10) * vib) >> 11;
+                    cur_inc = (uint32_t)((int32_t)g_lead[v].phase_inc + delta);
+                }
+                g_lead[v].phase += cur_inc;
 
-            uint32_t cur_inc = g_lead.phase_inc;
-            if (g_lead.vib_delay > 0) {
-                g_lead.vib_delay--;
-            } else {
-                g_lead.vib_phase += 550000u; // ~5.5 Hz blues vibrato
-                int32_t vib = hal_sine_q15(g_lead.vib_phase);
-                cur_inc = (uint32_t)((int32_t)g_lead.phase_inc + ((vib * (int32_t)(g_lead.phase_inc >> 8)) >> 15));
+                int32_t lead_sample = 0;
+                switch (preset->lead_instrument % 4) {
+                    case LEAD_BLUES_GUITAR: { // 0: Overdriven Blues Guitar
+                        int16_t w1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t w2 = hal_sine_q15(g_lead[v].phase * 2);
+                        int16_t w3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int32_t g_raw = (w1 >> 1) + (w2 >> 2) + (w3 >> 3);
+                        int32_t g_driven = (g_raw * 5) >> 2;
+                        if (g_driven > 24000) g_driven = 24000;
+                        else if (g_driven < -24000) g_driven = -24000;
+                        lead_sample = g_driven;
+                        break;
+                    }
+                    case LEAD_HARMONICA: { // 1: Chicago Blues Harp
+                        int16_t h1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t h3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int16_t h5 = hal_sine_q15(g_lead[v].phase * 5);
+                        int32_t reed = (h1 >> 1) + (h3 >> 2) + (h5 >> 3);
+                        if (reed > 20000) reed = 20000;
+                        else if (reed < -20000) reed = -20000;
+                        lead_sample = reed;
+                        break;
+                    }
+                    case LEAD_TENOR_SAX: { // 2: Tenor Sax
+                        int16_t s1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t s2 = hal_sine_q15(g_lead[v].phase * 2);
+                        int16_t s3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int16_t breath = (int16_t)(g_lfsr & 0x07FF);
+                        lead_sample = (s1 * 5 / 8) + (s2 >> 2) + (s3 >> 3) + breath;
+                        break;
+                    }
+                    case LEAD_MOOG_LEAD: // 3: Moog Solo Lead
+                    default: {
+                        g_lead[v].phase2 += cur_inc + (cur_inc >> 8);
+                        int16_t m1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t m2 = hal_sine_q15(g_lead[v].phase2);
+                        int32_t moog = (m1 >> 1) + (m2 >> 1);
+                        g_lead[v].filter_lp += ((moog - g_lead[v].filter_lp) * 18000) >> 15;
+                        lead_sample = g_lead[v].filter_lp;
+                        break;
+                    }
+                }
+
+                uint8_t l_vol = preset->lead_vol > 0 ? preset->lead_vol : 115;
+                int32_t l_amp = (g_lead[v].env_q15 * l_vol) >> 15;
+                mix += (lead_sample * l_amp) >> 8;
+
+                if (g_lead[v].gate_samples > 0) {
+                    if (g_lead[v].env_q15 < g_lead[v].target_env) {
+                        g_lead[v].env_q15 += (g_lead[v].target_env - g_lead[v].env_q15 + 15) >> 4;
+                    }
+                } else {
+                    g_lead[v].env_q15 = (g_lead[v].env_q15 * 32400) >> 15;
+                    if (g_lead[v].env_q15 < 100) g_lead[v].active = 0;
+                }
             }
-            g_lead.phase += cur_inc;
-
-            int32_t lead_sample = 0;
-            switch (preset->lead_instrument % 4) {
-                case LEAD_BLUES_GUITAR: { // 0: Overdriven Blues Guitar
-                    int16_t w1 = hal_sine_q15(g_lead.phase);
-                    int16_t w2 = hal_sine_q15(g_lead.phase * 2);
-                    int16_t w3 = hal_sine_q15(g_lead.phase * 3);
-                    int32_t g_raw = (w1 >> 1) + (w2 >> 2) + (w3 >> 3);
-                    int32_t g_driven = (g_raw * 5) >> 2;
-                    if (g_driven > 24000) g_driven = 24000;
-                    else if (g_driven < -24000) g_driven = -24000;
-                    lead_sample = g_driven;
-                    break;
-                }
-                case LEAD_HARMONICA: { // 1: Chicago Blues Harp
-                    int16_t h1 = hal_sine_q15(g_lead.phase);
-                    int16_t h3 = hal_sine_q15(g_lead.phase * 3);
-                    int16_t h5 = hal_sine_q15(g_lead.phase * 5);
-                    int32_t reed = (h1 >> 1) + (h3 >> 2) + (h5 >> 3);
-                    if (reed > 20000) reed = 20000;
-                    else if (reed < -20000) reed = -20000;
-                    lead_sample = reed;
-                    break;
-                }
-                case LEAD_TENOR_SAX: { // 2: Tenor Sax
-                    int16_t s1 = hal_sine_q15(g_lead.phase);
-                    int16_t s2 = hal_sine_q15(g_lead.phase * 2);
-                    int16_t s3 = hal_sine_q15(g_lead.phase * 3);
-                    int16_t breath = (int16_t)(g_lfsr & 0x07FF);
-                    lead_sample = (s1 * 5 / 8) + (s2 >> 2) + (s3 >> 3) + breath;
-                    break;
-                }
-                case LEAD_MOOG_LEAD: // 3: Moog Solo Lead
-                default: {
-                    g_lead.phase2 += cur_inc + (cur_inc >> 8);
-                    int16_t m1 = hal_sine_q15(g_lead.phase);
-                    int16_t m2 = hal_sine_q15(g_lead.phase2);
-                    int32_t moog = (m1 >> 1) + (m2 >> 1);
-                    g_lead.filter_lp += ((moog - g_lead.filter_lp) * 18000) >> 15;
-                    lead_sample = g_lead.filter_lp;
-                    break;
-                }
-            }
-
-            uint8_t l_vol = preset->lead_vol > 0 ? preset->lead_vol : 115;
-            int32_t l_amp = (g_lead.env_q15 * l_vol) >> 15;
-            mix += (lead_sample * l_amp) >> 8;
-
-            if (g_lead.gate_samples > 0) {
-                if (g_lead.env_q15 < g_lead.target_env) {
-                    g_lead.env_q15 += (g_lead.target_env - g_lead.env_q15 + 15) >> 4;
-                }
-            } else {
-                g_lead.env_q15 = (g_lead.env_q15 * 32400) >> 15;
-                if (g_lead.env_q15 < 100) g_lead.active = 0;
-            }
-        }
-
-        // Drums: Rimshot (3)
-        if (g_drum_env[3] > 0) {
-            g_drum_pitch[3] += 12000000u;
-            int16_t r_sample = hal_sine_q15(g_drum_pitch[3]);
-            int32_t d3_amp = (g_drum_env[3] * preset->drums_vol) >> 15;
-            mix += (r_sample * d3_amp) >> 8;
-            g_drum_env[3] = (g_drum_env[3] * g_drum_decay[3]) >> 15;
         }
 
         // 4-Comb Schroeder Room Reverb Parallel Summation

@@ -85,6 +85,9 @@ Everything runs entirely on the internal 240 MHz RISC microcontroller using pure
 
 ### Rotary Encoders
 
+The 4 lower knobs dynamically re-map when switching between **Lead Sheet View** and **Band Mixer View** (`HOME` button):
+
+#### On Lead Sheet View (Default)
 | Encoder | Label | Primary Function (Turn) | Secondary Function (Hold `GLO` + Turn) |
 |---|---|---|---|
 | **Encoder 0** | `SELECT` | **Groove Style**: Cycles 5 groove styles | **Drum Kit**: Studio Punch, Vintage Brush, Retro 808 |
@@ -94,6 +97,15 @@ Everything runs entirely on the internal 240 MHz RISC microcontroller using pure
 | **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Engine**: P-Bass, Upright, Muted Boogie, Moog Funk |
 | **Encoder 5** | `KNOB 4` | **Keys Volume**: Adjusts comping chord level | **Reverb Mix**: Schroeder room reverb wet level |
 | **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: Blues Guitar, Harp, Tenor Sax, Moog | **Key Select** (Hold `SEL` or `GLO`): Scrolls keys `C..B` |
+
+#### On Band Mixer View (`HOME` Pressed)
+On the Band Mixer view, Knobs 1--4 act as dedicated hardware mixing faders:
+| Encoder | Label | Direct Turn (Fader) | Hold `GLO` + Turn |
+|---|---|---|---|
+| **Encoder 2** | `KNOB 1` | **Bass Level**: Adjusts `BASS VOL` | **Reverb Mix**: Schroeder room reverb level |
+| **Encoder 3** | `KNOB 2` | **Keys Level**: Adjusts `KEYS VOL` | **Spice Level**: Harmonic complexity ($0\%\text{--}100\%$) |
+| **Encoder 4** | `KNOB 3` | **Drums Level**: Adjusts `DRUMS VOL` | **Swing %**: Shuffle swing ($50\%\text{--}80\%$) |
+| **Encoder 5** | `KNOB 4` | **Lead Level**: Adjusts `LEAD VOL` | **Master Tuning**: $440\text{ Hz}$, $432\text{ Hz}$, $442\text{ Hz}$ |
 
 ---
 
@@ -120,17 +132,20 @@ All 14 front-panel buttons have dedicated functions:
 
 ---
 
-### 27 Backlit Silicone Keys & Live Solo Keyboard
+### 27 Backlit Silicone Keys & Live Polyphonic Keyboard
 
-The 27 silicone keys serve dual roles: a **live playable solo lead keyboard** during playback, and a **section & key navigation matrix** when stopped or holding `SEL`.
+The 27 silicone keys serve dual roles: a **live 4-voice polyphonic keyboard** during playback, and a **section & key navigation matrix** when holding `SEL`.
 
-#### 1. Live Playable Solo Keyboard (During Playback)
-- **2-Octave Lead Register ($F_4\text{--}G_6$, MIDI 65--91)**: Pressing any silicone key triggers the dedicated **5th DSP Lead Voice** with expressive legato portamento transitions and delayed blues vibrato.
-- **Minor Blues Scale LED Guide**: All 27 keys feature individually addressable white LEDs. During playback, LEDs illuminate **strictly under notes of the Minor Blues Scale** (`1, b3, 4, b5, 5, b7` relative to the active root key), providing an instant visual fretboard for soloing.
-- **Beat 1 Visual Heartbeat**: The root key's LED pulses on Beat 1 of every measure for rock-solid visual timing.
-- **Note Auditioning**: When stopped, pressing any key lets you audition lead instruments and notes immediately.
+#### 1. Live Playable Polyphonic Keyboard (Without `SEL`)
+- **4-Voice Polyphony & Chords**: Pressing multiple keys simultaneously plays rich multi-note chords or harmonized lead licks across 4 dynamic DSP voices with quietest-voice stealing.
+- **Independent Note Tracking**: Holding a low drone or bass note while tapping and releasing higher notes releases only the tapped notes—the low note sustains cleanly without getting stuck.
+- **Expressive Blues Vibrato**: Sustained notes naturally bloom into an authentic $\pm 27\text{-cent}$ finger vibrato after ~40 ms of gate hold.
+- **2-Octave Lead Register ($F_4\text{--}G_6$, MIDI 65--91)**: Expressive soloing with touch velocity and instant response.
+- **Full Backlight When Stopped / In Setup**: When playback is stopped or `SEL` is held, all 27 keys illuminate with full white backlighting so you can easily read printed labels in dim lighting.
+- **Minor Blues Scale LED Guide (While Playing)**: During playback, LEDs illuminate **strictly under notes of the Minor Blues Scale** (`1, b3, 4, b5, 5, b7` relative to the active root key), providing an instant visual fretboard for soloing. The root note pulses on Beat 1 of every measure for rock-solid visual timing.
 
-#### 2. Section Navigation & Form Controls (Hold `SEL` or when Stopped)
+#### 2. Section Navigation & Form Controls (Hold `SEL`)
+> **Note**: Pressing silicone keys **never** changes the session root key unless `SEL` is actively held down. This prevents accidental key modulations while auditioning or jamming.
 - **Keys 0 to 11 (Chromatic Key Select)**:
   - `Key 0 = F`, `Key 1 = F#`, `Key 2 = G`, `Key 3 = Ab`, `Key 4 = A`, `Key 5 = Bb`, `Key 6 = B`, `Key 7 = C`, `Key 8 = C#`, `Key 9 = D`, `Key 10 = Eb`, `Key 11 = E`.
   - **Single Tap while playing**: Queues key modulation seamlessly at the start of the next 12-bar chorus.
