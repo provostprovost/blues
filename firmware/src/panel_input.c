@@ -498,21 +498,10 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
         ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
         if (!is_minor) {
             if (deg == DEG_IV7 || deg == DEG_iv7) {
-                scale[5] = 1; // 4 (IV7 root)
+                scale[4] = 0; scale[5] = 1; // Swap 3 -> 4 (IV7 root) so no 4-in-a-row clump
             } else if (deg == DEG_V7 || deg == DEG_v7) {
-                scale[5] = 1; scale[11] = 1; // 4 (V7 b7) + 7 (V7 3rd)
-            } else if (deg == DEG_bVI7) {
-                scale[8] = 1; // b6
-            } else if (deg == DEG_bVII7) {
-                scale[10] = 1; // b7
-            } else if (deg == DEG_SHARP_IV_DIM7) {
-                scale[6] = 1; // #4
-            }
-        } else {
-            if (deg == DEG_iv7 || deg == DEG_IV7 || deg == DEG_bVI7) {
-                scale[8] = 1; // b6 (iv7 3rd / bVI7 root)
-            } else if (deg == DEG_V7) {
-                scale[11] = 1; // 7 (V7 major 3rd)
+                scale[3] = 0; scale[5] = 1; // Swap b3 -> 4 (V7 b7)
+                scale[9] = 0; scale[11] = 1; // Swap 6 -> 7 (V7 3rd)
             }
         }
 

@@ -151,7 +151,7 @@ static void init_factory_presets(void) {
                 p->bass_instrument = BASS_P_BASS;
                 p->drum_kit = DRUM_STUDIO;
                 p->lead_instrument = LEAD_BLUES_GUITAR;
-                p->form_mode = FORM_12BAR;
+                p->form_mode = FORM_MINOR_BLUES;
                 break;
             case 1: // Slow 12/8 Blues
                 p->root_key = 4; // E
