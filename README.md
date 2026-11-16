@@ -8,10 +8,11 @@
 
 TexasBlues-1 (TB-1) turns the pocket-sized **M-VAVE FM-1** synthesizer into a standalone, autonomous rhythm section designed for solo guitarists practicing or performing without a keyboard or bass player. 
 
-Built on the open-source `zvenson/dinghy` v0.5 framework, TB-1 generates a three-part blues band in real time with zero latency:
-- **Driving Walking Electric Bass**: Melodic, target-note walking basslines with directional chromatic and diatonic approaches.
-- **Guide-Tone Comping Engine**: Rootless Bill Evans and Ray Charles blues voicings across 4 sound engines (Rhodes FM, Bright FM EP, B3 Drawbar Organ, and Clavinet) sitting in a dedicated high comping register.
-- **Acoustic Synthesized Drum Kit**: 4-voice transient drum machine featuring a pitch-swept kick, body+noise snare, metallic LFSR hi-hat/ride, and rimshot metronome.
+Built on the open-source `zvenson/dinghy` v0.5 framework, TB-1 generates a complete, dynamic blues band in real time with zero latency:
+- **Driving Walking Electric Bass**: 4 selectable bass engines (Fender P-Bass, Upright Double Bass, Muted Tic-Tac Boogie, and Moog Funk Synth) with authentic acoustic harmonics, wooden slap transients, and directional walking lines.
+- **Guide-Tone Comping Engine**: Rootless Bill Evans and Ray Charles blues voicings across 12 sound engines (Rhodes FM, Bright FM EP, Wurlitzer 200A, Clean & Dirty B3 Organs, Clavinet D6, Archtop Guitar, Blues Horns, Honky-Tonk Piano, Tremolo EP, Resonator Dobro, and Leslie Organ) sitting in a dedicated high comping register.
+- **Punchy Acoustic Drum Machine**: 4 selectable kits (Studio Punch, Vintage Brush, Retro 808, and Stax Tight) with acoustic transient kicks, backbeat snares, sizzle cymbals, and rimshot metronome.
+- **Playable 4-Voice Polyphonic Lead Synth**: 8 solo lead voices (Blues Guitar, Chicago Harp, Tenor Sax, Moog Lead, Warm Jazz "Lucille", Fuzz Octave, Muted Trumpet, and Percussive B3) with natural blues finger vibrato and direct octave shifts.
 
 Everything runs entirely on the internal 240 MHz RISC microcontroller using pure 32-bit fixed-point integer DSP with zero floating-point overhead.
 
@@ -24,10 +25,14 @@ Everything runs entirely on the internal 240 MHz RISC microcontroller using pure
   - [Rotary Encoders](#rotary-encoders)
   - [14 Hardware Buttons](#14-hardware-buttons)
   - [27 Backlit Silicone Keys](#27-backlit-silicone-keys)
+  - [Switching Between Major & Minor Blues](#switching-between-major--minor-blues)
 - [Display Views](#display-views)
-- [Accompaniment Engine Features](#accompaniment-engine-features)
-  - [Groove Styles](#5-groove-styles)
-  - [Sound Engines (Keys Algorithms)](#4-keys-sound-engines)
+- [Accompaniment Engine Features](#sound-engines--grooves)
+  - [8 Selectable Groove Styles](#8-selectable-groove-styles)
+  - [4 Selectable Bass Engines](#4-selectable-bass-engines)
+  - [12 Selectable Chord Engines](#12-selectable-chord-engines)
+  - [4 Selectable Drum Kits](#4-selectable-drum-kits)
+  - [8 Solo Lead Voice Engines](#8-solo-lead-voice-engines)
   - [The "Spice" Macro](#the-spice-macro)
   - [Key Decoupling & Preset System](#key-decoupling--preset-system)
 - [External MIDI & Footswitch Control](#external-midi--footswitch-control)
@@ -88,15 +93,15 @@ Everything runs entirely on the internal 240 MHz RISC microcontroller using pure
 The 4 lower knobs dynamically re-map when switching between **Lead Sheet View** and **Band Mixer View** (`HOME` button):
 
 #### On Lead Sheet View (Default)
-| Encoder | Label | Primary Function (Turn) | Secondary Function (Hold `GLO` + Turn) |
+| Encoder | Label | Primary Function (Turn) | Secondary Function (Hold `GLO` or `SCALE` + Turn) |
 |---|---|---|---|
-| **Encoder 0** | `SELECT` | **Groove Style**: Cycles 8 groove styles | **Drum Kit**: Studio, Brush, Retro 808, Stax Tight |
+| **Encoder 0** | `SELECT` | **Groove Style**: Cycles 8 groove styles | **Drum Kit** (Hold `GLO`): Studio, Brush, Retro 808, Stax Tight<br>**Blues Form Mode** (Hold `SCALE`): Major 12-Bar, Minor Blues, Quick Change, 8-Bar, 1-4-5 |
 | **Encoder 1** | `ALGORITHM` | **Chord Engine**: 12 electric piano, organ, acoustic piano, guitar & horn engines | — |
-| **Encoder 2** | `KNOB 1` | **Tempo**: Adjusts BPM ($40\text{--}240\text{ BPM}$) | **Swing %**: Adjusts shuffle swing ($0\%\text{--}100\%$) |
-| **Encoder 3** | `KNOB 2` | **Spice Level**: Adjusts harmonic complexity ($0\%\text{--}100\%$) | **Master Tuning**: $440\text{ Hz}$, $432\text{ Hz}$, or $442\text{ Hz}$ |
-| **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Engine**: P-Bass, Upright, Muted Boogie, Moog Funk |
-| **Encoder 5** | `KNOB 4` | **Keys Volume**: Adjusts comping chord level | **Reverb Mix**: Schroeder room reverb wet level |
-| **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: 8 expressive guitar, harp, horn, moog & organ voices | **Key Select** (Hold `SEL` or `GLO`): Scrolls keys `C..B` |
+| **Encoder 2** | `KNOB 1` | **Tempo**: Adjusts BPM ($40\text{--}240\text{ BPM}$) | **Swing %** (Hold `GLO`): Adjusts shuffle swing ($0\%\text{--}100\%$) |
+| **Encoder 3** | `KNOB 2` | **Spice Level**: Adjusts harmonic complexity ($0\%\text{--}100\%$) | **Master Tuning** (Hold `GLO`): $440\text{ Hz}$, $432\text{ Hz}$, or $442\text{ Hz}$ |
+| **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Engine** (Hold `GLO`): P-Bass, Upright, Muted Boogie, Moog Funk |
+| **Encoder 5** | `KNOB 4` | **Keys Volume**: Adjusts comping chord level | **Reverb Mix** (Hold `GLO`): Schroeder room reverb wet level |
+| **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: 8 expressive guitar, harp, horn, moog & organ voices | **Key Select** (Hold `SCALE` or `GLO`): Scrolls keys `C..B` |
 
 #### On Band Mixer View (`HOME` Pressed)
 On the Band Mixer view, Knobs 1--4 act as dedicated hardware mixing faders:
@@ -158,21 +163,47 @@ The 27 silicone keys serve dual roles: a **live 4-voice polyphonic keyboard** du
   - Key 16: Immediate Turnaround (Jump to Bar 9)
   - Key 17: Manual Accent Stab
 - **Keys 18 to 22 (Form Variations)**:
-  - Standard 12-Bar, Quick-Change (IV in Bar 2), 1-4-5 Blues, 8-Bar Blues, Minor Blues.
+  - Key 18: Standard 12-Bar Major Blues
+  - Key 19: Quick-Change (IV in Bar 2)
+  - Key 20: 1-4-5 Opening Variation
+  - Key 21: 8-Bar Blues Progression
+  - Key 22: 12-Bar Minor Blues Progression
 - **Keys 23 to 26 (Outro Cadences)**:
   - Immediate Stop, Tag Ending, Triple Turnaround, Chromatic Slide Outro.
 
 ---
 
+### Switching Between Major & Minor Blues
+
+TexasBlues-1 supports both classic **12-Bar Dominant Major Blues** ($I^7, IV^7, V^7$) and **12-Bar Minor Blues** ($i^7, iv^7, \text{bVI}^7, V^7$, e.g. *"The Thrill Is Gone"*, *"Tin Pan Alley"*). You can seamlessly switch between them using any of these 3 methods:
+
+1. **One-Touch Hardware Button (`NOTE REPEAT`)**:
+   - Press the **`NOTE REPEAT`** chassis button (`LFO` code).
+   - Instantly toggles between Major 12-Bar and Minor Blues on the fly.
+2. **Knob Step-Through (Hold `SCALE` + Turn `STYLE`)**:
+   - Hold down the **`SCALE`** button (`SEL` code) and rotate the **`STYLE` knob** (`SELECT` Encoder 0).
+   - Cycles through all 5 form variations: `12-BAR MAJ` $\leftrightarrow$ `12-BAR MIN` $\leftrightarrow$ `QUICK CHG` $\leftrightarrow$ `8-BAR` $\leftrightarrow$ `1-4-5`.
+3. **Dedicated Key Matrix Shortcut**:
+   - Hold **`SCALE`** (`SEL`) and press **Key 22** for Minor Blues, or **Key 18** for Standard Major Blues.
+
+#### Real-Time Visual Feedback:
+- **Subheader Color & Quality**: In Minor Blues mode, the subheader immediately switches to **`KEY: Em (MIN)`** rendered in bright **cyan** (`RGB(140, 210, 255)`), while Major Blues displays **`KEY: E (MAJ)`** in warm gray.
+- **Immediate Bar Redraw**: All 12 chord grid boxes instantaneously re-render with authentic minor quality labels (`Em7`, `Am7`, `C7`, `B7`) without waiting for bar boundaries.
+- **Status Confirmation**: The status line displays `PLAYING (MINOR BLUES)` or `STOPPED (MINOR BLUES)`.
+
+---
+
 ## Display Views
 
-Press **`HOME`** to toggle between the two non-blocking 240x240 RGB TFT screens:
+Press **`PATCH` (`HOME`)** to toggle between the two non-blocking 240x240 RGB TFT screens:
 
 ### 1. 12-Bar Lead Sheet View
-- Displays the complete 12-bar chord grid with large, easy-to-read chord symbols (e.g. `E7`, `A7`, `B7`).
+- Displays the complete 12-bar chord grid with large, easy-to-read chord symbols (e.g. `E7`, `A7`, `B7` or `Em7`, `Am7`, `C7`).
 - **Differential Tile Rendering**: Zero screen flicker. The active measure box highlights in amber, and 4 beat pips track the groove in real time.
-- **Header**: Active Groove Style & Drum Kit (e.g. `TX SHUFFLE [STUDIO]`), Session Key, BPM, and Spice %.
-- **Footer**: Live Status (`PLAYING`, `VAMP LOOP ACTIVE`, `STOP-TIME BREAK`) and Sound Engines (`BLUES GTR * RHODES FM`).
+- **Header**: Active Groove Style & Drum Kit (e.g. `TX SHUFFLE [STUDIO]`).
+- **Subheader**: Displays Session Key, Form (`(MAJ)` or cyan `(MIN)`), BPM, and Spice %.
+- **Status Line**: Live status display (`PLAYING`, `PLAYING (MINOR BLUES)`, `STOPPED`, `VAMP LOOP ACTIVE`, `STOP-TIME BREAK`, `ENDING ARMED`, `KEY MOD QUEUED`).
+- **Footer**: Displays active voices aligned with physical top-row knob positions: `<Solo Lead> * <Chord Engine>` (e.g. `BLUES GTR * RHODES FM`). Turning the left knob (`PRESETS`) adjusts the left instrument, while turning the right knob (`ALGORITHM`) adjusts the right instrument.
 
 ### 2. Band Mixer View
 - Live visual meters for all instrument levels and macro parameters:
@@ -182,7 +213,7 @@ Press **`HOME`** to toggle between the two non-blocking 240x240 RGB TFT screens:
   4. `LEAD VOL`: Solo Lead Synth Level & Instrument Name
   5. `REVERB`: 4-Comb Schroeder Room Reverb Mix
   6. `SPICE`: Harmonic / Arrangement Complexity ($0\%\text{--}100\%$)
-  7. `SWING`: Shuffle Swing Percentage ($50\%\text{--}80\%$)
+  7. `SWING`: Shuffle Swing Percentage ($0\%\text{--}100\%$)
 
 ---
 

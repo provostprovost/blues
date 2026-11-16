@@ -5,7 +5,6 @@
 static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
 static const char *GROOVE_NAMES[8] = { "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE", "MEMPHIS SOUL", "RHUMBA BLUES", "BOOGIE WOOGIE" };
 static const char *ALGO_NAMES[12]  = { "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET", "ARCHTOP GTR", "BLUES HORNS", "HONKY-TONK", "TREMOLO EP", "RESONATOR", "LESLIE ORGAN" };
-static const char *BASS_NAMES[4]   = { "P-BASS", "UPRIGHT", "MUTED BOOGIE", "MOOG FUNK" };
 static const char *DRUM_NAMES[4]   = { "STUDIO", "BRUSH", "RETRO 808", "STAX TIGHT" };
 static const char *LEAD_NAMES[8]   = { "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "MUTED TRPT", "PERC ORGAN" };
 
