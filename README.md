@@ -52,16 +52,16 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 ### Knobs
 
-| Knob | Lead Sheet (Screen 1) | Band Mixer (Screen 2) | Band Style (Screen 3) |
-|---|---|---|---|
-| **`MASTER`** | Hardware master volume | Hardware master volume | Hardware master volume |
-| **`SELECT`** | Groove Preset (sets Bass, Keys, Drums & Swing)<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* |
-| **`PRESETS`** | Solo Lead Voice (8 voices)<br>*(Hold `SEL`: Key `C`–`B`)* | Solo Lead Voice<br>*(Hold `SEL`: Key `C`–`B`)* | Solo Lead Voice<br>*(Hold `SEL`: Key `C`–`B`)* |
-| **`ALGORITHM`** | Backing Chord Sound (12 engines) | Backing Chord Sound | Backing Chord Sound |
-| **`KNOB1`** | Tempo (40–240 BPM)<br>*(Hold `GLO`: Swing 0%–100%)* | Bass Volume<br>*(Hold `GLO`: Reverb Mix)* | Bass Line Style (5 styles)<br>*(Hold `GLO`: Bass Sound)* |
-| **`KNOB2`** | Spice (0%–100%)<br>*(Hold `GLO`: Tuning 440/432/442)* | Keys Volume<br>*(Hold `GLO`: Spice 0%–100%)* | Keys Rhythm Style (5 styles)<br>*(Hold `GLO`: Chord Sound)* |
-| **`KNOB3`** | Bass Volume<br>*(Hold `GLO`: Bass Sound)* | Drums Volume<br>*(Hold `GLO`: Swing 0%–100%)* | Drum Beat Pattern (8 patterns)<br>*(Hold `GLO`: Drum Kit)* |
-| **`KNOB4`** | Keys Volume<br>*(Hold `GLO`: Reverb Mix)* | Lead Volume<br>*(Hold `GLO`: Fullness 0%–100%)* | Blues Form (5 forms)<br>*(Hold `GLO`: Tuning 440/432/442)* |
+| Knob | Lead Sheet (Screen 1) | Band Mixer (Screen 2) | Band Style (Screen 3) | Band Feel (Screen 4) |
+|---|---|---|---|---|
+| **`MASTER`** | Hardware master volume | Hardware master volume | Hardware master volume | Hardware master volume |
+| **`SELECT`** | Groove Preset (sets Bass, Keys, Drums & Swing)<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* |
+| **`PRESETS`** | Solo Lead Voice (8 voices)<br>*(Hold `SEL`: Key `C`–`B`)* | Solo Lead Voice<br>*(Hold `SEL`: Key `C`–`B`)* | Solo Lead Voice<br>*(Hold `SEL`: Key `C`–`B`)* | Solo Lead Voice<br>*(Hold `SEL`: Key `C`–`B`)* |
+| **`ALGORITHM`** | Backing Chord Sound (12 engines) | Backing Chord Sound | Backing Chord Sound | Backing Chord Sound |
+| **`KNOB1`** | Tempo (40–240 BPM)<br>*(Hold `GLO`: Swing 0%–100%)* | Bass Volume<br>*(Hold `GLO`: Reverb Mix)* | Bass Line Style (5 styles)<br>*(Hold `GLO`: Bass Sound)* | Bass Fullness (0%–100%)<br>*(Hold `GLO`: Bass Spice)* |
+| **`KNOB2`** | Master Spice (0%–100%)<br>*(Hold `GLO`: Tuning 440/432/442)* | Keys Volume<br>*(Hold `GLO`: Master Spice)* | Keys Rhythm Style (5 styles)<br>*(Hold `GLO`: Chord Sound)* | Keys Fullness (0%–100%)<br>*(Hold `GLO`: Keys Spice)* |
+| **`KNOB3`** | Bass Volume<br>*(Hold `GLO`: Bass Sound)* | Drums Volume<br>*(Hold `GLO`: Swing 0%–100%)* | Drum Beat Pattern (8 patterns)<br>*(Hold `GLO`: Drum Kit)* | Drums Fullness (0%–100%)<br>*(Hold `GLO`: Drums Spice)* |
+| **`KNOB4`** | Keys Volume<br>*(Hold `GLO`: Reverb Mix)* | Lead Volume<br>*(Hold `GLO`: Master Fullness)* | Blues Form (5 forms)<br>*(Hold `GLO`: Tuning 440/432/442)* | Master Fullness (all 3)<br>*(Hold `GLO`: Master Spice)* |
 
 ### Buttons
 
@@ -70,7 +70,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **`PLAY/STOP`** | Start or stop playback (LED lights up while playing). |
 | **`REC`** | Toggle 1-bar count-in rimshot click (pulses on Beat 1). |
 | **`OCT-` / `OCT+`** | Shift the 27-key solo keyboard down or up (-2 to +2 octaves). Hold `SEL` + `OCT-`/`OCT+` to nudge tempo ±4 BPM. |
-| **`HOME`** | Cycle screens: **Lead Sheet** → **Band Mixer** → **Band Style** → **Lead Sheet**. |
+| **`HOME`** | Cycle screens: **Lead Sheet** → **Band Mixer** → **Band Style** → **Band Feel** → **Lead Sheet**. |
 | **`SAVE`** | Save your current groove, tempo, key, voices, styles, and mixer levels to flash. |
 | **`GLO`** | Secondary knob layer (bottom half of Mixer & Band Style, plus quick Lead Sheet tweaks). |
 | **`ARP`** | Tap Tempo—tap in rhythm to set the BPM. |
@@ -119,11 +119,12 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 ## Display Screens
 
-Press **`HOME`** to cycle through the three screens:
+Press **`HOME`** to cycle through the four screens:
 
 1. **12-Bar Lead Sheet:** Shows the groove and drum kit at the top, Key + Form (`(MAJ)` or cyan `(MIN)`), BPM, and Spice below it, the 12-bar chord grid with the active bar highlighted in amber, 4 beat pips, live playback status (and 1.5s parameter toasts), and the footer (`<Solo Lead> * <Chord Engine>`, aligned left-to-right with `PRESETS` and `ALGORITHM`).
 2. **Band Mixer:** Live level bars for `BASS VOL`, `KEYS VOL`, `DRUMS VOL`, `LEAD VOL`, `REVERB`, `SPICE`, `SWING` (0%–100%), and `FULLNESS` (0%–100%).
 3. **Band Style:** Direct rhythm & tone editor for `BASS LINE`, `KEYS RHY`, `DRUM BEAT`, and `FORM` (`KNOB1–4`), plus `[G] BASS`, `[G] KEYS`, `[G] KIT`, and `[G] TUNE` (`GLO` + `KNOB1–4`).
+4. **Band Feel:** Per-instrument `BASS FUL`, `KEYS FUL`, `DRUMS FUL`, `MSTR FUL` (`KNOB1–4`) and `[G]BS SPC`, `[G]KY SPC`, `[G]DR SPC`, `[G]MS SPC` (`GLO` + `KNOB1–4`).
 
 ---
 

@@ -53,6 +53,16 @@ static uint8_t wrap_step_u8(uint8_t cur, int32_t delta, uint8_t count) {
     return (uint8_t)(v % count);
 }
 
+static void set_master_fullness(HarmonyState *hs, PresetConfig *p, uint8_t val) {
+    hs->fullness = val; hs->bass_fullness = val; hs->keys_fullness = val; hs->drums_fullness = val;
+    p->fullness  = val; p->bass_fullness  = val; p->keys_fullness  = val; p->drums_fullness  = val;
+}
+
+static void set_master_spice(HarmonyState *hs, PresetConfig *p, uint8_t val) {
+    hs->spice_level = val; hs->bass_spice = val; hs->keys_spice = val; hs->drums_spice = val;
+    p->spice        = val; p->bass_spice = val; p->keys_spice = val; p->drums_spice = val;
+}
+
 void panel_init(void) {
     g_prev_key_mask = 0;
     for (uint32_t i = 0; i < ZONE1_COUNT; i++) {
@@ -166,7 +176,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     }
     if (btn_edges & (1u << BTN_HOME)) {
         if (ui_screen) {
-            *ui_screen = (uint8_t)((*ui_screen + 1) % 3);
+            *ui_screen = (uint8_t)((*ui_screen + 1) % 4);
             hs->ui_dirty = 1;
         }
     }
@@ -193,6 +203,12 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         p->root_key = hs->root_semitone;
         p->spice = hs->spice_level;
         p->fullness = hs->fullness;
+        p->bass_fullness = hs->bass_fullness;
+        p->keys_fullness = hs->keys_fullness;
+        p->drums_fullness = hs->drums_fullness;
+        p->bass_spice = hs->bass_spice;
+        p->keys_spice = hs->keys_spice;
+        p->drums_spice = hs->drums_spice;
         p->bass_style = hs->bass_style;
         p->keys_style = hs->keys_style;
         p->drum_pattern = hs->drum_pattern;
@@ -300,10 +316,14 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     uint8_t scr = ui_screen ? *ui_screen : 0;
     uint8_t is_mixer = (scr == 1);
     uint8_t is_style = (scr == 2);
+    uint8_t is_feel  = (scr == 3);
 
-    // KNOB 1: Lead Sheet (BPM / GLO:Swing) | Mixer (Bass Vol / GLO:Reverb) | Band Style (Bass Line / GLO:Bass Sound)
+    // KNOB 1: Lead Sheet (BPM / GLO:Swing) | Mixer (Bass Vol / GLO:Reverb) | Style (Bass Line / GLO:Bass Sound) | Feel (Bass Ful / GLO:Bass Spc)
     if ((delta = hal_get_encoder_delta(ENC_KNOB1)) != 0) {
-        if (is_style) {
+        if (is_feel) {
+            if (glo_held) { hs->bass_spice = clamp_step_u8(hs->bass_spice, delta * 5, 0, 100); p->bass_spice = hs->bass_spice; }
+            else          { hs->bass_fullness = clamp_step_u8(hs->bass_fullness, delta * 5, 0, 100); p->bass_fullness = hs->bass_fullness; }
+        } else if (is_style) {
             if (glo_held) {
                 p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, 8);
             } else {
@@ -326,9 +346,18 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // KNOB 2: Lead Sheet (Spice / GLO:Tuning) | Mixer (Keys Vol / GLO:Spice) | Band Style (Keys Rhythm / GLO:Chord Sound)
+    // KNOB 2: Lead Sheet (Master Spice / GLO:Tuning) | Mixer (Keys Vol / GLO:Master Spice) | Style (Keys Rhy / GLO:Chord Sound) | Feel (Keys Ful / GLO:Keys Spc)
     if ((delta = hal_get_encoder_delta(ENC_KNOB2)) != 0) {
-        if (is_style) {
+        if (is_feel) {
+            if (glo_held) {
+                hs->keys_spice = clamp_step_u8(hs->keys_spice, delta * 5, 0, 100);
+                p->keys_spice = hs->keys_spice;
+                hs->spice_level = hs->keys_spice; p->spice = hs->keys_spice;
+            } else {
+                hs->keys_fullness = clamp_step_u8(hs->keys_fullness, delta * 5, 0, 100);
+                p->keys_fullness = hs->keys_fullness;
+            }
+        } else if (is_style) {
             if (glo_held) {
                 p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, 12);
             } else {
@@ -337,8 +366,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             }
         } else if (is_mixer) {
             if (glo_held) {
-                hs->spice_level = clamp_step_u8(hs->spice_level, delta * 5, 0, 100);
-                p->spice = hs->spice_level;
+                set_master_spice(hs, p, clamp_step_u8(hs->spice_level, delta * 5, 0, 100));
             } else {
                 p->keys_vol = clamp_step_u8(p->keys_vol, delta * 4, 0, 127);
             }
@@ -347,8 +375,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                 p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
                 set_toast(hs, ms_now, TUNE_LABELS[p->master_tuning]);
             } else {
-                hs->spice_level = clamp_step_u8(hs->spice_level, delta * 5, 0, 100);
-                p->spice = hs->spice_level;
+                set_master_spice(hs, p, clamp_step_u8(hs->spice_level, delta * 5, 0, 100));
             }
         }
         hs->ui_dirty = 1;
@@ -356,9 +383,12 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // KNOB 3: Lead Sheet (Bass Vol / GLO:Bass Sound) | Mixer (Drums Vol / GLO:Swing) | Band Style (Drum Beat / GLO:Drum Kit)
+    // KNOB 3: Lead Sheet (Bass Vol / GLO:Bass Sound) | Mixer (Drums Vol / GLO:Swing) | Style (Drum Beat / GLO:Drum Kit) | Feel (Drums Ful / GLO:Drums Spc)
     if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
-        if (is_style) {
+        if (is_feel) {
+            if (glo_held) { hs->drums_spice = clamp_step_u8(hs->drums_spice, delta * 5, 0, 100); p->drums_spice = hs->drums_spice; }
+            else          { hs->drums_fullness = clamp_step_u8(hs->drums_fullness, delta * 5, 0, 100); p->drums_fullness = hs->drums_fullness; }
+        } else if (is_style) {
             if (glo_held) {
                 p->drum_kit = wrap_step_u8(p->drum_kit, delta, 8);
             } else {
@@ -382,9 +412,12 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // KNOB 4: Lead Sheet (Keys Vol / GLO:Reverb) | Mixer (Lead Vol / GLO:Fullness) | Band Style (Blues Form / GLO:Tuning)
+    // KNOB 4: Lead Sheet (Keys Vol / GLO:Reverb) | Mixer (Lead Vol / GLO:Master Ful) | Style (Form / GLO:Tuning) | Feel (Master Ful / GLO:Master Spc)
     if ((delta = hal_get_encoder_delta(ENC_KNOB4)) != 0) {
-        if (is_style) {
+        if (is_feel) {
+            if (glo_held) set_master_spice(hs, p, clamp_step_u8(hs->spice_level, delta * 5, 0, 100));
+            else          set_master_fullness(hs, p, clamp_step_u8(hs->fullness, delta * 5, 0, 100));
+        } else if (is_style) {
             if (glo_held) {
                 p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
             } else {
@@ -393,8 +426,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             }
         } else if (is_mixer) {
             if (glo_held) {
-                hs->fullness = clamp_step_u8(hs->fullness, delta * 5, 0, 100);
-                p->fullness = hs->fullness;
+                set_master_fullness(hs, p, clamp_step_u8(hs->fullness, delta * 5, 0, 100));
             } else {
                 p->lead_vol = clamp_step_u8(p->lead_vol, delta * 4, 0, 127);
             }

@@ -268,6 +268,12 @@ static void init_factory_presets(void) {
             arranger_apply_groove_defaults(&tmp_hs, p, (GrooveStyle)p->groove_style);
             p->swing = saved_swing;
         }
+        p->bass_fullness = p->fullness;
+        p->keys_fullness = p->fullness;
+        p->drums_fullness = p->fullness;
+        p->bass_spice = p->spice;
+        p->keys_spice = p->spice;
+        p->drums_spice = p->spice;
     }
 }
 
@@ -294,6 +300,12 @@ static void app_main(void) {
     g_harmony.root_semitone = g_presets[g_active_preset].root_key;
     g_harmony.spice_level = g_presets[g_active_preset].spice;
     g_harmony.fullness = g_presets[g_active_preset].fullness;
+    g_harmony.bass_fullness = g_presets[g_active_preset].bass_fullness;
+    g_harmony.keys_fullness = g_presets[g_active_preset].keys_fullness;
+    g_harmony.drums_fullness = g_presets[g_active_preset].drums_fullness;
+    g_harmony.bass_spice = g_presets[g_active_preset].bass_spice;
+    g_harmony.keys_spice = g_presets[g_active_preset].keys_spice;
+    g_harmony.drums_spice = g_presets[g_active_preset].drums_spice;
     g_harmony.bass_style = g_presets[g_active_preset].bass_style;
     g_harmony.keys_style = g_presets[g_active_preset].keys_style;
     g_harmony.drum_pattern = g_presets[g_active_preset].drum_pattern;

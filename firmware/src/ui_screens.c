@@ -52,6 +52,15 @@ static uint8_t g_last_s_keys = 0xFF;
 static uint8_t g_last_s_drum = 0xFF;
 static uint8_t g_last_s_tune = 0xFF;
 
+static uint8_t g_last_f_bful = 0xFF;
+static uint8_t g_last_f_kful = 0xFF;
+static uint8_t g_last_f_dful = 0xFF;
+static uint8_t g_last_f_mful = 0xFF;
+static uint8_t g_last_f_bspc = 0xFF;
+static uint8_t g_last_f_kspc = 0xFF;
+static uint8_t g_last_f_dspc = 0xFF;
+static uint8_t g_last_f_mspc = 0xFF;
+
 void ui_init(void) {
     g_last_bar = 0xFF;
     g_last_beat = 0xFF;
@@ -90,6 +99,14 @@ void ui_init(void) {
     g_last_s_keys = 0xFF;
     g_last_s_drum = 0xFF;
     g_last_s_tune = 0xFF;
+    g_last_f_bful = 0xFF;
+    g_last_f_kful = 0xFF;
+    g_last_f_dful = 0xFF;
+    g_last_f_mful = 0xFF;
+    g_last_f_bspc = 0xFF;
+    g_last_f_kspc = 0xFF;
+    g_last_f_dspc = 0xFF;
+    g_last_f_mspc = 0xFF;
 }
 
 static void format_chord_str(char *buf, uint8_t root_key, ScaleDegree deg) {
@@ -307,7 +324,7 @@ static void render_style_view(const HarmonyState *hs, const PresetConfig *preset
         hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND STYLE", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:FRM", RGB(0, 220, 255), 1);
         hal_draw_text_box(0, 198, 240, 0, "[GLO]: BASS / KEYS / KIT / TUNE", RGB(255, 180, 0), 1);
-        hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);
+        hal_draw_text_box(0, 216, 240, 0, "HOME: BAND FEEL VIEW", RGB(140, 140, 140), 1);
     }
 
     uint8_t bs = hs->bass_style % 5;
@@ -327,6 +344,25 @@ static void render_style_view(const HarmonyState *hs, const PresetConfig *preset
     render_style_row(119, "[G] KEYS",  ALGO_NAMES[ki],       RGB(255, 220, 120), full_redraw, ki, &g_last_s_keys);
     render_style_row(138, "[G] KIT",   DRUM_NAMES[di],       RGB(255, 150, 150), full_redraw, di, &g_last_s_drum);
     render_style_row(157, "[G] TUNE",  TUNE_NAMES[tn],       RGB(200, 160, 255), full_redraw, tn, &g_last_s_tune);
+}
+
+static void render_feel_view(const HarmonyState *hs, uint8_t full_redraw) {
+    if (full_redraw) {
+        hal_fill_rect(0, 0, 240, 240, C_BLACK);
+        hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND FEEL", RGB(255, 190, 0), 1);
+        hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:ALL", RGB(0, 220, 255), 1);
+        hal_draw_text_box(0, 198, 240, 0, "[GLO]: TRACK SPICE", RGB(255, 180, 0), 1);
+        hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);
+    }
+
+    render_meter(24,  "BASS FUL",  hs->bass_fullness,  100, RGB(80, 160, 255),  full_redraw, &g_last_f_bful);
+    render_meter(43,  "KEYS FUL",  hs->keys_fullness,  100, RGB(255, 180, 40),  full_redraw, &g_last_f_kful);
+    render_meter(62,  "DRUMS FUL", hs->drums_fullness, 100, RGB(255, 80, 80),   full_redraw, &g_last_f_dful);
+    render_meter(81,  "MSTR FUL",  hs->fullness,       100, RGB(0, 220, 255),   full_redraw, &g_last_f_mful);
+    render_meter(100, "[G]BS SPC", hs->bass_spice,     100, RGB(140, 200, 255), full_redraw, &g_last_f_bspc);
+    render_meter(119, "[G]KY SPC", hs->keys_spice,     100, RGB(255, 220, 100), full_redraw, &g_last_f_kspc);
+    render_meter(138, "[G]DR SPC", hs->drums_spice,    100, RGB(255, 140, 140), full_redraw, &g_last_f_dspc);
+    render_meter(157, "[G]MS SPC", hs->spice_level,    100, RGB(200, 140, 255), full_redraw, &g_last_f_mspc);
 }
 
 void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
@@ -393,8 +429,10 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
         g_last_queued_key = hs->has_queued_key;
     } else if (screen_id == 1) {
         render_mixer_view(hs, preset, preset_idx, screen_switched || force_redraw);
-    } else {
+    } else if (screen_id == 2) {
         render_style_view(hs, preset, screen_switched || force_redraw);
+    } else {
+        render_feel_view(hs, screen_switched || force_redraw);
     }
 
     g_last_bar = hs->current_bar;

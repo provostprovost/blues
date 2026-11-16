@@ -623,13 +623,24 @@ void test_stage5_integration(void) {
     Voicing fv = { {0}, 0 };
     PerformanceFrame pf;
 
-    fhs.fullness = 10; // Ultra-sparse: no beat-1 bass, rimshot instead of snare
+    fhs.bass_fullness = 10;  // Ultra-sparse: no beat-1 bass, beat-2 plays 5th (1-5-1-5, never 1-6-1-6)
+    fhs.drums_fullness = 10; // Ultra-sparse: rimshot instead of snare
+    fhs.bass_spice = 80;
     arranger_generate_frame(&fhs, &fp, &pf, &fv);
     assert(pf.bass_trigger == 0);
     assert((pf.drum_mask & 0x08) != 0);
     assert((pf.drum_mask & 0x02) == 0);
 
-    fhs.fullness = 95; // Full rocking band + Bar 12 beat 3 offbeat fill
+    // Beat 2 at low bass_fullness must play 5th (+7 = 47 for E2=40), NOT 6th (+9 = 49)
+    fhs.current_bar = 0;
+    fhs.current_beat = 2;
+    arranger_generate_frame(&fhs, &fp, &pf, &fv);
+    assert(pf.bass_trigger == 1);
+    assert(pf.bass_note == 47);
+
+    fhs.bass_fullness = 95;
+    fhs.drums_fullness = 95; // Full rocking band + Bar 12 beat 3 offbeat fill
+    fhs.drums_spice = 80;
     fhs.current_bar = 11;
     fhs.current_beat = 3;
     fhs.current_subdiv = 16; // offbeat_subdiv for swing 67 = 12 + (67*6)/100 = 16

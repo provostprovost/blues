@@ -194,6 +194,12 @@ typedef struct {
     uint8_t     cpu_load_pct;
     uint16_t    chorus_count;
     uint8_t     fullness;
+    uint8_t     bass_fullness;
+    uint8_t     keys_fullness;
+    uint8_t     drums_fullness;
+    uint8_t     bass_spice;
+    uint8_t     keys_spice;
+    uint8_t     drums_spice;
     uint8_t     bass_style;
     uint8_t     keys_style;
     uint8_t     drum_pattern;
@@ -227,6 +233,12 @@ typedef struct {
     uint8_t  lead_instrument;
     uint8_t  lead_vol;
     uint8_t  fullness;
+    uint8_t  bass_fullness;
+    uint8_t  keys_fullness;
+    uint8_t  drums_fullness;
+    uint8_t  bass_spice;
+    uint8_t  keys_spice;
+    uint8_t  drums_spice;
     uint8_t  bass_style;
     uint8_t  keys_style;
     uint8_t  drum_pattern;
