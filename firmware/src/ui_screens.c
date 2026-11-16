@@ -245,7 +245,7 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
         hal_fill_rect(0, 0, 240, 240, C_BLACK);
         hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND MIXER", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BAS K2:KEY K3:DRM K4:LD", RGB(0, 220, 255), 1);
-        hal_draw_text_box(0, 198, 240, 0, "[GLO]:REV/SPC/SWG [SEL]:FUL", RGB(255, 180, 0), 1);
+        hal_draw_text_box(0, 198, 240, 0, "[GLO]: REV/SPC/SWG/FUL", RGB(255, 180, 0), 1);
         hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);
     }
 

@@ -357,13 +357,12 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB4 (Encoder 5): Keys Vol / Reverb Mix (or Lead Vol / Tuning on Mixer view)
+    // ENC_KNOB4 (Encoder 5): Keys Vol / Reverb Mix (or Lead Vol / Fullness on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB4)) != 0) {
         if (is_mixer) {
             if (glo_held) {
-                int32_t nt = (int32_t)p->master_tuning + delta;
-                while (nt < 0) nt += 3;
-                p->master_tuning = (uint8_t)(nt % 3);
+                hs->fullness = clamp_step_u8(hs->fullness, delta * 5, 0, 100);
+                p->fullness = hs->fullness;
             } else {
                 p->lead_vol = clamp_step_u8(p->lead_vol, delta * 4, 0, 127);
             }

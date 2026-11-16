@@ -61,7 +61,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **`KNOB1`** | Tempo (40–240 BPM)<br>*(Mixer: Bass Volume)* | Swing (0%–100%)<br>*(Mixer: Reverb Mix)* | — |
 | **`KNOB2`** | Spice (0%–100%)<br>*(Mixer: Keys Volume)* | Master Tuning (440 / 432 / 442 Hz)<br>*(Mixer: Spice)* | Fullness (0%–100%, sparse vs. rocking) |
 | **`KNOB3`** | Bass Volume<br>*(Mixer: Drums Volume)* | Bass Engine (4 engines)<br>*(Mixer: Swing)* | — |
-| **`KNOB4`** | Keys Volume<br>*(Mixer: Lead Volume)* | Reverb Mix<br>*(Mixer: Master Tuning)* | — |
+| **`KNOB4`** | Keys Volume<br>*(Mixer: Lead Volume)* | Reverb Mix<br>*(Mixer: Fullness 0%–100%)* | — |
 
 ### Buttons
 
@@ -88,7 +88,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 - **Change the key:** Hold **`SEL`** (or **`GLO`**) and turn **`PRESETS`**. Or hold **`SEL`** and tap one of the first 12 silicone keys (`F` through `E`): a single tap queues the key change for the next chorus, and a quick double tap switches right away.
 - **Switch between Major and Minor Blues:** Press **`LFO`** for a one-tap toggle. You can also hold **`SEL`** and turn **`SELECT`**, or hold **`SEL`** and press Key 22 (Minor) / Key 18 (Major). Minor Blues shows **`KEY:Em (MIN)`** in cyan at the top of the screen and updates all 12 chord boxes (`Em7`, `Am7`, `C7`, `B7`).
 - **Make the chords and bass jazzier:** Turn **`KNOB2`** (**Spice**). Low (0–30%) keeps it straight and simple; middle (31–65%) adds 9ths, 13ths, and chromatic bass walk-ups; high (66–100%) adds passing diminished chords, tritone subs, and turnaround chords in Bars 11–12.
-- **Dial in sparse vs. full-band energy:** Hold **`SEL`** and turn **`KNOB2`** (**Fullness**). Low (<35%) strips the band down to a thin, intimate trio (half-note bass, soft backbeat chords, light rimshot/hat); high (>70%) adds driving bass anticipations, push comping stabs, ghost snares, and punchy Bar 4/8/12 drum fills.
+- **Dial in sparse vs. full-band energy:** On the Band Mixer (`HOME`), hold **`GLO`** and turn **`KNOB4`** (**Fullness**), or on the Lead Sheet hold **`SEL`** and turn **`KNOB2`**. Low (<35%) strips the band down to a thin, intimate trio (half-note bass, soft backbeat chords, light rimshot/hat); high (>70%) adds driving bass anticipations, push comping stabs, ghost snares, and punchy Bar 4/8/12 drum fills.
 - **Adjust shuffle feel:** Hold **`GLO`** and turn **`KNOB1`** (**Swing**), or press **`HOME`** to open the Band Mixer and hold **`GLO`** + turn **`KNOB3`**. 0% is straight 8ths, ~67% is a classic triplet shuffle, and 100% is a hard dotted-8th swing.
 - **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While playing, the LEDs always stay at a clean **6 notes per octave**: **Minor Blues** (`1, b3, 4, b5, 5, b7`) in Minor Blues (the default startup mode in E Minor); in Major forms, **Major Blues** (`1, 2, b3, 3, 5, 6`) on `I7` bars and **Minor Blues** (`1, b3, 4, b5, 5, b7`) on `IV7`/`V7` bars, with a quick Beat-1 flash on the root.
 - **Arm an ending:** Hold **`SEL`** and tap Keys 23–26 (23: Hard Stop, 24: Tag Ending, 25: Triple Turnaround, 26: Chromatic Slide).
