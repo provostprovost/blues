@@ -2,6 +2,7 @@
 #include "hal_adapter.h"
 #include "dsp_voices.h"
 #include "blues_harmony.h"
+#include "blues_arranger.h"
 
 #define ZONE1_COUNT 12u
 #define KEY0_OFFSET 53u // F3 (MIDI 53)
@@ -182,6 +183,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         p->root_key = hs->root_semitone;
         p->spice = hs->spice_level;
         p->fullness = hs->fullness;
+        p->bass_style = hs->bass_style;
+        p->keys_style = hs->keys_style;
+        p->drum_pattern = hs->drum_pattern;
         p->form_mode = hs->form_mode;
         hal_blob_save(0, presets, sizeof(PresetConfig) * NUM_PRESET_SLOTS);
         g_save_pending = 0;
@@ -255,20 +259,44 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         }
     }
 
-    // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..11)
+    static const char *KEYS_STYLE_LABELS[5] = {
+        "KEYS: CHARLESTON", "KEYS: BACKBEAT 2&4", "KEYS: CALL & RESP", "KEYS: SPARSE PAD", "KEYS: CHOP 4/4"
+    };
+    static const char *BASS_STYLE_LABELS[5] = {
+        "BASS LINE: WALKING", "BASS LINE: SHUFFLE", "BASS LINE: BOOGIE", "BASS LINE: ROOT-5TH", "BASS LINE: FUNK SYNC"
+    };
+    static const char *DRUM_PAT_LABELS[8] = {
+        "DRUMS: 12/8 SLOW", "DRUMS: TX SHUFFLE", "DRUMS: CHI SWING", "DRUMS: ROCK BLUES",
+        "DRUMS: 2ND LINE", "DRUMS: MEMPHIS SOUL", "DRUMS: RHUMBA", "DRUMS: BOOGIE"
+    };
+    static const char *TUNE_LABELS[3] = { "TUNE: 440 HZ", "TUNE: 432 HZ", "TUNE: 442 HZ" };
+    static const char *BASS_LABELS[8] = {
+        "BASS: P-BASS", "BASS: UPRIGHT", "BASS: MUTED BOOGIE", "BASS: MOOG FUNK",
+        "BASS: 60S JAZZ", "BASS: FLATWOUND", "BASS: AMPEG TUBE", "BASS: SUB OCTAVE"
+    };
+
+    // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..11), or Keys Comping Style with SEL (0..4)
     if ((delta = hal_get_encoder_delta(ENC_ALGORITHM)) != 0) {
-        int32_t na = (int32_t)p->ep_tone_algo + delta;
-        while (na < 0) na += 12;
-        p->ep_tone_algo = (uint8_t)(na % 12);
+        if (sel_held) {
+            int32_t nks = (int32_t)hs->keys_style + delta;
+            while (nks < 0) nks += 5;
+            hs->keys_style = (uint8_t)(nks % 5);
+            p->keys_style = hs->keys_style;
+            set_toast(hs, ms_now, KEYS_STYLE_LABELS[hs->keys_style]);
+        } else {
+            int32_t na = (int32_t)p->ep_tone_algo + delta;
+            while (na < 0) na += 12;
+            p->ep_tone_algo = (uint8_t)(na % 12);
+        }
         hs->ui_dirty = 1;
     }
 
-    // ENC_SELECT (Encoder 0): Groove Style (0..7), Drum Kit with GLO (0..3), or Form/Scale Mode with SEL (0..4)
+    // ENC_SELECT (Encoder 0): Groove Style (0..7), Drum Kit with GLO (0..7), or Form Mode with SEL (0..4)
     if ((delta = hal_get_encoder_delta(ENC_SELECT)) != 0) {
         if (glo_held) {
             int32_t nd = (int32_t)p->drum_kit + delta;
-            while (nd < 0) nd += 4;
-            p->drum_kit = (uint8_t)(nd % 4);
+            while (nd < 0) nd += 8;
+            p->drum_kit = (uint8_t)(nd % 8);
         } else if (sel_held) {
             int32_t nf = (int32_t)hs->form_mode + delta;
             while (nf < 0) nf += 5;
@@ -279,19 +307,22 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         } else {
             int32_t ng = (int32_t)p->groove_style + delta;
             while (ng < 0) ng += 8;
-            p->groove_style = (uint8_t)(ng % 8);
+            arranger_apply_groove_defaults(hs, p, (GrooveStyle)(ng % 8));
         }
         hs->ui_dirty = 1;
     }
 
     uint8_t is_mixer = (ui_screen && *ui_screen == 1);
 
-    static const char *TUNE_LABELS[3] = { "TUNE: 440 HZ", "TUNE: 432 HZ", "TUNE: 442 HZ" };
-    static const char *BASS_LABELS[4] = { "BASS: P-BASS", "BASS: UPRIGHT", "BASS: MUTED BOOGIE", "BASS: MOOG FUNK" };
-
-    // ENC_KNOB1 (Encoder 2): BPM / Swing (or Bass Vol / Reverb Mix on Mixer view)
+    // ENC_KNOB1 (Encoder 2): BPM / Swing / Drum Pattern (SEL) (or Bass Vol / Reverb Mix on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB1)) != 0) {
-        if (is_mixer) {
+        if (sel_held) {
+            int32_t ndp = (int32_t)hs->drum_pattern + delta;
+            while (ndp < 0) ndp += 8;
+            hs->drum_pattern = (uint8_t)(ndp % 8);
+            p->drum_pattern = hs->drum_pattern;
+            set_toast(hs, ms_now, DRUM_PAT_LABELS[hs->drum_pattern]);
+        } else if (is_mixer) {
             if (glo_held) p->reverb_mix = clamp_step_u8(p->reverb_mix, delta * 4, 0, 127);
             else          p->bass_vol   = clamp_step_u8(p->bass_vol,   delta * 4, 0, 127);
         } else {
@@ -336,16 +367,22 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB3 (Encoder 4): Bass Vol / Bass Engine (or Drums Vol / Swing on Mixer view)
+    // ENC_KNOB3 (Encoder 4): Bass Vol / Bass Engine (0..7) / Bass Line Style (SEL) (or Drums Vol / Swing on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
-        if (is_mixer) {
+        if (sel_held) {
+            int32_t nbs = (int32_t)hs->bass_style + delta;
+            while (nbs < 0) nbs += 5;
+            hs->bass_style = (uint8_t)(nbs % 5);
+            p->bass_style = hs->bass_style;
+            set_toast(hs, ms_now, BASS_STYLE_LABELS[hs->bass_style]);
+        } else if (is_mixer) {
             if (glo_held) p->swing     = clamp_step_u8(p->swing,     delta * 2, 0, 100);
             else          p->drums_vol = clamp_step_u8(p->drums_vol, delta * 4, 0, 127);
         } else {
             if (glo_held) {
                 int32_t nb = (int32_t)p->bass_instrument + delta;
-                while (nb < 0) nb += 4;
-                p->bass_instrument = (uint8_t)(nb % 4);
+                while (nb < 0) nb += 8;
+                p->bass_instrument = (uint8_t)(nb % 8);
                 set_toast(hs, ms_now, BASS_LABELS[p->bass_instrument]);
             } else {
                 p->bass_vol = clamp_step_u8(p->bass_vol, delta * 4, 0, 127);

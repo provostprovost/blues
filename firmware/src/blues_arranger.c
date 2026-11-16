@@ -195,6 +195,113 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
     return candidates[best_idx];
 }
 
+// 5 Independent Bass Line Patterns (16 steps per bar)
+static const uint8_t BASS_STYLE_MASKS[5][16] = {
+    {127,0,0,0,  108,0,0,0,  118,0,0,0,  108,0,0,0},  // WALKING 4/4 (quarter-note pocket)
+    {127,0,88,0, 112,0,86,0, 120,0,88,0, 112,0,86,0}, // SHUFFLE (repeats beat note on &)
+    {127,0,98,0, 115,0,98,0, 122,0,98,0, 115,0,98,0}, // BOOGIE BOX (1-3-5-6-b7-6-5-3)
+    {127,0,0,0,  0,0,95,0,   118,0,0,0,  105,0,0,0},  // ROOT-5TH (heavy root pocket)
+    {127,0,95,0, 0,0,110,0,  120,0,0,0,  105,0,95,0}  // FUNK SYNC (syncopated Memphis pocket)
+};
+
+// 5 Independent Keys Comping Styles with 2-Bar A/B Phrasing (breathing, never metronome-dense)
+static const uint8_t KEYS_STYLE_MASKS[5][2][16] = {
+    { // CHARLESTON: Beat 1 + & of Beat 2 (classic open blues pocket)
+      {105,0,0,0, 0,0,92,0, 0,0,0,0, 0,0,0,0},
+      {105,0,0,0, 0,0,92,0, 0,0,0,0, 0,0,0,0} },
+    { // BACKBEAT 2 & 4: leaves Beats 1 & 3 wide open
+      {0,0,0,0, 98,0,0,0, 0,0,0,0, 92,0,0,0},
+      {0,0,0,0, 98,0,0,0, 0,0,0,0, 92,0,0,0} },
+    { // CALL & RESPONSE: 2-bar phrasing (Bar A: 1 + 2&, Bar B: 2& + 4)
+      {105,0,0,0, 0,0,92,0, 0,0,0,0, 0,0,0,0},
+      {0,0,0,0,   0,0,95,0, 0,0,0,0, 88,0,0,0} },
+    { // SPARSE PAD: sustained Beat 1 (+ gentle 4& push on Bar B)
+      {95,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0},
+      {95,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,78,0} },
+    { // CHOP 4/4: driving rock/boogie chop on all 4 beats
+      {100,0,0,0, 88,0,0,0, 96,0,0,0, 88,0,0,0},
+      {100,0,0,0, 88,0,0,0, 96,0,0,0, 88,0,0,0} }
+};
+
+void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, GrooveStyle style) {
+    uint8_t idx = (uint8_t)style % 8;
+    preset->groove_style = idx;
+    preset->drum_pattern = idx;
+    hs->drum_pattern = idx;
+    preset->swing = GROOVE_TEMPLATES[idx].swing_ratio;
+
+    switch (idx) {
+        case GROOVE_SLOW_12_8:
+            preset->bass_style = BASS_STYLE_WALKING;
+            preset->keys_style = KEYS_STYLE_PAD;
+            break;
+        case GROOVE_TEXAS_SHUFFLE:
+            preset->bass_style = BASS_STYLE_SHUFFLE_REP;
+            preset->keys_style = KEYS_STYLE_CHARLESTON;
+            break;
+        case GROOVE_CHICAGO_SWING:
+            preset->bass_style = BASS_STYLE_WALKING;
+            preset->keys_style = KEYS_STYLE_CALL_RESP;
+            break;
+        case GROOVE_STRAIGHT_ROCK:
+            preset->bass_style = BASS_STYLE_ROOT_FIFTH;
+            preset->keys_style = KEYS_STYLE_BACKBEAT;
+            break;
+        case GROOVE_SECOND_LINE:
+        case GROOVE_MEMPHIS_SOUL:
+        case GROOVE_RHUMBA_BLUES:
+            preset->bass_style = BASS_STYLE_SYNCOPATED;
+            preset->keys_style = KEYS_STYLE_CALL_RESP;
+            break;
+        case GROOVE_BOOGIE_WOOGIE:
+        default:
+            preset->bass_style = BASS_STYLE_BOOGIE_BOX;
+            preset->keys_style = KEYS_STYLE_CHOP_4;
+            break;
+    }
+    hs->bass_style = preset->bass_style;
+    hs->keys_style = preset->keys_style;
+}
+
+static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t spice, uint8_t bass_style) {
+    uint8_t r = current.root_note % 12;
+    uint8_t curr_root = (uint8_t)(40 + ((r + 8) % 12));
+    while (curr_root < 40) curr_root += 12;
+    while (curr_root > 51) curr_root -= 12;
+
+    uint8_t is_min = (current.quality == CHORD_MIN7 || current.quality == CHORD_DIM7);
+    uint8_t third = is_min ? 3 : 4;
+    uint8_t fifth = (current.quality == CHORD_DIM7) ? 6 : 7;
+    uint8_t note = curr_root;
+
+    if (bass_style == BASS_STYLE_BOOGIE_BOX) {
+        // True 8-step blues box: 1, 3, 5, 6, b7, 6, 5, 3
+        uint8_t step8 = (uint8_t)((beat * 2) + (sub_idx >= 2 ? 1 : 0)) % 8;
+        static const uint8_t BOX_OFFSETS_MAJ[8] = { 0, 4, 7, 9, 10, 9, 7, 4 };
+        static const uint8_t BOX_OFFSETS_MIN[8] = { 0, 3, 7, 8, 10, 8, 7, 3 };
+        note = curr_root + (is_min ? BOX_OFFSETS_MIN[step8] : BOX_OFFSETS_MAJ[step8]);
+    } else if (bass_style == BASS_STYLE_ROOT_FIFTH) {
+        if (beat == 2) note = curr_root + fifth;
+        else if (beat == 3 && spice > 50) note = curr_root + 10; // b7 pickup
+        else note = curr_root;
+    } else if (bass_style == BASS_STYLE_SYNCOPATED) {
+        if (beat == 0) note = curr_root;
+        else if (beat == 1) note = curr_root + 10; // b7 on 2&
+        else if (beat == 2) note = curr_root + fifth;
+        else note = (sub_idx >= 2) ? (curr_root + third) : curr_root;
+    } else if (bass_style == BASS_STYLE_SHUFFLE_REP) {
+        // Shuffle repeat: & repeats the current beat's walking note instead of jumping to +7/+12
+        return bass_compute_note(current, next, beat, 0, spice);
+    } else {
+        // WALKING 4/4: clean quarter-note walking line
+        return bass_compute_note(current, next, beat, 0, spice);
+    }
+
+    while (note < 40) note += 12;
+    while (note > 62) note -= 12;
+    return note;
+}
+
 void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, PerformanceFrame *frame, Voicing *last_voicing) {
     frame->bass_trigger = 0;
     frame->bass_vel = 0;
@@ -217,7 +324,7 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         if (hs->current_beat > 0) return;
     }
 
-    const GrooveTemplate *gt = &GROOVE_TEMPLATES[preset->groove_style % 8];
+    const GrooveTemplate *gt = &GROOVE_TEMPLATES[hs->drum_pattern % 8];
     uint8_t sub_slot = 0xFF;
 
     if (gt->style == GROOVE_SLOW_12_8) {
@@ -238,18 +345,20 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         ScaleDegree active_degree = (hs->current_beat >= 2 && curr_slot.has_split) ? curr_slot.secondary : curr_slot.primary;
         int8_t j_vel = get_hmnz_jitter(hs->spice_level);
         uint8_t full = hs->fullness;
+        uint8_t b_style = hs->bass_style % 5;
+        uint8_t k_style = hs->keys_style % 5;
 
-        // Bass engine trigger (shaped by Fullness: sparse half-notes <35, template 35..70, driving >70)
-        uint8_t bass_hit = (gt->bass_mask[step16 % 16] > 0);
+        // Bass engine trigger: respects BassStyle; Fullness <35 strips to half-notes, >85 adds beat-4 pickup
+        uint8_t bass_vel_mask = BASS_STYLE_MASKS[b_style][step16 % 16];
+        uint8_t bass_hit = (bass_vel_mask > 0);
         if (full < 35) {
             bass_hit = ((hs->current_beat == 0 || hs->current_beat == 2) && sub_slot == 0);
-        } else if (full > 70 && ((sub_slot == 2 && (hs->current_beat == 1 || hs->current_beat == 3)) ||
-                                 (full > 85 && (sub_slot == 1 || sub_slot == 3)))) {
+        } else if (full > 85 && hs->current_beat == 3 && sub_slot == 2) {
             bass_hit = 1;
         }
         if (bass_hit) {
             frame->bass_trigger = 1;
-            int base_v = (gt->bass_mask[step16 % 16] > 0) ? gt->bass_mask[step16 % 16] : 88;
+            int base_v = (bass_vel_mask > 0) ? bass_vel_mask : 86;
             int bv = base_v + j_vel + ((full > 75) ? 8 : (full < 35) ? -10 : 0);
             frame->bass_vel = (uint8_t)((bv < 1) ? 1 : (bv > 127) ? 127 : bv);
 
@@ -258,21 +367,21 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             ScaleDegreeInfo next_info = harmony_get_degree_info(next_slot.primary);
             ChordContext c_curr = { (uint8_t)((hs->root_semitone + curr_info.semitone_offset) % 12), curr_info.quality };
             ChordContext c_next = { (uint8_t)((hs->root_semitone + next_info.semitone_offset) % 12), next_info.quality };
-            frame->bass_note = bass_compute_note(c_curr, c_next, hs->current_beat, sub_slot, hs->spice_level);
+            frame->bass_note = bass_compute_styled_note(c_curr, c_next, hs->current_beat, sub_slot, hs->spice_level, b_style);
         }
 
-        // Comping engine trigger (shaped by Fullness: sparse backbeat <35, template 35..70, push stabs >70)
-        uint8_t comp_hit = (gt->comp_mask[step16 % 16] > 0);
-        if (full < 35) {
-            comp_hit = ((hs->current_beat == 1 || hs->current_beat == 3) && sub_slot == 0);
-        } else if (full > 75 && sub_slot == 2 && (hs->current_beat == 1 || hs->current_beat == 3)) {
-            comp_hit = 1;
+        // Comping engine trigger: respects KeysStyle & 2-bar A/B phrasing (Fullness scales dynamics/density gently)
+        uint8_t bar_ab = hs->current_bar & 1u;
+        uint8_t comp_vel_mask = KEYS_STYLE_MASKS[k_style][bar_ab][step16 % 16];
+        uint8_t comp_hit = (comp_vel_mask > 0);
+        if (full < 25) {
+            comp_hit = (hs->current_beat == 1 && sub_slot == 0); // Ultra-sparse: single soft Beat 2 stab
         }
         if (comp_hit || hs->manual_stab_pending) {
             frame->comp_trigger = 1;
-            int base_cv = (gt->comp_mask[step16 % 16] > 0) ? gt->comp_mask[step16 % 16] : 85;
+            int base_cv = (comp_vel_mask > 0) ? comp_vel_mask : 85;
             if (hs->manual_stab_pending) base_cv = 120;
-            int cv = base_cv + j_vel + ((full > 75) ? 12 : (full < 35) ? -18 : 0);
+            int cv = base_cv + j_vel + ((full > 75) ? 10 : (full < 35) ? -18 : 0);
             frame->comp_vel = (uint8_t)((cv < 1) ? 1 : (cv > 127) ? 127 : cv);
             frame->comp_voicing = voice_lead_select(*last_voicing, active_degree, hs->root_semitone, hs->spice_level);
             *last_voicing = frame->comp_voicing;

@@ -25,6 +25,7 @@ typedef struct {
 
 uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t spice);
 Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root_semitone, uint8_t spice);
+void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, GrooveStyle style);
 void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, PerformanceFrame *frame, Voicing *last_voicing);
 
 #endif // BLUES_ARRANGER_H

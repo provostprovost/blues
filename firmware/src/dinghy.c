@@ -256,11 +256,17 @@ static void init_factory_presets(void) {
                 p->spice = 50;
                 p->swing = 65;
                 p->ep_tone_algo = (uint8_t)(i % 12);
-                p->bass_instrument = (uint8_t)(i % 4);
-                p->drum_kit = (uint8_t)(i % 4);
+                p->bass_instrument = (uint8_t)(i % 8);
+                p->drum_kit = (uint8_t)(i % 8);
                 p->lead_instrument = (uint8_t)(i % 8);
                 p->form_mode = (i % 3 == 0) ? FORM_MINOR_BLUES : FORM_12BAR;
                 break;
+        }
+        {
+            uint8_t saved_swing = p->swing;
+            HarmonyState tmp_hs;
+            arranger_apply_groove_defaults(&tmp_hs, p, (GrooveStyle)p->groove_style);
+            p->swing = saved_swing;
         }
     }
 }
@@ -288,6 +294,9 @@ static void app_main(void) {
     g_harmony.root_semitone = g_presets[g_active_preset].root_key;
     g_harmony.spice_level = g_presets[g_active_preset].spice;
     g_harmony.fullness = g_presets[g_active_preset].fullness;
+    g_harmony.bass_style = g_presets[g_active_preset].bass_style;
+    g_harmony.keys_style = g_presets[g_active_preset].keys_style;
+    g_harmony.drum_pattern = g_presets[g_active_preset].drum_pattern;
     g_harmony.form_mode = (FormMode)g_presets[g_active_preset].form_mode;
     g_last_voicing.count = 0;
 

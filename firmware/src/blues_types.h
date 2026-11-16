@@ -80,8 +80,28 @@ typedef enum {
     BASS_P_BASS = 0,
     BASS_UPRIGHT,
     BASS_MUTED_TICTAC,
-    BASS_MOOG_FUNK
+    BASS_MOOG_FUNK,
+    BASS_JAZZ_60S,
+    BASS_FLATWOUND,
+    BASS_AMPEG_GROWL,
+    BASS_SUB_OCTAVE
 } BassInstrument;
+
+typedef enum {
+    BASS_STYLE_WALKING = 0,
+    BASS_STYLE_SHUFFLE_REP,
+    BASS_STYLE_BOOGIE_BOX,
+    BASS_STYLE_ROOT_FIFTH,
+    BASS_STYLE_SYNCOPATED
+} BassStyle;
+
+typedef enum {
+    KEYS_STYLE_CHARLESTON = 0,
+    KEYS_STYLE_BACKBEAT,
+    KEYS_STYLE_CALL_RESP,
+    KEYS_STYLE_PAD,
+    KEYS_STYLE_CHOP_4
+} KeysStyle;
 
 typedef enum {
     KEYS_RHODES = 0,
@@ -102,7 +122,11 @@ typedef enum {
     DRUM_STUDIO = 0,
     DRUM_BRUSH,
     DRUM_RETRO_808,
-    DRUM_STAX_TIGHT
+    DRUM_STAX_TIGHT,
+    DRUM_CHICAGO_ROOM,
+    DRUM_DRY_VINTAGE,
+    DRUM_JAZZ_CLUB,
+    DRUM_HEAVY_ROCK
 } DrumKit;
 
 typedef enum {
@@ -170,6 +194,9 @@ typedef struct {
     uint8_t     cpu_load_pct;
     uint16_t    chorus_count;
     uint8_t     fullness;
+    uint8_t     bass_style;
+    uint8_t     keys_style;
+    uint8_t     drum_pattern;
     char        toast_msg[28];
     uint32_t    toast_until_ms;
 } HarmonyState;
@@ -200,6 +227,9 @@ typedef struct {
     uint8_t  lead_instrument;
     uint8_t  lead_vol;
     uint8_t  fullness;
+    uint8_t  bass_style;
+    uint8_t  keys_style;
+    uint8_t  drum_pattern;
 } PresetConfig;
 
 typedef struct {

@@ -264,33 +264,52 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             int16_t b_third = hal_sine_q15(g_bass.phase * 3);
             int32_t b_sample;
 
-            if (preset->bass_instrument == BASS_UPRIGHT) {
-                // Upright Double Bass: woody fundamental + body slap transient
-                b_sample = (b_fund * 3 / 4) + (b_harm >> 2);
-                if (g_bass.pluck_samples > 0) {
-                    g_bass.pluck_samples--;
-                    b_sample += (int32_t)g_bass.pluck_samples * 6;
+            if (g_bass.pluck_samples > 0) g_bass.pluck_samples--;
+
+            switch (preset->bass_instrument % 8) {
+                case BASS_UPRIGHT:
+                    b_sample = (b_fund * 3 / 4) + (b_harm >> 2);
+                    if (g_bass.pluck_samples > 0) {
+                        b_sample += (int32_t)g_bass.pluck_samples * 6;
+                    }
+                    break;
+                case BASS_MUTED_TICTAC:
+                    b_sample = (b_fund >> 2) + (b_harm >> 1) + (b_third >> 2);
+                    break;
+                case BASS_MOOG_FUNK: {
+                    int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
+                    int32_t saw = (b_fund >> 1) + (b_harm >> 2) + (b_third >> 3) + (b_fourth >> 4);
+                    int32_t cutoff = 3000 + ((g_bass.env_q15 * 24000) >> 15);
+                    g_bass_lp += ((saw - g_bass_lp) * cutoff) >> 15;
+                    b_sample = g_bass_lp;
+                    break;
                 }
-            } else if (preset->bass_instrument == BASS_MUTED_TICTAC) {
-                // Muted Tic-Tac Boogie: tight palm-mute bite with heavy 2nd harmonic
-                if (g_bass.pluck_samples > 0) g_bass.pluck_samples--;
-                b_sample = (b_fund >> 2) + (b_harm >> 1) + (b_third >> 2);
-            } else if (preset->bass_instrument == BASS_MOOG_FUNK) {
-                // Moog Funk: rich analog saw with dynamic envelope filter sweep
-                int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
-                int32_t saw = (b_fund >> 1) + (b_harm >> 2) + (b_third >> 3) + (b_fourth >> 4);
-                int32_t cutoff = 3000 + ((g_bass.env_q15 * 24000) >> 15);
-                g_bass_lp += ((saw - g_bass_lp) * cutoff) >> 15;
-                b_sample = g_bass_lp;
-                if (g_bass.pluck_samples > 0) g_bass.pluck_samples--;
-            } else {
-                // Fender P-Bass (Default): punchy roundwound with initial pluck bite
-                if (g_bass.pluck_samples > 0) {
-                    g_bass.pluck_samples--;
-                    b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
-                } else {
-                    b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 3);
+                case BASS_JAZZ_60S: { // 60s Jazz Bass: bridge pickup mid growl
+                    int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
+                    b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2) + (b_fourth >> 3);
+                    break;
                 }
+                case BASS_FLATWOUND: // Flatwound Motown: warm round fundamental
+                    b_sample = (b_fund * 3 / 4) + (b_harm >> 3) + (b_third >> 4);
+                    break;
+                case BASS_AMPEG_GROWL: { // Ampeg Tube Growl: warm asymmetric saturation
+                    int32_t raw = (b_fund * 3 / 4) + (b_harm >> 1) + (b_third >> 2);
+                    if (raw > 14000) raw = 14000 + ((raw - 14000) >> 2);
+                    else if (raw < -14000) raw = -14000 + ((raw + 14000) >> 2);
+                    b_sample = raw;
+                    break;
+                }
+                case BASS_SUB_OCTAVE: // Sub Octave: deep fundamental + clean octave blend
+                    b_sample = (b_fund * 7 / 8) + (b_harm >> 2);
+                    break;
+                case BASS_P_BASS:
+                default:
+                    if (g_bass.pluck_samples > 0) {
+                        b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
+                    } else {
+                        b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 3);
+                    }
+                    break;
             }
 
             int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
@@ -304,11 +323,17 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 }
             } else if (g_bass.gate_samples > 0) {
                 g_bass.gate_samples--;
-                int32_t decay = 32766; // P-Bass: ~258 ms half-life
-                if (preset->bass_instrument == BASS_MUTED_TICTAC) decay = 32761;      // ~73 ms tight mute
-                else if (preset->bass_instrument == BASS_UPRIGHT)   decay = 32764;      // ~129 ms acoustic woody decay
-                else if (preset->bass_instrument == BASS_MOOG_FUNK) decay = 32765;      // ~172 ms synth pluck
-                g_bass.env_q15 = (g_bass.env_q15 * decay) >> 15;
+                static const int32_t BASS_DECAYS[8] = {
+                    32766, // P-BASS (~258 ms)
+                    32764, // UPRIGHT (~129 ms)
+                    32761, // MUTED BOOGIE (~73 ms)
+                    32765, // MOOG FUNK (~172 ms)
+                    32766, // 60S JAZZ (~258 ms)
+                    32765, // FLATWOUND (~172 ms)
+                    32766, // AMPEG TUBE (~258 ms)
+                    32766  // SUB OCTAVE (~258 ms)
+                };
+                g_bass.env_q15 = (g_bass.env_q15 * BASS_DECAYS[preset->bass_instrument % 8]) >> 15;
             } else {
                 g_bass.env_q15 = (g_bass.env_q15 * 32745) >> 15; // Smooth ~22 ms half-life release tail
             }
@@ -452,21 +477,25 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             }
         }
 
-        // 3. Synthesized Drums (4 Selectable Kits: Studio, Brush, Retro 808, Stax Tight)
+        // 3. Synthesized Drums (8 Selectable Kits)
+        static const uint32_t KICK_BASE_INC[8] = {
+            4380000u, 3200000u, 2200000u, 5100000u,
+            3900000u, 4700000u, 3500000u, 3600000u
+        };
+        static const uint32_t KICK_SWEEP_MUL[8] = {
+            260u, 180u, 320u, 300u,
+            240u, 220u, 190u, 350u
+        };
+        uint8_t dkit = preset->drum_kit % 8;
+
         // Kick (0)
         if (g_drum_env[0] > 0) {
-            uint32_t kick_inc;
-            if (preset->drum_kit == DRUM_BRUSH) {
-                kick_inc = 3200000u + (uint32_t)(g_drum_env[0] * 180);
-            } else if (preset->drum_kit == DRUM_RETRO_808) {
-                kick_inc = 2200000u + (uint32_t)(g_drum_env[0] * 320);
-            } else if (preset->drum_kit == DRUM_STAX_TIGHT) {
-                kick_inc = 5100000u + (uint32_t)(g_drum_env[0] * 300);
-            } else {
-                kick_inc = 4380000u + (uint32_t)(g_drum_env[0] * 260);
-            }
+            uint32_t kick_inc = KICK_BASE_INC[dkit] + (uint32_t)g_drum_env[0] * KICK_SWEEP_MUL[dkit];
             g_drum_pitch[0] += kick_inc;
             int16_t k_sample = hal_sine_q15(g_drum_pitch[0]);
+            if (dkit == DRUM_HEAVY_ROCK) {
+                k_sample = (int16_t)((k_sample * 5 / 4) > 32767 ? 32767 : (k_sample * 5 / 4) < -32767 ? -32767 : (k_sample * 5 / 4));
+            }
             int32_t d0_amp = (g_drum_env[0] * preset->drums_vol) >> 15;
             mix += (k_sample * d0_amp) >> 7;
             g_drum_env[0] = (g_drum_env[0] * g_drum_decay[0]) >> 15;
@@ -477,19 +506,24 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
             int16_t noise_sample = (int16_t)(g_lfsr & 0x7FFF);
             int16_t s_sample;
-            if (preset->drum_kit == DRUM_BRUSH) {
+            static const uint32_t SNARE_BODY_INC[8] = {
+                17540000u, 15000000u, 22000000u, 19500000u,
+                16200000u, 18400000u, 21000000u, 15800000u
+            };
+            g_drum_pitch[1] += SNARE_BODY_INC[dkit];
+            int16_t body = hal_sine_q15(g_drum_pitch[1]);
+
+            if (dkit == DRUM_BRUSH) {
                 s_sample = noise_sample >> 1; // Soft brush swirl
-            } else if (preset->drum_kit == DRUM_RETRO_808) {
-                g_drum_pitch[1] += 22000000u;
-                int16_t body = hal_sine_q15(g_drum_pitch[1]);
+            } else if (dkit == DRUM_RETRO_808) {
                 s_sample = (noise_sample * 3 / 4) + (body >> 2); // Snappy 808 clap/snare
-            } else if (preset->drum_kit == DRUM_STAX_TIGHT) {
-                g_drum_pitch[1] += 19500000u;
-                int16_t body = hal_sine_q15(g_drum_pitch[1]);
-                s_sample = (noise_sample * 5 / 8) + (body >> 1); // Dampened Stax crack
+            } else if (dkit == DRUM_STAX_TIGHT || dkit == DRUM_DRY_VINTAGE) {
+                s_sample = (noise_sample * 5 / 8) + (body >> 1); // Tight dry crack
+            } else if (dkit == DRUM_CHICAGO_ROOM || dkit == DRUM_HEAVY_ROCK) {
+                s_sample = (noise_sample * 3 / 8) + (body * 5 / 8); // Fat woody body
+            } else if (dkit == DRUM_JAZZ_CLUB) {
+                s_sample = (noise_sample * 5 / 8) + (body >> 2); // Crisp snappy jazz snare
             } else {
-                g_drum_pitch[1] += 17540000u;
-                int16_t body = hal_sine_q15(g_drum_pitch[1]);
                 s_sample = (noise_sample >> 1) + (body >> 1); // Studio snare
             }
             int32_t d1_amp = (g_drum_env[1] * preset->drums_vol) >> 15;
@@ -508,9 +542,11 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
 
         // Rimshot (3)
         if (g_drum_env[3] > 0) {
-            uint32_t rim_inc = (preset->drum_kit == DRUM_RETRO_808) ? 16000000u :
-                               ((preset->drum_kit == DRUM_BRUSH) ? 8500000u : 12000000u);
-            g_drum_pitch[3] += rim_inc;
+            static const uint32_t RIM_INC[8] = {
+                12000000u, 8500000u, 16000000u, 13000000u,
+                11000000u, 10500000u, 14500000u, 12500000u
+            };
+            g_drum_pitch[3] += RIM_INC[dkit];
             int16_t r_sample = hal_sine_q15(g_drum_pitch[3]);
             int32_t d3_amp = (g_drum_env[3] * preset->drums_vol) >> 15;
             mix += (r_sample * d3_amp) >> 7;

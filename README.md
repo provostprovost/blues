@@ -7,7 +7,7 @@
 
 Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, walking bass, and comping chords—that follows a real 12-bar form while you solo on guitar or play the built-in 4-voice lead keyboard.
 
-- **Real blues accompaniment:** 8 groove styles, 4 bass engines, 12 chord engines, and 4 drum kits.
+- **Real blues accompaniment:** 8 groove styles, 8 bass engines, 12 chord engines, and 8 drum kits—plus independent bass, keys, and drum rhythm styles.
 - **Playable lead synth:** 8 solo voices across 27 backlit keys with the blues scale lit up under your fingers.
 - **Live jam controls:** Toggle major/minor blues, trigger stop-time breaks, vamp on a chord, or cue a turnaround on the fly.
 - **Save your setup:** Dial in your favorite sound and hit `SAVE` so it boots right back into your jam.
@@ -55,12 +55,12 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | Knob | Normal Turn | Hold `GLO` + Turn | Hold `SEL` + Turn |
 |---|---|---|---|
 | **`MASTER`** | Hardware master volume | — | — |
-| **`SELECT`** | Groove Style (8 styles) | Drum Kit (4 kits) | Blues Form (Major, Quick-Change, 1-4-5, 8-Bar, Minor) |
+| **`SELECT`** | Groove Style (8 styles) | Drum Kit (8 kits) | Blues Form (Major, Quick-Change, 1-4-5, 8-Bar, Minor) |
 | **`PRESETS`** | Solo Lead Voice (8 voices) | Key (`C`–`B`) | Key (`C`–`B`) |
-| **`ALGORITHM`** | Backing Chord Engine (12 engines) | — | — |
-| **`KNOB1`** | Tempo (40–240 BPM)<br>*(Mixer: Bass Volume)* | Swing (0%–100%)<br>*(Mixer: Reverb Mix)* | — |
+| **`ALGORITHM`** | Backing Chord Engine (12 engines) | — | Keys Comping Style (Charleston, Backbeat, Call & Resp, Pad, Chop) |
+| **`KNOB1`** | Tempo (40–240 BPM)<br>*(Mixer: Bass Volume)* | Swing (0%–100%)<br>*(Mixer: Reverb Mix)* | Drum Beat Pattern (8 patterns) |
 | **`KNOB2`** | Spice (0%–100%)<br>*(Mixer: Keys Volume)* | Master Tuning (440 / 432 / 442 Hz)<br>*(Mixer: Spice)* | Fullness (0%–100%, sparse vs. rocking) |
-| **`KNOB3`** | Bass Volume<br>*(Mixer: Drums Volume)* | Bass Engine (4 engines)<br>*(Mixer: Swing)* | — |
+| **`KNOB3`** | Bass Volume<br>*(Mixer: Drums Volume)* | Bass Sound (8 basses)<br>*(Mixer: Swing)* | Bass Line Style (Walking, Shuffle, Boogie, Root-5th, Funk) |
 | **`KNOB4`** | Keys Volume<br>*(Mixer: Lead Volume)* | Reverb Mix<br>*(Mixer: Fullness 0%–100%)* | — |
 
 ### Buttons
@@ -111,8 +111,8 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 - **8 Groove Styles (`SELECT`):** 12/8 Slow Blues, Texas Shuffle, Chicago Swing, Rockin' Blues, New Orleans 2nd Line, Memphis Soul, Rhumba Blues (3-3-2), Boogie-Woogie.
 - **12 Chord Engines (`ALGORITHM`):** Rhodes FM, Bright FM EP, Wurlitzer 200A, Clean B3 Organ, Dirty Gospel B3, Clavinet D6, Archtop Rhythm Guitar, Blues Horns, Honky-Tonk Piano, Tremolo Suitcase EP, Delta Resonator Guitar, Rotary Leslie Organ.
 - **8 Solo Lead Voices (`PRESETS`):** Overdriven Blues Guitar, Chicago Blues Harp, Tenor Sax, Moog Lead, Warm Jazz Hollowbody ("Lucille"), Fuzz Octave, Muted Blues Trumpet, Percussive B3 Organ.
-- **4 Bass Engines (`GLO` + `KNOB3`):** Fender P-Bass, Upright Double Bass, Muted Tic-Tac Boogie, Moog Funk Synth.
-- **4 Drum Kits (`GLO` + `SELECT`):** Studio Punch, Vintage Brush, Retro 808, Stax Tight.
+- **8 Bass Engines (`GLO` + `KNOB3`):** Fender P-Bass, Upright Double Bass, Muted Tic-Tac Boogie, Moog Funk Synth, 60s Jazz Bass, Flatwound Motown, Ampeg Tube Growl, Sub Octave.
+- **8 Drum Kits (`GLO` + `SELECT`):** Studio Punch, Vintage Brush, Retro 808, Stax Tight, Chicago Room, Dry Vintage, Jazz Club, Heavy Blues-Rock.
 
 ---
 
