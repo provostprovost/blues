@@ -9,23 +9,23 @@ static const GrooveTemplate GROOVE_TEMPLATES[8] = {
       {127,0,90,0, 110,0,90,0, 120,0,90,0, 110,0,90,0},
       {100,0,0,0,  90,0,0,0,   100,0,0,0,  90,0,0,0},
       {127,0,100,0, 127,0,100,0, 127,0,100,0, 127,0,100,0} },
-    { GROOVE_CHICAGO_SWING, 60,
+    { GROOVE_CHICAGO_SWING, 55,
       {127,0,0,0,  100,0,0,0,  110,0,0,0,  100,0,0,0},
       {110,0,0,80, 0,0,100,0,  110,0,0,80, 0,0,100,0},
       {127,0,80,0, 127,0,80,0,  127,0,80,0, 127,0,80,0} },
-    { GROOVE_STRAIGHT_ROCK, 50,
+    { GROOVE_STRAIGHT_ROCK, 0,
       {127,0,100,0, 110,0,100,0, 127,0,100,0, 110,0,100,0},
       {127,0,0,0,  0,0,0,0,    127,0,0,0,  0,0,0,0},
       {100,100,100,100, 100,100,100,100, 100,100,100,100, 100,100,100,100} },
-    { GROOVE_SECOND_LINE, 55,
+    { GROOVE_SECOND_LINE, 25,
       {127,0,90,0, 0,90,110,0, 127,0,90,0, 0,90,110,0},
       {100,0,0,90, 0,100,0,0,  100,0,0,90, 0,100,0,0},
       {127,90,100,90, 127,90,100,90, 127,90,100,90, 127,90,100,90} },
-    { GROOVE_MEMPHIS_SOUL, 52,
+    { GROOVE_MEMPHIS_SOUL, 15,
       {127,0,90,0, 0,90,110,0, 127,0,90,0, 0,90,110,0},
       {0,0,100,0,  110,0,0,90, 0,0,100,0,  110,0,0,90},
       {120,80,100,80, 120,80,100,80, 120,80,100,80, 120,80,100,80} },
-    { GROOVE_RHUMBA_BLUES, 50,
+    { GROOVE_RHUMBA_BLUES, 0,
       {127,0,0,100, 0,0,110,0, 127,0,0,100, 0,0,110,0},
       {0,0,90,0,   110,0,0,0,  0,0,90,0,   110,0,0,0},
       {110,70,70,100, 70,70,110,70, 110,70,70,100, 70,70,110,70} },
@@ -225,11 +225,11 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         else if (hs->current_subdiv == 8) sub_slot = 1;
         else if (hs->current_subdiv == 16) sub_slot = 2;
     } else {
-        uint8_t offbeat_subdiv = (uint8_t)((24 * preset->swing) / 100);
+        uint8_t offbeat_subdiv = 12 + (uint8_t)((preset->swing * 6) / 100);
         if (hs->current_subdiv == 0) sub_slot = 0;
-        else if (hs->current_subdiv == 6 && preset->swing < 60) sub_slot = 1;
+        else if (hs->current_subdiv == 6 && preset->swing < 30) sub_slot = 1;
         else if (hs->current_subdiv == offbeat_subdiv) sub_slot = 2;
-        else if (hs->current_subdiv == 18 && preset->swing < 60) sub_slot = 3;
+        else if (hs->current_subdiv == 18 && preset->swing < 30) sub_slot = 3;
     }
 
     if (sub_slot != 0xFF) {

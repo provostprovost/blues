@@ -92,7 +92,7 @@ The 4 lower knobs dynamically re-map when switching between **Lead Sheet View** 
 |---|---|---|---|
 | **Encoder 0** | `SELECT` | **Groove Style**: Cycles 8 groove styles | **Drum Kit**: Studio, Brush, Retro 808, Stax Tight |
 | **Encoder 1** | `ALGORITHM` | **Chord Engine**: 12 electric piano, organ, acoustic piano, guitar & horn engines | — |
-| **Encoder 2** | `KNOB 1` | **Tempo**: Adjusts BPM ($40\text{--}240\text{ BPM}$) | **Swing %**: Adjusts shuffle swing ($50\%\text{--}80\%$) |
+| **Encoder 2** | `KNOB 1` | **Tempo**: Adjusts BPM ($40\text{--}240\text{ BPM}$) | **Swing %**: Adjusts shuffle swing ($0\%\text{--}100\%$) |
 | **Encoder 3** | `KNOB 2` | **Spice Level**: Adjusts harmonic complexity ($0\%\text{--}100\%$) | **Master Tuning**: $440\text{ Hz}$, $432\text{ Hz}$, or $442\text{ Hz}$ |
 | **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Engine**: P-Bass, Upright, Muted Boogie, Moog Funk |
 | **Encoder 5** | `KNOB 4` | **Keys Volume**: Adjusts comping chord level | **Reverb Mix**: Schroeder room reverb wet level |
@@ -104,7 +104,7 @@ On the Band Mixer view, Knobs 1--4 act as dedicated hardware mixing faders:
 |---|---|---|---|
 | **Encoder 2** | `KNOB 1` | **Bass Level**: Adjusts `BASS VOL` | **Reverb Mix**: Schroeder room reverb level |
 | **Encoder 3** | `KNOB 2` | **Keys Level**: Adjusts `KEYS VOL` | **Spice Level**: Harmonic complexity ($0\%\text{--}100\%$) |
-| **Encoder 4** | `KNOB 3` | **Drums Level**: Adjusts `DRUMS VOL` | **Swing %**: Shuffle swing ($50\%\text{--}80\%$) |
+| **Encoder 4** | `KNOB 3` | **Drums Level**: Adjusts `DRUMS VOL` | **Swing %**: Shuffle swing ($0\%\text{--}100\%$) |
 | **Encoder 5** | `KNOB 4` | **Lead Level**: Adjusts `LEAD VOL` | **Master Tuning**: $440\text{ Hz}$, $432\text{ Hz}$, $442\text{ Hz}$ |
 
 ---

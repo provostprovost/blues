@@ -181,7 +181,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_STRAIGHT_ROCK;
                 p->bpm = 140;
                 p->spice = 40;
-                p->swing = 50;
+                p->swing = 0;
                 p->ep_tone_algo = KEYS_CLAVINET;
                 p->bass_instrument = BASS_MUTED_TICTAC;
                 p->drum_kit = DRUM_STUDIO;
@@ -193,7 +193,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_SECOND_LINE;
                 p->bpm = 96;
                 p->spice = 70;
-                p->swing = 55;
+                p->swing = 25;
                 p->ep_tone_algo = KEYS_WURLI;
                 p->bass_instrument = BASS_MOOG_FUNK;
                 p->drum_kit = DRUM_RETRO_808;
@@ -217,7 +217,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_MEMPHIS_SOUL;
                 p->bpm = 104;
                 p->spice = 55;
-                p->swing = 52;
+                p->swing = 15;
                 p->ep_tone_algo = KEYS_TREMOLO_EP;
                 p->bass_instrument = BASS_P_BASS;
                 p->drum_kit = DRUM_STAX_TIGHT;
@@ -229,7 +229,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_RHUMBA_BLUES;
                 p->bpm = 118;
                 p->spice = 50;
-                p->swing = 50;
+                p->swing = 0;
                 p->ep_tone_algo = KEYS_RESONATOR;
                 p->bass_instrument = BASS_P_BASS;
                 p->drum_kit = DRUM_STUDIO;

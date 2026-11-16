@@ -262,8 +262,8 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         } else {
             if (glo_held) {
                 int32_t nsw = (int32_t)p->swing + (delta * 2);
-                if (nsw < 50) nsw = 50;
-                if (nsw > 80) nsw = 80;
+                if (nsw < 0) nsw = 0;
+                if (nsw > 100) nsw = 100;
                 p->swing = (uint8_t)nsw;
             } else {
                 int32_t nb = (int32_t)p->bpm + (delta * 2);
@@ -315,8 +315,8 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         if (is_mixer) {
             if (glo_held) {
                 int32_t nsw = (int32_t)p->swing + (delta * 2);
-                if (nsw < 50) nsw = 50;
-                if (nsw > 80) nsw = 80;
+                if (nsw < 0) nsw = 0;
+                if (nsw > 100) nsw = 100;
                 p->swing = (uint8_t)nsw;
             } else {
                 int32_t nv = (int32_t)p->drums_vol + (delta * 4);
