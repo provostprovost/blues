@@ -1,0 +1,330 @@
+#include "panel_input.h"
+#include "hal_adapter.h"
+#include "dsp_voices.h"
+
+#define ZONE1_COUNT 12u
+#define KEY0_OFFSET 53u // F3 (MIDI 53)
+
+static uint32_t g_prev_key_mask = 0;
+static uint32_t g_last_key_press_ms[ZONE1_COUNT] = {0};
+static uint8_t  g_save_pending = 0;
+static uint32_t g_last_param_change_ms = 0;
+
+void panel_init(void) {
+    g_prev_key_mask = 0;
+    for (uint32_t i = 0; i < ZONE1_COUNT; i++) {
+        g_last_key_press_ms[i] = 0;
+    }
+    g_save_pending = 0;
+    g_last_param_change_ms = 0;
+}
+
+uint8_t panel_check_autosave_needed(uint32_t ms_now) {
+    if (g_save_pending && (ms_now - g_last_param_change_ms >= AUTOSAVE_DEBOUNCE_MS)) {
+        return 1;
+    }
+    return 0;
+}
+
+void panel_clear_autosave_needed(void) {
+    g_save_pending = 0;
+}
+
+void panel_handle_midi_in(HarmonyState *hs, uint8_t status, uint8_t d1, uint8_t d2) {
+    if (status == 0xFA) { // Real-Time Start
+        hs->is_playing = 1;
+        hs->current_bar = 0;
+        hs->current_beat = 0;
+        hs->current_subdiv = 0;
+        hs->ui_dirty = 1;
+        return;
+    }
+    if (status == 0xFC) { // Real-Time Stop
+        hs->is_playing = 0;
+        dsp_all_notes_off();
+        hs->ui_dirty = 1;
+        return;
+    }
+    if (status == 0xF8) { // Real-Time Clock
+        hs->ext_clock_active = 1;
+        hs->ext_clock_ticks_pending++;
+        hs->ext_clock_timeout_ms = 500;
+        return;
+    }
+
+    uint8_t msg_type = status & 0xF0;
+    if (msg_type == 0xB0) { // Control Change
+        switch (d1) {
+            case 64: // Sustain Pedal -> Hold Chord
+                hs->hold_chord_active = (d2 >= 64) ? 1 : 0;
+                hs->ui_dirty = 1;
+                break;
+            case 80: // Footswitch 1 -> Early Turnaround
+                if (d2 >= 64) {
+                    hs->queued_cue = CUE_FORCE_TURNAROUND;
+                    hs->ui_dirty = 1;
+                }
+                break;
+            case 81: // Footswitch 2 -> Stop Time Break
+                if (d2 >= 64) {
+                    hs->queued_cue = CUE_STOP_TIME;
+                    hs->ui_dirty = 1;
+                }
+                break;
+            case 82: // Footswitch 3 -> Vamp Toggle
+                if (d2 >= 64) {
+                    hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP);
+                    hs->ui_dirty = 1;
+                }
+                break;
+            case 83: // Footswitch 4 -> End Song
+                if (d2 >= 64) {
+                    hs->ending_armed = 1;
+                    hs->outro_type = OUTRO_STOP;
+                    hs->ui_dirty = 1;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_preset_idx, uint32_t ms_now, uint8_t *ui_screen) {
+    PresetConfig *p = &presets[*active_preset_idx];
+    uint8_t glo_held = hal_get_glo_held();
+
+    // 1. Buttons
+    uint16_t btn_edges = hal_get_btn_edges();
+    if (btn_edges & (1u << BTN_PLAY)) {
+        hs->is_playing = !hs->is_playing;
+        if (hs->is_playing) {
+            hs->current_bar = 0;
+            hs->current_beat = 0;
+            hs->current_subdiv = 0;
+        } else {
+            dsp_all_notes_off();
+        }
+        hs->ui_dirty = 1;
+    }
+    if (btn_edges & (1u << BTN_REC)) {
+        hs->count_in_enabled = !hs->count_in_enabled;
+        p->count_in_enabled = hs->count_in_enabled;
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+    if (btn_edges & (1u << BTN_HOME)) {
+        if (ui_screen) {
+            *ui_screen = !(*ui_screen);
+            hs->ui_dirty = 1;
+        }
+    }
+    if (btn_edges & (1u << BTN_OCT_DOWN)) {
+        if (p->bpm > 44) p->bpm -= 4;
+        else p->bpm = 40;
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+    if (btn_edges & (1u << BTN_OCT_UP)) {
+        if (p->bpm < 236) p->bpm += 4;
+        else p->bpm = 240;
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+    if (btn_edges & (1u << BTN_SAVE)) {
+        // Immediate explicit preset save
+        p->root_key = hs->root_semitone;
+        p->spice = hs->spice_level;
+        p->form_mode = hs->form_mode;
+        hal_blob_save(0, presets, sizeof(PresetConfig) * NUM_PRESET_SLOTS);
+        g_save_pending = 0;
+        hs->ui_dirty = 1;
+    }
+
+    // 2. Rotary Encoders
+    int8_t delta;
+
+    // ENC_PRESETS (Encoder 6): Select Preset 0..15
+    if ((delta = hal_get_encoder_delta(ENC_PRESETS)) != 0) {
+        int32_t np = (int32_t)(*active_preset_idx) + delta;
+        while (np < 0) np += NUM_PRESET_SLOTS;
+        *active_preset_idx = (uint8_t)(np % NUM_PRESET_SLOTS);
+        PresetConfig *new_p = &presets[*active_preset_idx];
+        hs->root_semitone = new_p->root_key;
+        hs->spice_level = new_p->spice;
+        hs->form_mode = (FormMode)new_p->form_mode;
+        hs->opening_var = (OpeningVar)new_p->opening_var;
+        hs->outro_type = (OutroType)new_p->outro_type;
+        hs->count_in_enabled = new_p->count_in_enabled;
+        hs->ui_dirty = 1;
+    }
+
+    // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..3)
+    if ((delta = hal_get_encoder_delta(ENC_ALGORITHM)) != 0) {
+        int32_t na = (int32_t)p->ep_tone_algo + delta;
+        while (na < 0) na += 4;
+        p->ep_tone_algo = (uint8_t)(na % 4);
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+
+    // ENC_SELECT (Encoder 0): Groove Style (0..4)
+    if ((delta = hal_get_encoder_delta(ENC_SELECT)) != 0) {
+        int32_t ng = (int32_t)p->groove_style + delta;
+        while (ng < 0) ng += 5;
+        p->groove_style = (uint8_t)(ng % 5);
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+
+    // ENC_KNOB1 (Encoder 2): BPM / Swing
+    if ((delta = hal_get_encoder_delta(ENC_KNOB1)) != 0) {
+        if (glo_held) {
+            int32_t nsw = (int32_t)p->swing + (delta * 2);
+            if (nsw < 50) nsw = 50;
+            if (nsw > 80) nsw = 80;
+            p->swing = (uint8_t)nsw;
+        } else {
+            int32_t nb = (int32_t)p->bpm + (delta * 2);
+            if (nb < 40) nb = 40;
+            if (nb > 240) nb = 240;
+            p->bpm = (uint8_t)nb;
+        }
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+
+    // ENC_KNOB2 (Encoder 3): Spice / Tuning
+    if ((delta = hal_get_encoder_delta(ENC_KNOB2)) != 0) {
+        if (glo_held) {
+            int32_t nt = (int32_t)p->master_tuning + delta;
+            while (nt < 0) nt += 3;
+            p->master_tuning = (uint8_t)(nt % 3);
+        } else {
+            int32_t nsp = (int32_t)hs->spice_level + (delta * 5);
+            if (nsp < 0) nsp = 0;
+            if (nsp > 100) nsp = 100;
+            hs->spice_level = (uint8_t)nsp;
+            p->spice = hs->spice_level;
+        }
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+
+    // ENC_KNOB3 (Encoder 4): Bass Volume / Bass Cutoff
+    if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
+        if (glo_held) {
+            int32_t nc = (int32_t)p->bass_cutoff + (delta * 4);
+            if (nc < 0) nc = 0;
+            if (nc > 127) nc = 127;
+            p->bass_cutoff = (uint8_t)nc;
+        } else {
+            int32_t nv = (int32_t)p->bass_vol + (delta * 4);
+            if (nv < 0) nv = 0;
+            if (nv > 127) nv = 127;
+            p->bass_vol = (uint8_t)nv;
+        }
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+
+    // ENC_KNOB4 (Encoder 5): Keys Volume / Reverb Mix
+    if ((delta = hal_get_encoder_delta(ENC_KNOB4)) != 0) {
+        if (glo_held) {
+            int32_t nr = (int32_t)p->reverb_mix + (delta * 4);
+            if (nr < 0) nr = 0;
+            if (nr > 127) nr = 127;
+            p->reverb_mix = (uint8_t)nr;
+        } else {
+            int32_t nv = (int32_t)p->keys_vol + (delta * 4);
+            if (nv < 0) nv = 0;
+            if (nv > 127) nv = 127;
+            p->keys_vol = (uint8_t)nv;
+        }
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
+
+    // 3. Silicone Keys: 27 Keys decoded into 4 Zones
+    uint32_t curr_key_mask = hal_get_keys_mask();
+    uint32_t pressed = curr_key_mask & ~g_prev_key_mask;
+    g_prev_key_mask = curr_key_mask;
+
+    if (pressed) {
+        for (uint8_t k = 0; k < 27; k++) {
+            if (pressed & (1u << k)) {
+                if (k < 12) {
+                    // Zone 1: Root Key Select (Keys 0..11 -> F3..E4)
+                    uint8_t target_semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
+                    if (!hs->is_playing) {
+                        hs->root_semitone = target_semitone;
+                        p->root_key = target_semitone;
+                        hs->has_queued_key = 0;
+                    } else if (ms_now - g_last_key_press_ms[k] <= DOUBLE_TAP_WINDOW_MS) {
+                        // Double Tap: Immediate bar modulation
+                        hs->root_semitone = target_semitone;
+                        p->root_key = target_semitone;
+                        hs->has_queued_key = 0;
+                        hs->mod_next_bar = 0;
+                    } else {
+                        // Single Tap: Queue modulation for next chorus boundary
+                        hs->queued_next_key = target_semitone;
+                        hs->has_queued_key = 1;
+                    }
+                    g_last_key_press_ms[k] = ms_now;
+                    hs->ui_dirty = 1;
+                } else if (k >= 12 && k <= 17) {
+                    // Zone 2: Flow Control Cues
+                    switch (k) {
+                        case 12: hs->queued_cue = CUE_TO_12BAR; break;
+                        case 13: hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP); break;
+                        case 14: hs->queued_cue = CUE_STOP_TIME; break;
+                        case 15: hs->queued_cue = CUE_HOLD_CHORD; break;
+                        case 16: hs->queued_cue = CUE_FORCE_TURNAROUND; break;
+                        case 17: hs->manual_stab_pending = 1; break;
+                    }
+                    hs->ui_dirty = 1;
+                } else if (k >= 18 && k <= 22) {
+                    // Zone 3: Form Variations
+                    switch (k) {
+                        case 18: hs->form_mode = FORM_12BAR; break;
+                        case 19: hs->form_mode = FORM_QUICK_CHANGE; break;
+                        case 20: hs->form_mode = FORM_145_OPENING; break;
+                        case 21: hs->form_mode = FORM_8BAR; break;
+                        case 22: hs->form_mode = FORM_MINOR_BLUES; break;
+                    }
+                    p->form_mode = hs->form_mode;
+                    hs->ui_dirty = 1;
+                    g_save_pending = 1;
+                    g_last_param_change_ms = ms_now;
+                } else if (k >= 23 && k <= 26) {
+                    // Zone 4: Outros & Endings
+                    switch (k) {
+                        case 23: hs->outro_type = OUTRO_STOP; break;
+                        case 24: hs->outro_type = OUTRO_TAG; break;
+                        case 25: hs->outro_type = OUTRO_TRIPLE; break;
+                        case 26: hs->outro_type = OUTRO_CHROMATIC; break;
+                    }
+                    hs->ending_armed = 1;
+                    p->outro_type = hs->outro_type;
+                    hs->ui_dirty = 1;
+                }
+            }
+        }
+    }
+}
+
+void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
+    (void)active_preset_idx;
+    hal_set_btn_led(BTN_PLAY, hs->is_playing ? 1 : 0);
+    hal_set_btn_led(BTN_REC, (hs->is_playing && hs->current_beat == 0) ? 1 : 0);
+}

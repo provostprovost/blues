@@ -14,6 +14,16 @@
 #define COL_DARKGRAY    RGB565(40, 44, 52)
 #define COL_MIDGRAY     RGB565(90, 96, 110)
 
+#ifndef RGB
+#define RGB(r, g, b) ((uint16_t)((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)))
+#endif
+#ifndef C_BLACK
+#define C_BLACK 0x0000u
+#endif
+#ifndef C_WHITE
+#define C_WHITE 0xFFFFu
+#endif
+
 // Encoder Identifiers (matching Dinghy / M-VAVE FM-1)
 #ifndef ENC_SELECT
 #define ENC_SELECT      0
@@ -91,6 +101,11 @@ static inline void hal_draw_text(int x, int y, const char *s, uint16_t fg, uint1
     }
 }
 
+static inline void hal_draw_text_box(int x, int y, int w, int font_sz, const char *s, uint16_t fg, int align) {
+    (void)w; (void)font_sz; (void)align;
+    hal_draw_text(x, y, s, fg, 0);
+}
+
 static inline void hal_dump_ppm(const char *filename) {
     FILE *f = fopen(filename, "wb");
     if (!f) return;
@@ -141,6 +156,9 @@ static inline int16_t  hal_sine_q15(uint32_t phase) {
 static inline uint8_t  hal_lcd_idle(void) { return 1; }
 static inline void     hal_fill_rect(int x, int y, int w, int h, uint16_t col) { lcd_fill(x, y, w, h, col); }
 static inline void     hal_draw_text(int x, int y, const char *s, uint16_t fg, uint16_t bg) { (void)bg; draw_text_box(x, y, 240 - x, &FONT_S, s, fg, 0); }
+static inline void     hal_draw_text_box(int x, int y, int w, int font_sz, const char *s, uint16_t fg, int align) {
+    draw_text_box(x, y, w, font_sz ? &FONT_L : &FONT_S, s, fg, align);
+}
 static inline void     hal_dump_ppm(const char *filename) { (void)filename; }
 
 static inline uint32_t hal_get_note_edges(void) { return fm1_input_note_edges(); }

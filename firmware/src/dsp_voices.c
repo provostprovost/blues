@@ -30,8 +30,9 @@ typedef struct {
     uint32_t phase;
     uint32_t phase_inc;
     int32_t  env_q15;
-    int32_t  svf_low;
-    int32_t  svf_band;
+    int32_t  target_env;
+    uint32_t gate_samples;
+    uint16_t pluck_samples;
     uint8_t  active;
 } BassVoice;
 
@@ -64,9 +65,8 @@ static int32_t   g_eq_lp = 0;
 void dsp_init(void) {
     g_bass.active = 0;
     g_bass.phase = 0;
-    g_bass.svf_low = 0;
-    g_bass.svf_band = 0;
     g_bass.env_q15 = 0;
+    g_bass.gate_samples = 0;
     g_eq_lp = 0;
     for (int k = 0; k < 4; k++) {
         g_keys[k].active = 0;
@@ -103,12 +103,15 @@ static inline uint32_t get_scaled_inc(uint8_t midi_note, uint8_t tuning_mode) {
 
 void dsp_note_on_bass(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) {
     g_bass.phase_inc = get_scaled_inc(midi_note, tuning_mode);
-    g_bass.env_q15 = (int32_t)velocity * 256;
+    g_bass.target_env = (int32_t)velocity * 256;
     if (!g_bass.active) {
         g_bass.phase = 0;
-        g_bass.svf_low = 0;
-        g_bass.svf_band = 0;
+        g_bass.env_q15 = 0;
+    } else {
+        g_bass.env_q15 >>= 1; // Legato tie
     }
+    g_bass.gate_samples = 16000; // ~360 ms walking bass note sustain
+    g_bass.pluck_samples = 2200; // ~50 ms initial pluck snap
     g_bass.active = 1;
 }
 
@@ -158,25 +161,36 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
     for (uint32_t i = 0; i < num_frames; i++) {
         int32_t mix = 0;
 
-        // Bass Synth: Sawtooth + SVF Lowpass
+        // Bass Synth: Multi-Harmonic Precision Bass with Pluck Snap & Anti-Click Attack
         if (g_bass.active) {
             g_bass.phase += g_bass.phase_inc;
-            int32_t raw_saw = (int32_t)((g_bass.phase >> 16) - 32768);
-            int32_t f = 2000 + (preset->bass_cutoff * 120); // 2000..14000 Q15 cutoff
-            int32_t q = 12000;                              // Resonant Q
-            g_bass.svf_low  += (f * g_bass.svf_band) >> 15;
-            int32_t high     = raw_saw - g_bass.svf_low - ((q * g_bass.svf_band) >> 15);
-            g_bass.svf_band += (f * high) >> 15;
+            int16_t b_fund = hal_sine_q15(g_bass.phase);
+            int16_t b_harm = hal_sine_q15(g_bass.phase * 2);
+            int16_t b_third = hal_sine_q15(g_bass.phase * 3);
 
-            if (g_bass.svf_low > 32767) g_bass.svf_low = 32767;
-            if (g_bass.svf_low < -32767) g_bass.svf_low = -32767;
-            if (g_bass.svf_band > 32767) g_bass.svf_band = 32767;
-            if (g_bass.svf_band < -32767) g_bass.svf_band = -32767;
+            int32_t b_sample;
+            if (g_bass.pluck_samples > 0) {
+                g_bass.pluck_samples--;
+                // Accentuate 2nd & 3rd harmonics during initial ~50 ms pick bite
+                b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
+            } else {
+                b_sample = (b_fund * 3) / 5 + (b_harm >> 2) + (b_third >> 3);
+            }
 
             int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
-            mix += (g_bass.svf_low * b_amp) >> 6; // +6 dB boost for single bass voice
+            mix += (b_sample * b_amp) >> 6; // +6 dB punch for driving walking bass line
 
-            g_bass.env_q15 = (g_bass.env_q15 * 32700) >> 15;
+            // Attack micro-ramp (smooth 2 ms ramp up to eliminate note-on click/pop)
+            if (g_bass.env_q15 < g_bass.target_env) {
+                g_bass.env_q15 += (g_bass.target_env - g_bass.env_q15 + 15) >> 4;
+            }
+
+            if (g_bass.gate_samples > 0) {
+                g_bass.gate_samples--;
+                g_bass.env_q15 = (g_bass.env_q15 * 32766) >> 15; // Natural string decay
+            } else {
+                g_bass.env_q15 = (g_bass.env_q15 * 32650) >> 15; // Smooth release
+            }
             if (g_bass.env_q15 < 100) g_bass.active = 0;
         }
 

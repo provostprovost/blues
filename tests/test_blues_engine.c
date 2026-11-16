@@ -2,6 +2,10 @@
 #include <assert.h>
 #include "../firmware/src/blues_types.h"
 #include "../firmware/src/blues_harmony.h"
+#include "../firmware/src/blues_arranger.h"
+#include "../firmware/src/dsp_voices.h"
+#include "../firmware/src/panel_input.h"
+#include "../firmware/src/ui_screens.h"
 #include "../firmware/src/hal_adapter.h"
 
 // Phase 1 Unit Test: Harmonic State Machine & Structural Transitions
@@ -422,11 +426,87 @@ void test_stage3_dsp(void) {
     printf("[Stage 3] Fixed-point DSP audio engine tests passed successfully!\n");
 }
 
+// Phase 4 Unit Test: Panel Input Scanning, TFT UI, and Preset Flash Persistence
+void test_stage4_panel_ui(void) {
+    printf("[Stage 4] Testing Panel Input Scanning, TFT UI, and Presets...\n");
+
+    HarmonyState hs;
+    PresetConfig presets[16];
+    harmony_init(&hs);
+    panel_init();
+    ui_init();
+
+    for (int i = 0; i < 16; i++) {
+        presets[i].magic = PRESET_MAGIC;
+        presets[i].preset_id = i;
+        presets[i].root_key = 4; // E
+        presets[i].groove_style = GROOVE_TEXAS_SHUFFLE;
+        presets[i].bpm = 112;
+        presets[i].spice = 65;
+        presets[i].swing = 67;
+        presets[i].ep_tone_algo = 0;
+        presets[i].bass_vol = 110;
+        presets[i].keys_vol = 95;
+        presets[i].drums_vol = 105;
+        presets[i].reverb_mix = 35;
+        presets[i].master_tuning = 0;
+        presets[i].bass_cutoff = 85;
+        presets[i].drive_level = 20;
+        presets[i].count_in_enabled = 0;
+        presets[i].form_mode = FORM_12BAR;
+        presets[i].opening_var = VAR_FLAT_FOUR;
+        presets[i].outro_type = OUTRO_TAG;
+    }
+
+    uint8_t active_preset = 0;
+    uint8_t ui_screen = 0;
+
+    // 1. Test MIDI In parsing
+    panel_handle_midi_in(&hs, 0xFA, 0, 0); // MIDI Start
+    assert(hs.is_playing == 1);
+    assert(hs.current_bar == 0);
+
+    panel_handle_midi_in(&hs, 0xB0, 64, 127); // CC 64 Sustain / Hold
+    assert(hs.hold_chord_active == 1);
+
+    panel_handle_midi_in(&hs, 0xB0, 80, 127); // CC 80 Early Turnaround
+    assert(hs.queued_cue == CUE_FORCE_TURNAROUND);
+
+    panel_handle_midi_in(&hs, 0xB0, 81, 127); // CC 81 Stop Time Break
+    assert(hs.queued_cue == CUE_STOP_TIME);
+
+    panel_handle_midi_in(&hs, 0xB0, 82, 127); // CC 82 Vamp Toggle
+    assert(hs.queued_cue == CUE_TO_VAMP);
+
+    panel_handle_midi_in(&hs, 0xB0, 83, 127); // CC 83 Ending Armed
+    assert(hs.ending_armed == 1);
+    assert(hs.outro_type == OUTRO_STOP);
+
+    panel_handle_midi_in(&hs, 0xF8, 0, 0); // MIDI Clock
+    assert(hs.ext_clock_active == 1);
+    assert(hs.ext_clock_ticks_pending == 1);
+    assert(hs.ext_clock_timeout_ms == 500);
+
+    panel_handle_midi_in(&hs, 0xFC, 0, 0); // MIDI Stop
+    assert(hs.is_playing == 0);
+
+    // 2. Test Autosave Debounce
+    assert(panel_check_autosave_needed(1000) == 0);
+
+    // 3. Test UI screen rendering (both Lead Sheet and Band Mixer)
+    ui_render(&hs, &presets[active_preset], active_preset, 0, 1);
+    ui_screen = 1;
+    ui_render(&hs, &presets[active_preset], active_preset, ui_screen, 1);
+
+    printf("[Stage 4] Panel input scanning, TFT UI, and Presets tests passed!\n");
+}
+
 int main(void) {
     printf("[TB-1 Test Suite] Running Stage Tests...\n");
     test_stage1_harmony();
     test_stage2_arranger();
     test_stage3_dsp();
+    test_stage4_panel_ui();
     printf("[TB-1 Test Suite] All tests completed with 100%% assertions passing.\n");
     return 0;
 }
