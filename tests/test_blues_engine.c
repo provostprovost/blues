@@ -326,10 +326,107 @@ void test_stage2_arranger(void) {
     printf("[Stage 2] Arranger & voice-leading tests passed successfully!\n");
 }
 
+#include "../firmware/src/dsp_voices.h"
+
+// Phase 3 Unit Test: Fixed-Point DSP Engine & Polyphonic Voices
+void test_stage3_dsp(void) {
+    printf("[Stage 3] Testing Fixed-Point DSP Audio Engine...\n");
+
+    dsp_init();
+
+    PresetConfig preset;
+    preset.bpm = 112;
+    preset.groove_style = GROOVE_TEXAS_SHUFFLE;
+    preset.swing = 67;
+    preset.spice = 65;
+    preset.bass_vol = 127;
+    preset.keys_vol = 127;
+    preset.drums_vol = 127;
+    preset.reverb_mix = 127;
+    preset.drive_level = 100;
+    preset.bass_cutoff = 100;
+    preset.master_tuning = 0; // 440 Hz
+    preset.ep_tone_algo = 0;
+
+    int32_t buf[256 * 2];
+
+    // 1. Test all 4 EP tone algorithms under maximum polyphony (1000 blocks total = 250 blocks * 4 algos)
+    for (uint8_t algo = 0; algo < 4; algo++) {
+        preset.ep_tone_algo = algo;
+        dsp_init();
+
+        // Trigger Bass Note
+        dsp_note_on_bass(36, 127, preset.master_tuning);
+
+        // Trigger 4-note Voicing
+        Voicing v = { { 48, 52, 55, 59 }, 4 };
+        dsp_note_on_keys(&v, 127, preset.master_tuning);
+
+        // Trigger all 4 drums (Kick, Snare, Hat, Rimshot)
+        uint8_t dvel[4] = { 127, 127, 127, 127 };
+        dsp_trigger_drum(0x0F, dvel, 1);
+
+        int64_t energy_sum = 0;
+
+        // Render 250 blocks (at 256 frames each = 64,000 frames)
+        for (int blk = 0; blk < 250; blk++) {
+            for (int i = 0; i < 256 * 2; i++) buf[i] = 0;
+            dsp_render_block(buf, 256, &preset);
+
+            for (int i = 0; i < 256 * 2; i++) {
+                int32_t sample = buf[i];
+                // Assert no overflow or crazy values: soft saturator bounds output
+                assert(sample >= -32767 && sample <= 32767);
+                energy_sum += (sample < 0) ? -sample : sample;
+            }
+        }
+        // Assert non-zero audio energy was rendered
+        assert(energy_sum > 0);
+    }
+
+    // 2. Test tuning modes: 440 Hz, 432 Hz, 442 Hz
+    for (uint8_t tune = 0; tune < 3; tune++) {
+        dsp_init();
+        dsp_note_on_bass(40, 100, tune);
+        for (int i = 0; i < 256 * 2; i++) buf[i] = 0;
+        dsp_render_block(buf, 256, &preset);
+        int64_t sum = 0;
+        for (int i = 0; i < 256 * 2; i++) sum += (buf[i] < 0) ? -buf[i] : buf[i];
+        assert(sum > 0);
+    }
+
+    // 3. Test dsp_all_notes_off() and smooth reverb decay to zero
+    dsp_init();
+    dsp_note_on_bass(36, 127, 0);
+    uint8_t dvel[4] = { 127, 127, 127, 127 };
+    dsp_trigger_drum(0x0F, dvel, 0);
+    for (int i = 0; i < 256 * 2; i++) buf[i] = 0;
+    dsp_render_block(buf, 256, &preset);
+
+    // Call all notes off
+    dsp_all_notes_off();
+
+    // Reverb tail must decay over time
+    for (int blk = 0; blk < 200; blk++) {
+        for (int i = 0; i < 256 * 2; i++) buf[i] = 0;
+        dsp_render_block(buf, 256, &preset);
+    }
+    // In the last block, audio must have decayed to zero
+    int32_t last_block_max = 0;
+    for (int i = 0; i < 256 * 2; i++) {
+        int32_t abs_s = (buf[i] < 0) ? -buf[i] : buf[i];
+        if (abs_s > last_block_max) last_block_max = abs_s;
+    }
+    assert(last_block_max == 0); // Decays completely to zero without DC offset!
+
+    printf("[Stage 3] Fixed-point DSP audio engine tests passed successfully!\n");
+}
+
 int main(void) {
     printf("[TB-1 Test Suite] Running Stage Tests...\n");
     test_stage1_harmony();
     test_stage2_arranger();
+    test_stage3_dsp();
     printf("[TB-1 Test Suite] All tests completed with 100%% assertions passing.\n");
     return 0;
 }

@@ -64,10 +64,11 @@ static inline uint32_t hal_ticks(void) { return 0; }
 static inline void hal_poll(void) {}
 
 static inline int16_t hal_sine_q15(uint32_t phase) {
-    int32_t x = (int32_t)(phase >> 16) - 32768;
-    int32_t ax = (x < 0) ? -x : x;
-    int32_t y = ((32768 - ax) >> 1) * (ax >> 12);
-    return (x < 0) ? (int16_t)y : (int16_t)(-y);
+    int32_t x = (int32_t)phase >> 16, ax = x < 0 ? -x : x, y, ay;
+    y = (x * (32768 - ax)) >> 13;
+    ay = y < 0 ? -y : y;
+    y += ((((y * ay) >> 15) - y) * 7373) >> 15;
+    return (int16_t)(y > 32767 ? 32767 : y < -32767 ? -32767 : y);
 }
 
 static inline uint8_t hal_lcd_idle(void) { return 1; }
@@ -122,16 +123,21 @@ static inline int      hal_settings_load(void *data, uint16_t len) { (void)data;
 
 #else
 
-// Target build running inside Dinghy framework
-#include "platform.h"
-#include "hal/fm1_input.h"
+// Target build running inside Dinghy framework (platform.c already included in translation unit)
+#include "fm1_input.h"
 
 static inline uint32_t hal_millis(void) { return fm1_ms; }
 static inline uint32_t hal_ticks(void) { return fm1_ticks(); }
 #define HAL_TICKS_PER_US FM1_TICKS_PER_US
 
 static inline void     hal_poll(void) { platform_poll(); }
-static inline int16_t  hal_sine_q15(uint32_t phase) { return (int16_t)sine(phase); }
+static inline int16_t  hal_sine_q15(uint32_t phase) {
+    int32_t x = (int32_t)phase >> 16, ax = x < 0 ? -x : x, y, ay;
+    y = (x * (32768 - ax)) >> 13;
+    ay = y < 0 ? -y : y;
+    y += ((((y * ay) >> 15) - y) * 7373) >> 15;
+    return (int16_t)(y > 32767 ? 32767 : y < -32767 ? -32767 : y);
+}
 static inline uint8_t  hal_lcd_idle(void) { return 1; }
 static inline void     hal_fill_rect(int x, int y, int w, int h, uint16_t col) { lcd_fill(x, y, w, h, col); }
 static inline void     hal_draw_text(int x, int y, const char *s, uint16_t fg, uint16_t bg) { (void)bg; draw_text_box(x, y, 240 - x, &FONT_S, s, fg, 0); }

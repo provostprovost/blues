@@ -1,0 +1,15 @@
+#ifndef DSP_VOICES_H
+#define DSP_VOICES_H
+
+#include <stdint.h>
+#include "blues_types.h"
+#include "blues_arranger.h"
+
+void dsp_init(void);
+void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *preset);
+void dsp_note_on_bass(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode);
+void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_mode);
+void dsp_trigger_drum(uint8_t mask, const uint8_t *drum_vel, uint8_t open_hat);
+void dsp_all_notes_off(void);
+
+#endif // DSP_VOICES_H
