@@ -18,21 +18,26 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 ---
 
-## Quick Start (60 Seconds)
+## Quick Start (Web Installer — No Setup Required)
 
 > **Compatibility & Backup:** Built and tested on the **M-VAVE FM-1** (original hardware). Before flashing custom firmware, back up any stock FM-1 patterns/presets you want to keep using M-Vave's desktop/web tool. You can restore stock firmware anytime (see [Recovery](#recovery--restoring-stock-firmware)).
 
-1. Install Python dependencies:
-   ```bash
-   pip install mido python-rtmidi
-   ```
-2. Plug the FM-1 into your computer with a USB-C data cable and power it on.
-3. Download **`bluesbox.fwsc`** from the [Releases page](https://github.com/provostprovost/blues/releases) *(or clone the repo and run `./build.sh` first)*, then flash it:
+1. Plug the FM-1 into your computer with a USB-C data cable and power it on.
+2. Open the **[Blues Box Web Installer](https://provostprovost.github.io/blues/)** in **Chrome, Edge, or Opera** and click **Connect & Install Blues Box** *(zero Python or CLI setup needed)*.
+
+<details>
+<summary>Alternative: Flash from CLI (Python)</summary>
+
+1. `pip install mido python-rtmidi`
+2. Download **`bluesbox.fwsc`** from the [Releases page](https://github.com/provostprovost/blues/releases) *(or run `./build.sh`)*, then flash:
    ```bash
    python3 tools/fm1_install.py bluesbox.fwsc --yes
    ```
-4. Once the FM-1 reboots, press **`PLAY/STOP`** to start the band.
-5. Turn **`SELECT`** to change the groove, **`KNOB1`** for tempo, **`ALGORITHM`** for chords, and **`PRESETS`** for the lead keyboard sound.
+
+</details>
+
+3. Once the FM-1 reboots, press **`PLAY/STOP`** to start the band.
+4. Turn **`SELECT`** to change the groove, **`KNOB1`** for tempo, **`ALGORITHM`** for chords, and **`PRESETS`** for the lead keyboard sound.
 
 ---
 
