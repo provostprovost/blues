@@ -1,6 +1,7 @@
 #include "panel_input.h"
 #include "hal_adapter.h"
 #include "dsp_voices.h"
+#include "blues_harmony.h"
 
 #define ZONE1_COUNT 12u
 #define KEY0_OFFSET 53u // F3 (MIDI 53)
@@ -478,15 +479,42 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
 void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     (void)active_preset_idx;
     hal_set_btn_led(BTN_PLAY, hs->is_playing ? 1 : 0);
-    hal_set_btn_led(BTN_REC, (hs->is_playing && hs->current_beat == 0) ? 1 : 0);
+    hal_set_btn_led(BTN_REC, (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4) ? 1 : 0);
 
     uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
+    uint8_t root_blink = (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4);
 
     if (hs->is_playing && !sel_held) {
-        // Crisp single-scale LED guide: Major Blues in major forms, Minor Blues in minor form
+        // Chord-following blues LED guide: base scale + missing target notes of the active bar's chord
         static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6
         static const uint8_t MIN_BLUES[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7
-        const uint8_t *active_scale = (hs->form_mode == FORM_MINOR_BLUES) ? MIN_BLUES : MAJ_BLUES;
+        uint8_t is_minor = (hs->form_mode == FORM_MINOR_BLUES);
+        const uint8_t *base = is_minor ? MIN_BLUES : MAJ_BLUES;
+
+        uint8_t scale[12];
+        for (uint8_t i = 0; i < 12; i++) scale[i] = base[i];
+
+        BarSlot slot = harmony_get_current_bar_slot(hs);
+        ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
+        if (!is_minor) {
+            if (deg == DEG_IV7 || deg == DEG_iv7) {
+                scale[5] = 1; // 4 (IV7 root)
+            } else if (deg == DEG_V7 || deg == DEG_v7) {
+                scale[5] = 1; scale[11] = 1; // 4 (V7 b7) + 7 (V7 3rd)
+            } else if (deg == DEG_bVI7) {
+                scale[8] = 1; // b6
+            } else if (deg == DEG_bVII7) {
+                scale[10] = 1; // b7
+            } else if (deg == DEG_SHARP_IV_DIM7) {
+                scale[6] = 1; // #4
+            }
+        } else {
+            if (deg == DEG_iv7 || deg == DEG_IV7 || deg == DEG_bVI7) {
+                scale[8] = 1; // b6 (iv7 3rd / bVI7 root)
+            } else if (deg == DEG_V7) {
+                scale[11] = 1; // 7 (V7 major 3rd)
+            }
+        }
 
         for (uint8_t k = 0; k < 27; k++) {
             int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
@@ -494,8 +522,8 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
             uint8_t interval = (uint8_t)((note + 12 - hs->root_semitone) % 12);
 
             hal_set_key_led_glow(k, 0);
-            if (active_scale[interval]) {
-                uint8_t pulse_off = (interval == 0 && hs->current_beat == 0);
+            if (scale[interval]) {
+                uint8_t pulse_off = (interval == 0 && root_blink);
                 hal_set_key_led(k, pulse_off ? 0 : 1);
             } else {
                 hal_set_key_led(k, 0);
@@ -507,7 +535,7 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
             hal_set_key_led_glow(k, 0);
             if (k < 12) {
                 uint8_t semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
-                if (semitone == hs->root_semitone && hs->is_playing && hs->current_beat == 0) {
+                if (semitone == hs->root_semitone && root_blink) {
                     hal_set_key_led(k, 0);
                 } else {
                     hal_set_key_led(k, 1);
