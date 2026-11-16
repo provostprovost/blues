@@ -125,8 +125,8 @@ static void init_factory_presets(void) {
         p->magic = PRESET_MAGIC;
         p->preset_id = i;
         p->master_tuning = 0; // 440 Hz
-        p->bass_vol = 110;
-        p->keys_vol = 95;
+        p->bass_vol = 115;
+        p->keys_vol = 70;
         p->drums_vol = 105;
         p->lead_vol = 115;
         p->reverb_mix = 35;

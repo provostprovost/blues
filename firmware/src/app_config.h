@@ -14,7 +14,7 @@
 #define NUM_PRESET_SLOTS          16
 #define PRESET_BLOB_SLOT          0
 #define SETTINGS_MAGIC            0x54423130u /* 'TB10' */
-#define PRESET_MAGIC              0x5Cu
+#define PRESET_MAGIC              0x5Du
 #define AUTOSAVE_DEBOUNCE_MS      2000
 #define DOUBLE_TAP_WINDOW_MS      250
 

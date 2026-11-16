@@ -145,7 +145,7 @@ void dsp_note_on_bass(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) 
     } else {
         g_bass.env_q15 >>= 1; // Legato tie
     }
-    g_bass.gate_samples = 11000; // ~250 ms plucked walking bass gate
+    g_bass.gate_samples = 17640; // ~400 ms walking bass gate
     g_bass.pluck_samples = 2200; // ~50 ms initial pluck snap
     g_bass.active = 1;
 }
@@ -304,13 +304,13 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 }
             } else if (g_bass.gate_samples > 0) {
                 g_bass.gate_samples--;
-                int32_t decay = 32725; // P-Bass: ~200 ms half-life
-                if (preset->bass_instrument == BASS_MUTED_TICTAC) decay = 32620;      // ~80 ms tight mute
-                else if (preset->bass_instrument == BASS_UPRIGHT)   decay = 32710;      // ~150 ms acoustic woody decay
-                else if (preset->bass_instrument == BASS_MOOG_FUNK) decay = 32715;      // ~160 ms synth pluck
+                int32_t decay = 32766; // P-Bass: ~258 ms half-life
+                if (preset->bass_instrument == BASS_MUTED_TICTAC) decay = 32761;      // ~73 ms tight mute
+                else if (preset->bass_instrument == BASS_UPRIGHT)   decay = 32764;      // ~129 ms acoustic woody decay
+                else if (preset->bass_instrument == BASS_MOOG_FUNK) decay = 32765;      // ~172 ms synth pluck
                 g_bass.env_q15 = (g_bass.env_q15 * decay) >> 15;
             } else {
-                g_bass.env_q15 = (g_bass.env_q15 * 32500) >> 15; // Smooth ~45 ms release tail
+                g_bass.env_q15 = (g_bass.env_q15 * 32745) >> 15; // Smooth ~22 ms half-life release tail
             }
             if (g_bass.target_env == 0 && g_bass.env_q15 < 100) g_bass.active = 0;
         }
