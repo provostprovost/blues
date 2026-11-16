@@ -24,5 +24,5 @@ jobs:
         BOARD=smk37 MODEL=elite sh build.sh --release "$V"
         BOARD=smk37 MODEL=mke sh build.sh --release "$V"
         sh build.sh --release "$V"
-      tests: sh tests/run_tests.sh
+        sh tests/run_tests.sh
       packages: build/bluesbox-[0-9]*.fwsc
