@@ -64,22 +64,22 @@ Everything runs entirely on the internal 240 MHz RISC microcontroller using pure
 ```
 +-------------------------------------------------------------+
 |   [SELECT]          [ALGORITHM]           [PRESETS]         |
-|  (Groove Style)   (Keys Sound Engine)   (Preset / Key)      |
+| (Groove / Drum)   (Chord Engine)        (Lead / Key)        |
 |                                                             |
 |       +---------------------------------------------+       |
 |       |       240x240 RGB565 COLOR TFT LCD          |       |
 |       |  • 12-Bar Lead Sheet with Beat Pips         |       |
-|       |  • 8-Channel Mixer with Level Meters        |       |
+|       |  • 7-Channel Band Mixer with Level Meters   |       |
 |       +---------------------------------------------+       |
 |                                                             |
 |   [KNOB 1]          [KNOB 2]          [KNOB 3]     [KNOB 4] |
-| (BPM / Swing)     (Spice / Tune)    (Bass / Tone) (Keys/Rev)|
+| (BPM / Bass)      (Spice / Keys)    (Bass / Drums)(Keys / Lead)|
 |                                                             |
 | [PLAY] [REC] [OCT-] [OCT+] [HOME] [SAVE] [GLO] [ARP] [FX]   |
 | [EDIT] [ENV] [SEQ]  [LFO]  [SEL]                            |
 |                                                             |
-|  [F3] [F#3] [G3] [Ab3] [A3] [Bb3] [B3] [C4] [C#4] [D4]...   |
-|  (27 White Backlit Silicone Keys with Beat-1 Pulse)         |
+|  [F4] [F#4] [G4] [Ab4] [A4] [Bb4] [B4] [C5] [C#5] [D5]...   |
+|  (27 White Backlit Silicone Keys with Blues Scale & Pulse)  |
 +-------------------------------------------------------------+
 ```
 
@@ -241,7 +241,7 @@ Controlled via **Encoder 3 (`KNOB 2`)** from $0\%$ to $100\%$:
 
 - **Key Persistence**: The active musical key is **strictly decoupled from preset switching**. You can jam in the key of **E**, browse through all 16 presets (switching between Texas Shuffle, Slow 12/8, Chicago Swing, and Funk), and every preset will immediately play in **E** without interrupting your flow.
 - **Presets 0 to 15**: Full accompaniment snapshots (groove style, tempo, swing %, EP algorithm, spice level, and mixer balances).
-- **Instant Save**: Press **`SAVE`** at any time to commit your current settings to the FM-1's non-volatile onboard flash storage.
+- **Instant Save**: Press **`SAVE`** at any time to commit your current settings to the FM-1's non-volatile onboard flash storage. Background autosaving is intentionally disabled to protect your presets from accidental overwrites during live jamming.
 
 ---
 
