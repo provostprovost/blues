@@ -483,28 +483,22 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
 
     if (hs->is_playing && !sel_held) {
-        // Composite Blues LED guide: home scale at full brightness, crossover blues notes dim (~1/24)
+        // Crisp single-scale LED guide: Major Blues in major forms, Minor Blues in minor form
         static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6
         static const uint8_t MIN_BLUES[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7
-        uint8_t is_minor = (hs->form_mode == FORM_MINOR_BLUES);
-        const uint8_t *primary_scale   = is_minor ? MIN_BLUES : MAJ_BLUES;
-        const uint8_t *secondary_scale = is_minor ? MAJ_BLUES : MIN_BLUES;
+        const uint8_t *active_scale = (hs->form_mode == FORM_MINOR_BLUES) ? MIN_BLUES : MAJ_BLUES;
 
         for (uint8_t k = 0; k < 27; k++) {
             int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
             uint8_t note = (uint8_t)((note_val < 0) ? 0 : (note_val > 127) ? 127 : note_val);
             uint8_t interval = (uint8_t)((note + 12 - hs->root_semitone) % 12);
 
-            if (primary_scale[interval]) {
+            hal_set_key_led_glow(k, 0);
+            if (active_scale[interval]) {
                 uint8_t pulse_off = (interval == 0 && hs->current_beat == 0);
                 hal_set_key_led(k, pulse_off ? 0 : 1);
-                hal_set_key_led_glow(k, 0);
-            } else if (secondary_scale[interval]) {
-                hal_set_key_led(k, 0);
-                hal_set_key_led_glow(k, 1);
             } else {
                 hal_set_key_led(k, 0);
-                hal_set_key_led_glow(k, 0);
             }
         }
     } else {
