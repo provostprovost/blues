@@ -87,13 +87,13 @@ Everything runs entirely on the internal 240 MHz RISC microcontroller using pure
 
 | Encoder | Label | Primary Function (Turn) | Secondary Function (Hold `GLO` + Turn) |
 |---|---|---|---|
-| **Encoder 0** | `SELECT` | **Groove Style**: Cycles through the 5 groove styles | — |
-| **Encoder 1** | `ALGORITHM` | **Keys Engine**: Rhodes FM, Bright EP, B3 Organ, Clavinet | — |
+| **Encoder 0** | `SELECT` | **Groove Style**: Cycles 5 groove styles | **Drum Kit**: Studio Punch, Vintage Brush, Retro 808 |
+| **Encoder 1** | `ALGORITHM` | **Chord Engine**: 8 classic electric piano, organ, guitar & horn engines | — |
 | **Encoder 2** | `KNOB 1` | **Tempo**: Adjusts BPM ($40\text{--}240\text{ BPM}$) | **Swing %**: Adjusts shuffle swing ($50\%\text{--}80\%$) |
-| **Encoder 3** | `KNOB 2` | **Spice Level**: Adjusts harmonic/rhythmic complexity ($0\%\text{--}100\%$) | **Master Tuning**: $440\text{ Hz}$, $432\text{ Hz}$, or $442\text{ Hz}$ |
-| **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Tone**: Low-pass cutoff filter ($30\%\text{--}100\%$) |
+| **Encoder 3** | `KNOB 2` | **Spice Level**: Adjusts harmonic complexity ($0\%\text{--}100\%$) | **Master Tuning**: $440\text{ Hz}$, $432\text{ Hz}$, or $442\text{ Hz}$ |
+| **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Engine**: P-Bass, Upright, Muted Boogie, Moog Funk |
 | **Encoder 5** | `KNOB 4` | **Keys Volume**: Adjusts comping chord level | **Reverb Mix**: Schroeder room reverb wet level |
-| **Encoder 6** | `PRESETS` | **Preset Slot**: Selects Presets 0--15 (preserves key) | **Key Select** (Hold `SEL`): Scrolls chromatic keys |
+| **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: Blues Guitar, Harp, Tenor Sax, Moog | **Key Select** (Hold `SEL` or `GLO`): Scrolls keys `C..B` |
 
 ---
 
@@ -120,18 +120,24 @@ All 14 front-panel buttons have dedicated functions:
 
 ---
 
-### 27 Backlit Silicone Keys
+### 27 Backlit Silicone Keys & Live Solo Keyboard
 
-The silicone keyboard is fully backlit with individual white LEDs. The LED under the active root key **pulses as a visual heartbeat metronome on Beat 1** of every measure.
+The 27 silicone keys serve dual roles: a **live playable solo lead keyboard** during playback, and a **section & key navigation matrix** when stopped or holding `SEL`.
 
+#### 1. Live Playable Solo Keyboard (During Playback)
+- **2-Octave Lead Register ($F_4\text{--}G_6$, MIDI 65--91)**: Pressing any silicone key triggers the dedicated **5th DSP Lead Voice** with expressive legato portamento transitions and delayed blues vibrato.
+- **Minor Blues Scale LED Guide**: All 27 keys feature individually addressable white LEDs. During playback, LEDs illuminate **strictly under notes of the Minor Blues Scale** (`1, b3, 4, b5, 5, b7` relative to the active root key), providing an instant visual fretboard for soloing.
+- **Beat 1 Visual Heartbeat**: The root key's LED pulses on Beat 1 of every measure for rock-solid visual timing.
+- **Note Auditioning**: When stopped, pressing any key lets you audition lead instruments and notes immediately.
+
+#### 2. Section Navigation & Form Controls (Hold `SEL` or when Stopped)
 - **Keys 0 to 11 (Chromatic Key Select)**:
-  - Tapping any key immediately sets the jam key:
-    `Key 0 = F`, `Key 1 = F#`, `Key 2 = G`, `Key 3 = Ab`, `Key 4 = A`, `Key 5 = Bb`, `Key 6 = B`, `Key 7 = C`, `Key 8 = C#`, `Key 9 = D`, `Key 10 = Eb`, `Key 11 = E`.
+  - `Key 0 = F`, `Key 1 = F#`, `Key 2 = G`, `Key 3 = Ab`, `Key 4 = A`, `Key 5 = Bb`, `Key 6 = B`, `Key 7 = C`, `Key 8 = C#`, `Key 9 = D`, `Key 10 = Eb`, `Key 11 = E`.
   - **Single Tap while playing**: Queues key modulation seamlessly at the start of the next 12-bar chorus.
   - **Double Tap (< 250 ms) while playing**: Executes an immediate in-bar key modulation.
 - **Keys 12 to 17 (Live Performance Cues)**:
   - Key 12: Return to Standard 12-Bar Form
-  - Key 13: Vamp Toggle
+  - Key 13: Vamp Toggle (freeze on current chord)
   - Key 14: 4-Bar Stop-Time Break
   - Key 15: Chord Hold
   - Key 16: Immediate Turnaround (Jump to Bar 9)
@@ -139,7 +145,7 @@ The silicone keyboard is fully backlit with individual white LEDs. The LED under
 - **Keys 18 to 22 (Form Variations)**:
   - Standard 12-Bar, Quick-Change (IV in Bar 2), 1-4-5 Blues, 8-Bar Blues, Minor Blues.
 - **Keys 23 to 26 (Outro Cadences)**:
-  - Armed outro triggers: Immediate Stop, Tag Ending, Triple Turnaround, Chromatic Slide Outro.
+  - Immediate Stop, Tag Ending, Triple Turnaround, Chromatic Slide Outro.
 
 ---
 
@@ -150,43 +156,59 @@ Press **`HOME`** to toggle between the two non-blocking 240x240 RGB TFT screens:
 ### 1. 12-Bar Lead Sheet View
 - Displays the complete 12-bar chord grid with large, easy-to-read chord symbols (e.g. `E7`, `A7`, `B7`).
 - **Differential Tile Rendering**: Zero screen flicker. The active measure box highlights in amber, and 4 beat pips track the groove in real time.
-- Status bar displays: `KEY: E`, `TEMPO: 112`, `STYLE: TEXAS SHUFFLE`, `SPICE: 65%`, and active cues (`VAMP`, `TURNAROUND`, `STOP-TIME`).
+- **Header**: Active Groove Style & Drum Kit (e.g. `TX SHUFFLE [STUDIO]`), Session Key, BPM, and Spice %.
+- **Footer**: Live Status (`PLAYING`, `VAMP LOOP ACTIVE`, `STOP-TIME BREAK`) and Sound Engines (`RHODES FM * BLUES GTR`).
 
 ### 2. Band Mixer View
-- 8-channel virtual console with live visual meters:
-  1. `BASS`: Walking Bass Volume & Cutoff Filter
-  2. `KEYS`: Comping Voicing Volume
-  3. `KICK`: Bass Drum Level
-  4. `SNAR`: Snare Drum Level
-  5. `HAT`: Hi-Hat / Ride Cymbal Level
-  6. `RIM`: Rimshot Click Level
-  7. `REV`: Schroeder Room Reverb Mix
-  8. `DRV`: Analog Tube Soft-Clip Drive Level
+- Live visual meters for all instrument levels and macro parameters:
+  1. `BASS VOL`: Walking Bass Level & Engine Name
+  2. `KEYS VOL`: Comping Chord Level & Engine Name
+  3. `DRUMS VOL`: Drum Kit Level & Kit Name
+  4. `LEAD VOL`: Solo Lead Synth Level & Instrument Name
+  5. `REVERB`: 4-Comb Schroeder Room Reverb Mix
+  6. `SPICE`: Harmonic / Arrangement Complexity ($0\%\text{--}100\%$)
+  7. `SWING`: Shuffle Swing Percentage ($50\%\text{--}80\%$)
 
 ---
 
-## Accompaniment Engine Features
+## Sound Engines & Instruments
 
-### 5 Groove Styles
-
-Selected with **Encoder 0 (`SELECT`)**:
-
-1. **Texas Shuffle**: Stevie Ray Vaughan / Double Trouble driving blues shuffle with tight snare backbeat, walking boogie bass, and syncopated off-beat comping (Default 67% swing, 112 BPM).
-2. **Slow 12/8 Blues**: B.B. King / Buddy Guy late-night 12/8 slow blues ballad with rolling triplet ride cymbals, expressive piano chords, and deep bass pedal notes (68 BPM).
-3. **Chicago Swing**: Muddy Waters / Little Walter uptempo swinging blues with walking quarter-note bass, crisp hi-hat chicks, and Evans guide-tone comping (130 BPM).
-4. **Rockin' 8s**: Chuck Berry / Hound Dog straight-eighth rock 'n' roll boogie with driving eighth-note basslines and biting clavinet stabs (140 BPM).
-5. **2nd Line Funk**: New Orleans syncopated street beat with polyrhythmic snare accents, bouncing basslines, and syncopated rhythmic stabs (96 BPM).
+### 4 Selectable Bass Engines
+Adjusted via **Encoder 4 (`KNOB 3`)** with `GLO` held:
+1. **Fender P-Bass**: Resonant multi-harmonic electric bass with ~50 ms initial pick bite snap, prominent 2nd & 3rd harmonics, and roundwound string decay. Audibly tuned to $E_2\text{--}D_4$ ($82\text{--}293\text{ Hz}$) for punchy clarity on the pocket speaker.
+2. **Upright Double Bass**: Acoustic jazz/blues double bass with deep fundamental body resonance and percussive wooden fingerboard slap attack.
+3. **Muted Tic-Tac Boogie**: Palm-muted baritone guitar / boogie bass with snappy pick attack and tight percussive decay (~120 ms).
+4. **Moog Funk Synth**: Classic 24dB-style resonant analog synth bass with dynamic envelope filter sweep for 70s funk blues.
 
 ---
 
-### 4 Keys Sound Engines
+### 8 Selectable Chord Engines
+Adjusted via **Encoder 1 (`ALGORITHM`)**:
+1. **Rhodes FM (Algo 0)**: 2-Operator FM synthesis producing a sweet bell/tine attack that dissolves into a warm, mellow electric piano body.
+2. **Bright FM EP (Algo 1)**: 2:1 FM chime algorithm with crisp attack transients and rich overtones.
+3. **Wurlitzer 200A (Algo 2)**: Gritty reed electric piano with rich 3rd harmonic bite and warm asymmetric reed bark.
+4. **Clean B3 Organ (Algo 3)**: Gospel jazz drawbars (88 8000 000 fundamental + octave + 5th) with smooth organ sustain.
+5. **Dirty Gospel B3 (Algo 4)**: Saturated full blues drawbars (88 8800 000) with biting tube overdrive.
+6. **Funk Clavinet D6 (Algo 5)**: Biting 3:1 plucked FM algorithm with fast percussive decay and sharp pick attack.
+7. **Archtop Rhythm Guitar (Algo 6)**: Warm hollowbody jazz/blues comping guitar with string pluck transient and wooden acoustic resonance.
+8. **Blues Horn Section (Algo 7)**: Tenor sax and trumpet brass ensemble with swelling attack and rich harmonized brass overtones.
 
-Selected with **Encoder 1 (`ALGORITHM`)**:
+---
 
-1. **Rhodes FM (Algo 0)**: 2-Operator FM synthesis producing a sweet bell/tine attack that sustains into a warm, mellow electric piano fundamental.
-2. **Bright FM EP (Algo 1)**: 2:1 FM chime algorithm with crisp attack transients and rich upper harmonics for cutting through dense mixes.
-3. **B3 Drawbar Organ (Algo 2)**: 4-harmonic additive Hammond B3 emulation (`888800000` drawbar registration) with cutting upper harmonic drawbars for classic gospel/blues comping.
-4. **Funk Clavinet (Algo 3)**: Biting 3:1 plucked FM algorithm with fast decay, ideal for percussive rhythm chops and syncopated funk lines.
+### 3 Selectable Drum Kits
+Adjusted via **Encoder 0 (`SELECT`)** with `GLO` held:
+1. **Studio Punch**: Punchy sine-sweep kick, crisp snap snare, clean metallic hi-hat, and wooden rimshot.
+2. **Vintage Brush**: Soft acoustic thud kick, textured sandpaper brush stir/swirl snare, and dark sizzle ride cymbal.
+3. **Retro 808 / Lo-Fi**: Deep boomy 808 sub kick, snappy 808 clap/snare, sizzly metallic hats, and synthetic rim tick.
+
+---
+
+### 4 Solo Lead Voice Engines
+Adjusted via direct turn of **Encoder 6 (`PRESETS`)**:
+1. **Overdriven Blues Guitar**: Singing electric lead guitar with tube clipping bite, harmonic sustain, and touch sensitivity.
+2. **Chicago Blues Harp**: Amplified green bullet harmonica with authentic nasal reed pulse, throat bite, and pitch-bend nuance.
+3. **Tenor Saxophone**: Breathy acoustic tenor sax with acoustic throat resonance, expressive swell, and subtle reed growl.
+4. **Moog Solo Lead**: Classic analog monosynth lead with detuned dual oscillators, singing filter resonance, and portamento glide.
 
 ---
 

@@ -4,6 +4,7 @@
 
 #define ZONE1_COUNT 12u
 #define KEY0_OFFSET 53u // F3 (MIDI 53)
+#define KEY_LEAD_BASE 65u // F4 (MIDI 65) - 2-octave playable solo keyboard (F4..G6)
 
 static uint32_t g_prev_key_mask = 0;
 static uint32_t g_last_key_press_ms[ZONE1_COUNT] = {0};
@@ -196,9 +197,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // 2. Rotary Encoders
     int8_t delta;
 
-    // ENC_PRESETS (Encoder 6): Select Preset 0..15 (or Select Key when holding BTN_SEL)
+    // ENC_PRESETS (Encoder 6): Select Lead Instrument (0..3), or Root Key with SEL or GLO held
     if ((delta = hal_get_encoder_delta(ENC_PRESETS)) != 0) {
-        if (sel_held) {
+        if (sel_held || glo_held) {
             int32_t nk = (int32_t)hs->root_semitone + delta;
             while (nk < 0) nk += 12;
             hs->root_semitone = (uint8_t)(nk % 12);
@@ -207,36 +208,36 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             g_save_pending = 1;
             g_last_param_change_ms = ms_now;
         } else {
-            int32_t np = (int32_t)(*active_preset_idx) + delta;
-            while (np < 0) np += NUM_PRESET_SLOTS;
-            *active_preset_idx = (uint8_t)(np % NUM_PRESET_SLOTS);
-            PresetConfig *new_p = &presets[*active_preset_idx];
-            // Preserve active session key: preset browsing changes accompaniment style & sound without yanking the player's key
-            new_p->root_key = hs->root_semitone;
-            hs->spice_level = new_p->spice;
-            hs->form_mode = (FormMode)new_p->form_mode;
-            hs->opening_var = (OpeningVar)new_p->opening_var;
-            hs->outro_type = (OutroType)new_p->outro_type;
-            hs->count_in_enabled = new_p->count_in_enabled;
+            int32_t nl = (int32_t)p->lead_instrument + delta;
+            while (nl < 0) nl += 4;
+            p->lead_instrument = (uint8_t)(nl % 4);
             hs->ui_dirty = 1;
+            g_save_pending = 1;
+            g_last_param_change_ms = ms_now;
         }
     }
 
-    // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..3)
+    // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..7)
     if ((delta = hal_get_encoder_delta(ENC_ALGORITHM)) != 0) {
         int32_t na = (int32_t)p->ep_tone_algo + delta;
-        while (na < 0) na += 4;
-        p->ep_tone_algo = (uint8_t)(na % 4);
+        while (na < 0) na += 8;
+        p->ep_tone_algo = (uint8_t)(na % 8);
         hs->ui_dirty = 1;
         g_save_pending = 1;
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_SELECT (Encoder 0): Groove Style (0..4)
+    // ENC_SELECT (Encoder 0): Groove Style (0..4) or Drum Kit with GLO (0..2)
     if ((delta = hal_get_encoder_delta(ENC_SELECT)) != 0) {
-        int32_t ng = (int32_t)p->groove_style + delta;
-        while (ng < 0) ng += 5;
-        p->groove_style = (uint8_t)(ng % 5);
+        if (glo_held) {
+            int32_t nd = (int32_t)p->drum_kit + delta;
+            while (nd < 0) nd += 3;
+            p->drum_kit = (uint8_t)(nd % 3);
+        } else {
+            int32_t ng = (int32_t)p->groove_style + delta;
+            while (ng < 0) ng += 5;
+            p->groove_style = (uint8_t)(ng % 5);
+        }
         hs->ui_dirty = 1;
         g_save_pending = 1;
         g_last_param_change_ms = ms_now;
@@ -278,13 +279,12 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB3 (Encoder 4): Bass Volume / Bass Cutoff
+    // ENC_KNOB3 (Encoder 4): Bass Volume (0..127) or Bass Instrument with GLO (0..3)
     if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
         if (glo_held) {
-            int32_t nc = (int32_t)p->bass_cutoff + (delta * 4);
-            if (nc < 0) nc = 0;
-            if (nc > 127) nc = 127;
-            p->bass_cutoff = (uint8_t)nc;
+            int32_t nb = (int32_t)p->bass_instrument + delta;
+            while (nb < 0) nb += 4;
+            p->bass_instrument = (uint8_t)(nb % 4);
         } else {
             int32_t nv = (int32_t)p->bass_vol + (delta * 4);
             if (nv < 0) nv = 0;
@@ -296,7 +296,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB4 (Encoder 5): Keys Volume / Reverb Mix
+    // ENC_KNOB4 (Encoder 5): Keys Volume (0..127) or Reverb Mix with GLO (0..127)
     if ((delta = hal_get_encoder_delta(ENC_KNOB4)) != 0) {
         if (glo_held) {
             int32_t nr = (int32_t)p->reverb_mix + (delta * 4);
@@ -314,70 +314,108 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // 3. Silicone Keys: 27 Keys decoded into 4 Zones
+    // 3. Silicone Keys: 27 Keys (Playable Solo Keyboard during Playback; Section Cues with SEL held or Stopped)
     uint32_t curr_key_mask = hal_get_keys_mask();
     uint32_t pressed = curr_key_mask & ~g_prev_key_mask;
+    uint32_t released = ~curr_key_mask & g_prev_key_mask;
     g_prev_key_mask = curr_key_mask;
 
-    if (pressed) {
-        for (uint8_t k = 0; k < 27; k++) {
-            if (pressed & (1u << k)) {
-                if (k < 12) {
-                    // Zone 1: Root Key Select (Keys 0..11 -> F3..E4)
-                    uint8_t target_semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
-                    if (!hs->is_playing) {
-                        hs->root_semitone = target_semitone;
-                        p->root_key = target_semitone;
-                        hs->has_queued_key = 0;
-                    } else if (ms_now - g_last_key_press_ms[k] <= DOUBLE_TAP_WINDOW_MS) {
-                        // Double Tap: Immediate bar modulation
-                        hs->root_semitone = target_semitone;
-                        p->root_key = target_semitone;
-                        hs->has_queued_key = 0;
-                        hs->mod_next_bar = 0;
-                    } else {
-                        // Single Tap: Queue modulation for next chorus boundary
-                        hs->queued_next_key = target_semitone;
-                        hs->has_queued_key = 1;
-                    }
-                    g_last_key_press_ms[k] = ms_now;
-                    hs->ui_dirty = 1;
-                } else if (k >= 12 && k <= 17) {
-                    // Zone 2: Flow Control Cues
-                    switch (k) {
-                        case 12: hs->queued_cue = CUE_TO_12BAR; break;
-                        case 13: hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP); break;
-                        case 14: hs->queued_cue = CUE_STOP_TIME; break;
-                        case 15: hs->queued_cue = CUE_HOLD_CHORD; break;
-                        case 16: hs->queued_cue = CUE_FORCE_TURNAROUND; break;
-                        case 17: hs->manual_stab_pending = 1; break;
-                    }
-                    hs->ui_dirty = 1;
-                } else if (k >= 18 && k <= 22) {
-                    // Zone 3: Form Variations
-                    switch (k) {
-                        case 18: hs->form_mode = FORM_12BAR; break;
-                        case 19: hs->form_mode = FORM_QUICK_CHANGE; break;
-                        case 20: hs->form_mode = FORM_145_OPENING; break;
-                        case 21: hs->form_mode = FORM_8BAR; break;
-                        case 22: hs->form_mode = FORM_MINOR_BLUES; break;
-                    }
-                    p->form_mode = hs->form_mode;
-                    hs->ui_dirty = 1;
-                    g_save_pending = 1;
-                    g_last_param_change_ms = ms_now;
-                } else if (k >= 23 && k <= 26) {
-                    // Zone 4: Outros & Endings
-                    switch (k) {
-                        case 23: hs->outro_type = OUTRO_STOP; break;
-                        case 24: hs->outro_type = OUTRO_TAG; break;
-                        case 25: hs->outro_type = OUTRO_TRIPLE; break;
-                        case 26: hs->outro_type = OUTRO_CHROMATIC; break;
-                    }
-                    hs->ending_armed = 1;
-                    p->outro_type = hs->outro_type;
-                    hs->ui_dirty = 1;
+    if (hs->is_playing && !sel_held) {
+        // Idea A: 27 Silicone Keys are a playable monophonic solo lead keyboard (F4..G6)
+        if (pressed) {
+            for (uint8_t k = 0; k < 27; k++) {
+                if (pressed & (1u << k)) {
+                    dsp_note_on_lead((uint8_t)(KEY_LEAD_BASE + k), 115, p->master_tuning);
                 }
+            }
+        }
+        if (released) {
+            if (curr_key_mask == 0) {
+                dsp_note_off_lead();
+            } else {
+                for (int8_t r = 26; r >= 0; r--) {
+                    if (curr_key_mask & (1u << r)) {
+                        dsp_note_on_lead((uint8_t)(KEY_LEAD_BASE + r), 115, p->master_tuning);
+                        break;
+                    }
+                }
+            }
+        }
+    } else {
+        // SEL held or Stopped: Section Control, Key Selection, Cues & Form Modes
+        if (pressed) {
+            if (!hs->is_playing && !sel_held) {
+                for (uint8_t k = 0; k < 27; k++) {
+                    if (pressed & (1u << k)) {
+                        dsp_note_on_lead((uint8_t)(KEY_LEAD_BASE + k), 115, p->master_tuning);
+                    }
+                }
+            }
+
+            for (uint8_t k = 0; k < 27; k++) {
+                if (pressed & (1u << k)) {
+                    if (k < 12) {
+                        // Zone 1: Root Key Select (Keys 0..11 -> F3..E4)
+                        uint8_t target_semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
+                        if (!hs->is_playing) {
+                            hs->root_semitone = target_semitone;
+                            p->root_key = target_semitone;
+                            hs->has_queued_key = 0;
+                        } else if (ms_now - g_last_key_press_ms[k] <= DOUBLE_TAP_WINDOW_MS) {
+                            // Double Tap: Immediate bar modulation
+                            hs->root_semitone = target_semitone;
+                            p->root_key = target_semitone;
+                            hs->has_queued_key = 0;
+                            hs->mod_next_bar = 0;
+                        } else {
+                            // Single Tap: Queue modulation for next chorus boundary
+                            hs->queued_next_key = target_semitone;
+                            hs->has_queued_key = 1;
+                        }
+                        g_last_key_press_ms[k] = ms_now;
+                        hs->ui_dirty = 1;
+                    } else if (k >= 12 && k <= 17) {
+                        // Zone 2: Flow Control Cues
+                        switch (k) {
+                            case 12: hs->queued_cue = CUE_TO_12BAR; break;
+                            case 13: hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP); break;
+                            case 14: hs->queued_cue = CUE_STOP_TIME; break;
+                            case 15: hs->queued_cue = CUE_HOLD_CHORD; break;
+                            case 16: hs->queued_cue = CUE_FORCE_TURNAROUND; break;
+                            case 17: hs->manual_stab_pending = 1; break;
+                        }
+                        hs->ui_dirty = 1;
+                    } else if (k >= 18 && k <= 22) {
+                        // Zone 3: Form Variations
+                        switch (k) {
+                            case 18: hs->form_mode = FORM_12BAR; break;
+                            case 19: hs->form_mode = FORM_QUICK_CHANGE; break;
+                            case 20: hs->form_mode = FORM_145_OPENING; break;
+                            case 21: hs->form_mode = FORM_8BAR; break;
+                            case 22: hs->form_mode = FORM_MINOR_BLUES; break;
+                        }
+                        p->form_mode = hs->form_mode;
+                        hs->ui_dirty = 1;
+                        g_save_pending = 1;
+                        g_last_param_change_ms = ms_now;
+                    } else if (k >= 23 && k <= 26) {
+                        // Zone 4: Outros & Endings
+                        switch (k) {
+                            case 23: hs->outro_type = OUTRO_STOP; break;
+                            case 24: hs->outro_type = OUTRO_TAG; break;
+                            case 25: hs->outro_type = OUTRO_TRIPLE; break;
+                            case 26: hs->outro_type = OUTRO_CHROMATIC; break;
+                        }
+                        hs->ending_armed = 1;
+                        p->outro_type = hs->outro_type;
+                        hs->ui_dirty = 1;
+                    }
+                }
+            }
+        }
+        if (released && !hs->is_playing) {
+            if (curr_key_mask == 0) {
+                dsp_note_off_lead();
             }
         }
     }
@@ -388,18 +426,39 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     hal_set_btn_led(BTN_PLAY, hs->is_playing ? 1 : 0);
     hal_set_btn_led(BTN_REC, (hs->is_playing && hs->current_beat == 0) ? 1 : 0);
 
-    // Backlight all 27 silicone keys so labels are clearly readable
-    for (uint8_t k = 0; k < 27; k++) {
-        if (k < 12) {
-            uint8_t semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
-            if (semitone == hs->root_semitone && hs->is_playing && hs->current_beat == 0) {
-                // Subtle pulse on beat 1 to identify the active root key
+    uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
+
+    if (hs->is_playing && !sel_held) {
+        // Minor Blues Scale: 1, b3, 4, b5, 5, b7 (offsets 0, 3, 5, 6, 7, 10 relative to root)
+        for (uint8_t k = 0; k < 27; k++) {
+            uint8_t note = (uint8_t)(KEY_LEAD_BASE + k);
+            uint8_t interval = (uint8_t)((note + 12 - hs->root_semitone) % 12);
+            uint8_t is_blues = (interval == 0 || interval == 3 || interval == 5 ||
+                                interval == 6 || interval == 7 || interval == 10);
+            if (is_blues) {
+                if (interval == 0 && hs->current_beat == 0) {
+                    // Beat 1 pulse on root notes
+                    hal_set_key_led(k, 0);
+                } else {
+                    hal_set_key_led(k, 1);
+                }
+            } else {
                 hal_set_key_led(k, 0);
+            }
+        }
+    } else {
+        // Stopped or SEL held: all keys backlit for navigation & section cues
+        for (uint8_t k = 0; k < 27; k++) {
+            if (k < 12) {
+                uint8_t semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
+                if (semitone == hs->root_semitone && hs->is_playing && hs->current_beat == 0) {
+                    hal_set_key_led(k, 0);
+                } else {
+                    hal_set_key_led(k, 1);
+                }
             } else {
                 hal_set_key_led(k, 1);
             }
-        } else {
-            hal_set_key_led(k, 1);
         }
     }
 }

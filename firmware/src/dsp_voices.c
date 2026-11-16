@@ -46,8 +46,25 @@ typedef struct {
     uint8_t  active;
 } KeysVoice;
 
+typedef struct {
+    uint32_t phase;
+    uint32_t phase2;
+    uint32_t phase_inc;
+    uint32_t target_inc;
+    int32_t  env_q15;
+    int32_t  target_env;
+    uint32_t gate_samples;
+    uint8_t  active;
+    uint8_t  midi_note;
+    int32_t  filter_lp;
+    uint32_t vib_phase;
+    uint16_t vib_delay;
+} LeadVoice;
+
 static BassVoice g_bass;
 static KeysVoice g_keys[4];
+static LeadVoice g_lead;
+static int32_t   g_bass_lp = 0;
 static int32_t   g_drum_env[4];
 static uint16_t  g_drum_decay[4] = { 32000, 31000, 30000, 28000 };
 static uint32_t  g_drum_pitch[4];
@@ -67,7 +84,18 @@ void dsp_init(void) {
     g_bass.phase = 0;
     g_bass.env_q15 = 0;
     g_bass.gate_samples = 0;
+    g_bass_lp = 0;
     g_eq_lp = 0;
+    g_lead.active = 0;
+    g_lead.phase = 0;
+    g_lead.phase2 = 0;
+    g_lead.phase_inc = 0;
+    g_lead.target_inc = 0;
+    g_lead.env_q15 = 0;
+    g_lead.gate_samples = 0;
+    g_lead.filter_lp = 0;
+    g_lead.vib_phase = 0;
+    g_lead.vib_delay = 0;
     for (int k = 0; k < 4; k++) {
         g_keys[k].active = 0;
         g_keys[k].phase_c = 0;
@@ -92,6 +120,8 @@ void dsp_all_notes_off(void) {
     g_bass.active = 0;
     for (int k = 0; k < 4; k++) g_keys[k].active = 0;
     for (int d = 0; d < 4; d++) g_drum_env[d] = 0;
+    g_lead.active = 0;
+    g_lead.env_q15 = 0;
 }
 
 static inline uint32_t get_scaled_inc(uint8_t midi_note, uint8_t tuning_mode) {
@@ -132,6 +162,31 @@ void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_m
     }
 }
 
+void dsp_note_on_lead(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) {
+    g_lead.target_inc = get_scaled_inc(midi_note, tuning_mode);
+    g_lead.midi_note = midi_note;
+    g_lead.target_env = (int32_t)velocity * 256;
+    if (!g_lead.active) {
+        g_lead.phase = 0;
+        g_lead.phase2 = 0;
+        g_lead.phase_inc = g_lead.target_inc;
+        g_lead.env_q15 = 0;
+        g_lead.vib_delay = 5500;
+        g_lead.vib_phase = 0;
+        g_lead.filter_lp = 0;
+    } else {
+        // Legato tie: blend envelope for expressive phrasing
+        g_lead.env_q15 = (g_lead.env_q15 * 3 + g_lead.target_env) / 4;
+        g_lead.vib_delay = 3000;
+    }
+    g_lead.gate_samples = 44100 * 10; // Sustained while key held
+    g_lead.active = 1;
+}
+
+void dsp_note_off_lead(void) {
+    g_lead.gate_samples = 0; // Release phase
+}
+
 void dsp_trigger_drum(uint8_t mask, const uint8_t *drum_vel, uint8_t open_hat) {
     for (int d = 0; d < 4; d++) {
         if (mask & (1 << d)) {
@@ -161,78 +216,151 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
     for (uint32_t i = 0; i < num_frames; i++) {
         int32_t mix = 0;
 
-        // Bass Synth: Multi-Harmonic Precision Bass with Pluck Snap & Anti-Click Attack
+        // 1. Bass Synth Engine (4 Selectable Instruments)
         if (g_bass.active) {
             g_bass.phase += g_bass.phase_inc;
             int16_t b_fund = hal_sine_q15(g_bass.phase);
             int16_t b_harm = hal_sine_q15(g_bass.phase * 2);
             int16_t b_third = hal_sine_q15(g_bass.phase * 3);
-
             int32_t b_sample;
-            if (g_bass.pluck_samples > 0) {
-                g_bass.pluck_samples--;
-                // Accentuate 2nd & 3rd harmonics during initial ~50 ms pick bite
-                b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
+
+            if (preset->bass_instrument == BASS_UPRIGHT) {
+                // Upright Double Bass: woody fundamental + body slap transient
+                b_sample = (b_fund * 3 / 4) + (b_harm >> 2);
+                if (g_bass.pluck_samples > 0) {
+                    g_bass.pluck_samples--;
+                    b_sample += (int32_t)g_bass.pluck_samples * 6;
+                }
+            } else if (preset->bass_instrument == BASS_MUTED_TICTAC) {
+                // Muted Tic-Tac Boogie: tight palm-mute bite with heavy 2nd harmonic
+                if (g_bass.pluck_samples > 0) g_bass.pluck_samples--;
+                b_sample = (b_fund >> 2) + (b_harm >> 1) + (b_third >> 2);
+            } else if (preset->bass_instrument == BASS_MOOG_FUNK) {
+                // Moog Funk: rich analog saw with dynamic envelope filter sweep
+                int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
+                int32_t saw = (b_fund >> 1) + (b_harm >> 2) + (b_third >> 3) + (b_fourth >> 4);
+                int32_t cutoff = 3000 + ((g_bass.env_q15 * 24000) >> 15);
+                g_bass_lp += ((saw - g_bass_lp) * cutoff) >> 15;
+                b_sample = g_bass_lp;
+                if (g_bass.pluck_samples > 0) g_bass.pluck_samples--;
             } else {
-                b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 3);
+                // Fender P-Bass (Default): punchy roundwound with initial pluck bite
+                if (g_bass.pluck_samples > 0) {
+                    g_bass.pluck_samples--;
+                    b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
+                } else {
+                    b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 3);
+                }
             }
 
             int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
-            mix += (b_sample * b_amp) >> 7; // Driving, punchy walking bass (audible and fat on internal speaker)
+            mix += (b_sample * b_amp) >> 7; // Driving, punchy walking bass
 
-            // Attack micro-ramp (smooth 2 ms ramp up to eliminate note-on click/pop)
+            // Attack micro-ramp
             if (g_bass.env_q15 < g_bass.target_env) {
                 g_bass.env_q15 += (g_bass.target_env - g_bass.env_q15 + 15) >> 4;
             }
 
             if (g_bass.gate_samples > 0) {
                 g_bass.gate_samples--;
-                g_bass.env_q15 = (g_bass.env_q15 * 32766) >> 15; // Natural string decay
+                if (preset->bass_instrument == BASS_MUTED_TICTAC) {
+                    g_bass.env_q15 = (g_bass.env_q15 * 32300) >> 15; // Tight palm-mute decay
+                } else {
+                    g_bass.env_q15 = (g_bass.env_q15 * 32766) >> 15; // Natural string decay
+                }
             } else {
-                g_bass.env_q15 = (g_bass.env_q15 * 32650) >> 15; // Smooth release
+                g_bass.env_q15 = (g_bass.env_q15 * 32650) >> 15;
             }
             if (g_bass.env_q15 < 100) g_bass.active = 0;
         }
 
-        // Keys Synth: 4-voice Polyphony across 4 Distinct Musical Algorithms
+        // 2. Keys Synth Engine: 4-Voice Polyphony across 8 Instruments
         for (int k = 0; k < 4; k++) {
             if (g_keys[k].active) {
                 int16_t car = 0;
-                int32_t m_env = (g_keys[k].env_q15 * 3) / 4; // Sustained harmonic body
+                int32_t m_env = (g_keys[k].env_q15 * 3) / 4;
 
-                if (preset->ep_tone_algo == 0) { // Rhodes FM: sweet bell tine attack with warm sustained EP body
-                    g_keys[k].phase_c += g_keys[k].inc_c;
-                    g_keys[k].phase_m += g_keys[k].inc_c; // 1:1 modulator
-                    int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 16000);
-                    car = hal_sine_q15(g_keys[k].phase_c + pmod);
-                } else if (preset->ep_tone_algo == 1) { // Bright FM EP: crisp 2:1 chime attack with rich overtones
-                    g_keys[k].phase_c += g_keys[k].inc_c;
-                    g_keys[k].phase_m += g_keys[k].inc_c * 2; // 2:1 modulator
-                    int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 24000);
-                    car = hal_sine_q15(g_keys[k].phase_c + pmod);
-                } else if (preset->ep_tone_algo == 2) { // B3 Drawbar Organ: cutting harmonic drawbars
-                    g_keys[k].phase_c += g_keys[k].inc_c;
-                    int16_t h1 = hal_sine_q15(g_keys[k].phase_c);
-                    int16_t h2 = hal_sine_q15(g_keys[k].phase_c * 2);
-                    int16_t h3 = hal_sine_q15(g_keys[k].phase_c * 3);
-                    int16_t h4 = hal_sine_q15(g_keys[k].phase_c * 4);
-                    car = (h1 >> 2) + (h2 >> 1) + (h3 >> 2) + (h4 >> 3);
-                } else { // Clavinet: biting 3:1 funk pluck
-                    g_keys[k].phase_c += g_keys[k].inc_c;
-                    g_keys[k].phase_m += g_keys[k].inc_c * 3;
-                    int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((((int32_t)mod * g_keys[k].env_q15) >> 15) * 28000);
-                    car = hal_sine_q15(g_keys[k].phase_c + pmod);
+                switch (preset->ep_tone_algo % 8) {
+                    case KEYS_RHODES: { // 0: Rhodes FM
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        g_keys[k].phase_m += g_keys[k].inc_c;
+                        int16_t mod = hal_sine_q15(g_keys[k].phase_m);
+                        uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 16000);
+                        car = hal_sine_q15(g_keys[k].phase_c + pmod);
+                        break;
+                    }
+                    case KEYS_BRIGHT_EP: { // 1: Bright FM EP
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        g_keys[k].phase_m += g_keys[k].inc_c * 2;
+                        int16_t mod = hal_sine_q15(g_keys[k].phase_m);
+                        uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 24000);
+                        car = hal_sine_q15(g_keys[k].phase_c + pmod);
+                        break;
+                    }
+                    case KEYS_WURLI: { // 2: Wurli 200A
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        g_keys[k].phase_m += g_keys[k].inc_c;
+                        int16_t mod = hal_sine_q15(g_keys[k].phase_m);
+                        uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 20000);
+                        int32_t w = hal_sine_q15(g_keys[k].phase_c + pmod);
+                        if (w > 16000) w = 16000 + ((w - 16000) >> 1);
+                        else if (w < -16000) w = -16000 + ((w + 16000) >> 1);
+                        car = (int16_t)w;
+                        break;
+                    }
+                    case KEYS_B3_CLEAN: { // 3: Clean B3 Organ (88 8000 000)
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        int16_t h1 = hal_sine_q15(g_keys[k].phase_c);
+                        int16_t h2 = hal_sine_q15(g_keys[k].phase_c * 2);
+                        int16_t h3 = hal_sine_q15(g_keys[k].phase_c * 3);
+                        car = (h1 >> 1) + (h2 >> 2) + (h3 >> 3);
+                        break;
+                    }
+                    case KEYS_B3_DIRTY: { // 4: Dirty Gospel B3 Organ (88 8800 000)
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        int16_t h1 = hal_sine_q15(g_keys[k].phase_c);
+                        int16_t h2 = hal_sine_q15(g_keys[k].phase_c * 2);
+                        int16_t h3 = hal_sine_q15(g_keys[k].phase_c * 3);
+                        int16_t h4 = hal_sine_q15(g_keys[k].phase_c * 4);
+                        int32_t organ = h1 + h2 + (h3 >> 1) + (h4 >> 2);
+                        if (organ > 22000) organ = 22000;
+                        else if (organ < -22000) organ = -22000;
+                        car = (int16_t)(organ >> 1);
+                        break;
+                    }
+                    case KEYS_CLAVINET: { // 5: Funk Clavinet D6
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        g_keys[k].phase_m += g_keys[k].inc_c * 3;
+                        int16_t mod = hal_sine_q15(g_keys[k].phase_m);
+                        uint32_t pmod = (uint32_t)((((int32_t)mod * g_keys[k].env_q15) >> 15) * 28000);
+                        car = hal_sine_q15(g_keys[k].phase_c + pmod);
+                        break;
+                    }
+                    case KEYS_ARCHTOP_GUITAR: { // 6: Archtop Rhythm Guitar
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        int16_t g1 = hal_sine_q15(g_keys[k].phase_c);
+                        int16_t g2 = hal_sine_q15(g_keys[k].phase_c * 2);
+                        int16_t g3 = hal_sine_q15(g_keys[k].phase_c * 3);
+                        car = (g1 * 5 / 8) + (g2 >> 2) + (g3 >> 3);
+                        break;
+                    }
+                    case KEYS_BLUES_HORNS: // 7: Blues Horn Section
+                    default: {
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        int16_t h1 = hal_sine_q15(g_keys[k].phase_c);
+                        int16_t h2 = hal_sine_q15(g_keys[k].phase_c * 2);
+                        int16_t h3 = hal_sine_q15(g_keys[k].phase_c * 3);
+                        car = (h1 >> 1) + (h2 * 3 / 8) + (h3 >> 3);
+                        break;
+                    }
                 }
 
                 int32_t k_amp = (g_keys[k].env_q15 * preset->keys_vol) >> 15;
-                mix += (car * k_amp) >> 8; // Prominent, articulate keys level
+                mix += (car * k_amp) >> 8;
 
                 if (g_keys[k].gate_samples > 0) {
                     g_keys[k].gate_samples--;
-                    if (preset->ep_tone_algo != 2) {
+                    if (preset->ep_tone_algo != KEYS_B3_CLEAN && preset->ep_tone_algo != KEYS_B3_DIRTY) {
                         g_keys[k].env_q15 = (g_keys[k].env_q15 * 32766) >> 15;
                     }
                 } else {
@@ -242,9 +370,17 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             }
         }
 
-        // Drums: Kick (0)
+        // 3. Synthesized Drums (3 Selectable Kits: Studio, Brush, Retro 808)
+        // Kick (0)
         if (g_drum_env[0] > 0) {
-            uint32_t kick_inc = 4380000u + (uint32_t)(g_drum_env[0] * 260);
+            uint32_t kick_inc;
+            if (preset->drum_kit == DRUM_BRUSH) {
+                kick_inc = 3200000u + (uint32_t)(g_drum_env[0] * 180);
+            } else if (preset->drum_kit == DRUM_RETRO_808) {
+                kick_inc = 2200000u + (uint32_t)(g_drum_env[0] * 320);
+            } else {
+                kick_inc = 4380000u + (uint32_t)(g_drum_env[0] * 260);
+            }
             g_drum_pitch[0] += kick_inc;
             int16_t k_sample = hal_sine_q15(g_drum_pitch[0]);
             int32_t d0_amp = (g_drum_env[0] * preset->drums_vol) >> 15;
@@ -252,25 +388,116 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             g_drum_env[0] = (g_drum_env[0] * g_drum_decay[0]) >> 15;
         }
 
-        // Drums: Snare (1)
+        // Snare (1)
         if (g_drum_env[1] > 0) {
             g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
             int16_t noise_sample = (int16_t)(g_lfsr & 0x7FFF);
-            g_drum_pitch[1] += 17540000u;
-            int16_t body_sample = hal_sine_q15(g_drum_pitch[1]);
-            int16_t s_sample = (noise_sample >> 1) + (body_sample >> 1);
+            int16_t s_sample;
+            if (preset->drum_kit == DRUM_BRUSH) {
+                s_sample = noise_sample >> 1; // Soft brush swirl
+            } else if (preset->drum_kit == DRUM_RETRO_808) {
+                g_drum_pitch[1] += 22000000u;
+                int16_t body = hal_sine_q15(g_drum_pitch[1]);
+                s_sample = (noise_sample * 3 / 4) + (body >> 2); // Snappy 808 clap/snare
+            } else {
+                g_drum_pitch[1] += 17540000u;
+                int16_t body = hal_sine_q15(g_drum_pitch[1]);
+                s_sample = (noise_sample >> 1) + (body >> 1); // Studio snare
+            }
             int32_t d1_amp = (g_drum_env[1] * preset->drums_vol) >> 15;
             mix += (s_sample * d1_amp) >> 9;
             g_drum_env[1] = (g_drum_env[1] * g_drum_decay[1]) >> 15;
         }
 
-        // Drums: Hi-Hat (2)
+        // Hi-Hat / Ride (2)
         if (g_drum_env[2] > 0) {
             g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
             int16_t n_sample = (int16_t)(g_lfsr & 0xFFFF);
             int32_t d2_amp = (g_drum_env[2] * preset->drums_vol) >> 15;
             mix += (n_sample * d2_amp) >> 10;
             g_drum_env[2] = (g_drum_env[2] * g_drum_decay[2]) >> 15;
+        }
+
+        // Rimshot (3)
+        if (g_drum_env[3] > 0) {
+            uint32_t rim_inc = (preset->drum_kit == DRUM_RETRO_808) ? 16000000u :
+                               ((preset->drum_kit == DRUM_BRUSH) ? 8500000u : 12000000u);
+            g_drum_pitch[3] += rim_inc;
+            int16_t r_sample = hal_sine_q15(g_drum_pitch[3]);
+            int32_t d3_amp = (g_drum_env[3] * preset->drums_vol) >> 15;
+            mix += (r_sample * d3_amp) >> 8;
+            g_drum_env[3] = (g_drum_env[3] * g_drum_decay[3]) >> 15;
+        }
+
+        // 4. Solo Lead Voice (Idea A): 4 Lead Instruments
+        if (g_lead.active) {
+            g_lead.phase_inc += (int32_t)(g_lead.target_inc - g_lead.phase_inc) >> 3;
+
+            uint32_t cur_inc = g_lead.phase_inc;
+            if (g_lead.vib_delay > 0) {
+                g_lead.vib_delay--;
+            } else {
+                g_lead.vib_phase += 550000u; // ~5.5 Hz blues vibrato
+                int32_t vib = hal_sine_q15(g_lead.vib_phase);
+                cur_inc = (uint32_t)((int32_t)g_lead.phase_inc + ((vib * (int32_t)(g_lead.phase_inc >> 8)) >> 15));
+            }
+            g_lead.phase += cur_inc;
+
+            int32_t lead_sample = 0;
+            switch (preset->lead_instrument % 4) {
+                case LEAD_BLUES_GUITAR: { // 0: Overdriven Blues Guitar
+                    int16_t w1 = hal_sine_q15(g_lead.phase);
+                    int16_t w2 = hal_sine_q15(g_lead.phase * 2);
+                    int16_t w3 = hal_sine_q15(g_lead.phase * 3);
+                    int32_t g_raw = (w1 >> 1) + (w2 >> 2) + (w3 >> 3);
+                    int32_t g_driven = (g_raw * 5) >> 2;
+                    if (g_driven > 24000) g_driven = 24000;
+                    else if (g_driven < -24000) g_driven = -24000;
+                    lead_sample = g_driven;
+                    break;
+                }
+                case LEAD_HARMONICA: { // 1: Chicago Blues Harp
+                    int16_t h1 = hal_sine_q15(g_lead.phase);
+                    int16_t h3 = hal_sine_q15(g_lead.phase * 3);
+                    int16_t h5 = hal_sine_q15(g_lead.phase * 5);
+                    int32_t reed = (h1 >> 1) + (h3 >> 2) + (h5 >> 3);
+                    if (reed > 20000) reed = 20000;
+                    else if (reed < -20000) reed = -20000;
+                    lead_sample = reed;
+                    break;
+                }
+                case LEAD_TENOR_SAX: { // 2: Tenor Sax
+                    int16_t s1 = hal_sine_q15(g_lead.phase);
+                    int16_t s2 = hal_sine_q15(g_lead.phase * 2);
+                    int16_t s3 = hal_sine_q15(g_lead.phase * 3);
+                    int16_t breath = (int16_t)(g_lfsr & 0x07FF);
+                    lead_sample = (s1 * 5 / 8) + (s2 >> 2) + (s3 >> 3) + breath;
+                    break;
+                }
+                case LEAD_MOOG_LEAD: // 3: Moog Solo Lead
+                default: {
+                    g_lead.phase2 += cur_inc + (cur_inc >> 8);
+                    int16_t m1 = hal_sine_q15(g_lead.phase);
+                    int16_t m2 = hal_sine_q15(g_lead.phase2);
+                    int32_t moog = (m1 >> 1) + (m2 >> 1);
+                    g_lead.filter_lp += ((moog - g_lead.filter_lp) * 18000) >> 15;
+                    lead_sample = g_lead.filter_lp;
+                    break;
+                }
+            }
+
+            uint8_t l_vol = preset->lead_vol > 0 ? preset->lead_vol : 115;
+            int32_t l_amp = (g_lead.env_q15 * l_vol) >> 15;
+            mix += (lead_sample * l_amp) >> 8;
+
+            if (g_lead.gate_samples > 0) {
+                if (g_lead.env_q15 < g_lead.target_env) {
+                    g_lead.env_q15 += (g_lead.target_env - g_lead.env_q15 + 15) >> 4;
+                }
+            } else {
+                g_lead.env_q15 = (g_lead.env_q15 * 32400) >> 15;
+                if (g_lead.env_q15 < 100) g_lead.active = 0;
+            }
         }
 
         // Drums: Rimshot (3)

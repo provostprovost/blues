@@ -73,7 +73,6 @@ static void app_audio(int32_t *out, uint32_t n) {
     const PresetConfig *preset = &g_presets[g_active_preset];
 
     if (!g_harmony.is_playing) {
-        dsp_all_notes_off();
         dsp_render_block(out, n, preset);
         return;
     }
@@ -129,12 +128,16 @@ static void init_factory_presets(void) {
         p->bass_vol = 110;
         p->keys_vol = 95;
         p->drums_vol = 105;
+        p->lead_vol = 115;
         p->reverb_mix = 35;
         p->bass_cutoff = 85;
         p->drive_level = 20;
         p->count_in_enabled = 0;
         p->opening_var = VAR_FLAT_FOUR;
         p->outro_type = OUTRO_TAG;
+        p->bass_instrument = (uint8_t)(i % 4);
+        p->drum_kit = (uint8_t)(i % 3);
+        p->lead_instrument = (uint8_t)(i % 4);
 
         switch (i) {
             case 0: // Texas Shuffle
@@ -143,7 +146,10 @@ static void init_factory_presets(void) {
                 p->bpm = 112;
                 p->spice = 65;
                 p->swing = 67;
-                p->ep_tone_algo = 0; // Rhodes FM
+                p->ep_tone_algo = KEYS_RHODES;
+                p->bass_instrument = BASS_P_BASS;
+                p->drum_kit = DRUM_STUDIO;
+                p->lead_instrument = LEAD_BLUES_GUITAR;
                 p->form_mode = FORM_12BAR;
                 break;
             case 1: // Slow 12/8 Blues
@@ -152,7 +158,10 @@ static void init_factory_presets(void) {
                 p->bpm = 68;
                 p->spice = 50;
                 p->swing = 67;
-                p->ep_tone_algo = 2; // B3 Organ
+                p->ep_tone_algo = KEYS_B3_DIRTY;
+                p->bass_instrument = BASS_UPRIGHT;
+                p->drum_kit = DRUM_BRUSH;
+                p->lead_instrument = LEAD_HARMONICA;
                 p->form_mode = FORM_12BAR;
                 break;
             case 2: // Chicago Swing
@@ -161,7 +170,10 @@ static void init_factory_presets(void) {
                 p->bpm = 130;
                 p->spice = 55;
                 p->swing = 60;
-                p->ep_tone_algo = 1; // Bright EP
+                p->ep_tone_algo = KEYS_BRIGHT_EP;
+                p->bass_instrument = BASS_UPRIGHT;
+                p->drum_kit = DRUM_STUDIO;
+                p->lead_instrument = LEAD_TENOR_SAX;
                 p->form_mode = FORM_12BAR;
                 break;
             case 3: // Rockin' 8s
@@ -170,7 +182,10 @@ static void init_factory_presets(void) {
                 p->bpm = 140;
                 p->spice = 40;
                 p->swing = 50;
-                p->ep_tone_algo = 3; // Clavinet
+                p->ep_tone_algo = KEYS_CLAVINET;
+                p->bass_instrument = BASS_MUTED_TICTAC;
+                p->drum_kit = DRUM_STUDIO;
+                p->lead_instrument = LEAD_BLUES_GUITAR;
                 p->form_mode = FORM_12BAR;
                 break;
             case 4: // New Orleans 2nd Line
@@ -179,7 +194,10 @@ static void init_factory_presets(void) {
                 p->bpm = 96;
                 p->spice = 70;
                 p->swing = 55;
-                p->ep_tone_algo = 0; // Rhodes FM
+                p->ep_tone_algo = KEYS_WURLI;
+                p->bass_instrument = BASS_MOOG_FUNK;
+                p->drum_kit = DRUM_RETRO_808;
+                p->lead_instrument = LEAD_MOOG_LEAD;
                 p->form_mode = FORM_12BAR;
                 break;
             case 5: // Minor Blues
@@ -188,7 +206,10 @@ static void init_factory_presets(void) {
                 p->bpm = 84;
                 p->spice = 60;
                 p->swing = 67;
-                p->ep_tone_algo = 2; // B3 Organ
+                p->ep_tone_algo = KEYS_B3_CLEAN;
+                p->bass_instrument = BASS_UPRIGHT;
+                p->drum_kit = DRUM_BRUSH;
+                p->lead_instrument = LEAD_HARMONICA;
                 p->form_mode = FORM_MINOR_BLUES;
                 break;
             default: // Varied Blues Jam slots
@@ -197,7 +218,10 @@ static void init_factory_presets(void) {
                 p->bpm = (uint8_t)(90 + (i * 6));
                 p->spice = 50;
                 p->swing = 65;
-                p->ep_tone_algo = (uint8_t)(i % 4);
+                p->ep_tone_algo = (uint8_t)(i % 8);
+                p->bass_instrument = (uint8_t)(i % 4);
+                p->drum_kit = (uint8_t)(i % 3);
+                p->lead_instrument = (uint8_t)(i % 4);
                 p->form_mode = (i % 3 == 0) ? FORM_MINOR_BLUES : FORM_12BAR;
                 break;
         }

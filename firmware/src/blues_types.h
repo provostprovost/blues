@@ -73,6 +73,37 @@ typedef enum {
     GROOVE_SECOND_LINE
 } GrooveStyle;
 
+typedef enum {
+    BASS_P_BASS = 0,
+    BASS_UPRIGHT,
+    BASS_MUTED_TICTAC,
+    BASS_MOOG_FUNK
+} BassInstrument;
+
+typedef enum {
+    KEYS_RHODES = 0,
+    KEYS_BRIGHT_EP,
+    KEYS_WURLI,
+    KEYS_B3_CLEAN,
+    KEYS_B3_DIRTY,
+    KEYS_CLAVINET,
+    KEYS_ARCHTOP_GUITAR,
+    KEYS_BLUES_HORNS
+} ChordInstrument;
+
+typedef enum {
+    DRUM_STUDIO = 0,
+    DRUM_BRUSH,
+    DRUM_RETRO_808
+} DrumKit;
+
+typedef enum {
+    LEAD_BLUES_GUITAR = 0,
+    LEAD_HARMONICA,
+    LEAD_TENOR_SAX,
+    LEAD_MOOG_LEAD
+} LeadInstrument;
+
 typedef struct {
     ScaleDegree  degree;
     ChordQuality quality;
@@ -149,6 +180,10 @@ typedef struct {
     uint8_t  form_mode;
     uint8_t  opening_var;
     uint8_t  outro_type;
+    uint8_t  bass_instrument;
+    uint8_t  drum_kit;
+    uint8_t  lead_instrument;
+    uint8_t  lead_vol;
 } PresetConfig;
 
 typedef struct {

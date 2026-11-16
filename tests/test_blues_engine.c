@@ -351,12 +351,19 @@ void test_stage3_dsp(void) {
     preset.bass_cutoff = 100;
     preset.master_tuning = 0; // 440 Hz
     preset.ep_tone_algo = 0;
+    preset.bass_instrument = 0;
+    preset.drum_kit = 0;
+    preset.lead_instrument = 0;
+    preset.lead_vol = 115;
 
     int32_t buf[256 * 2];
 
-    // 1. Test all 4 EP tone algorithms under maximum polyphony (1000 blocks total = 250 blocks * 4 algos)
-    for (uint8_t algo = 0; algo < 4; algo++) {
+    // 1. Test all 8 EP tone algorithms, 4 Bass engines, 3 Drum kits, and 4 Lead instruments
+    for (uint8_t algo = 0; algo < 8; algo++) {
         preset.ep_tone_algo = algo;
+        preset.bass_instrument = algo % 4;
+        preset.drum_kit = algo % 3;
+        preset.lead_instrument = algo % 4;
         dsp_init();
 
         // Trigger Bass Note
@@ -365,6 +372,9 @@ void test_stage3_dsp(void) {
         // Trigger 4-note Voicing
         Voicing v = { { 48, 52, 55, 59 }, 4 };
         dsp_note_on_keys(&v, 127, preset.master_tuning);
+
+        // Trigger Solo Lead Note
+        dsp_note_on_lead(65 + algo, 115, preset.master_tuning);
 
         // Trigger all 4 drums (Kick, Snare, Hat, Rimshot)
         uint8_t dvel[4] = { 127, 127, 127, 127 };
@@ -456,6 +466,10 @@ void test_stage4_panel_ui(void) {
         presets[i].form_mode = FORM_12BAR;
         presets[i].opening_var = VAR_FLAT_FOUR;
         presets[i].outro_type = OUTRO_TAG;
+        presets[i].bass_instrument = (uint8_t)(i % 4);
+        presets[i].drum_kit = (uint8_t)(i % 3);
+        presets[i].lead_instrument = (uint8_t)(i % 4);
+        presets[i].lead_vol = 115;
     }
 
     uint8_t active_preset = 0;
@@ -532,6 +546,10 @@ void test_stage5_integration(void) {
         presets[i].form_mode = (i == 5) ? FORM_MINOR_BLUES : FORM_12BAR;
         presets[i].opening_var = VAR_FLAT_FOUR;
         presets[i].outro_type = OUTRO_TAG;
+        presets[i].bass_instrument = (uint8_t)(i % 4);
+        presets[i].drum_kit = (uint8_t)(i % 3);
+        presets[i].lead_instrument = (uint8_t)(i % 4);
+        presets[i].lead_vol = 115;
     }
 
     uint8_t active_preset = 0;

@@ -4,7 +4,10 @@
 
 static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
 static const char *GROOVE_NAMES[5] = { "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE" };
-static const char *ALGO_NAMES[4]   = { "RHODES FM", "BRIGHT EP", "B3 ORGAN", "CLAVINET" };
+static const char *ALGO_NAMES[8]   = { "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET", "ARCHTOP GTR", "BLUES HORNS" };
+static const char *BASS_NAMES[4]   = { "P-BASS", "UPRIGHT", "MUTED BOOGIE", "MOOG FUNK" };
+static const char *DRUM_NAMES[3]   = { "STUDIO", "BRUSH", "RETRO 808" };
+static const char *LEAD_NAMES[4]   = { "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD" };
 
 static uint8_t g_last_bar = 0xFF;
 static uint8_t g_last_beat = 0xFF;
@@ -12,6 +15,9 @@ static uint8_t g_last_screen = 0xFF;
 static uint8_t g_last_preset = 0xFF;
 static uint8_t g_last_key = 0xFF;
 static uint8_t g_last_algo = 0xFF;
+static uint8_t g_last_bass_inst = 0xFF;
+static uint8_t g_last_drum = 0xFF;
+static uint8_t g_last_lead = 0xFF;
 static uint8_t g_last_playing = 0xFF;
 static uint8_t g_last_groove = 0xFF;
 static uint8_t g_last_spice = 0xFF;
@@ -24,6 +30,9 @@ void ui_init(void) {
     g_last_preset = 0xFF;
     g_last_key = 0xFF;
     g_last_algo = 0xFF;
+    g_last_bass_inst = 0xFF;
+    g_last_drum = 0xFF;
+    g_last_lead = 0xFF;
     g_last_playing = 0xFF;
     g_last_groove = 0xFF;
     g_last_spice = 0xFF;
@@ -77,18 +86,19 @@ static void render_beat_pips(const HarmonyState *hs) {
 }
 
 static void render_header(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx) {
+    (void)preset_idx;
     hal_fill_rect(0, 0, 240, 44, C_BLACK);
 
-    // Header Title: Preset and Groove
-    char header[32];
+    // Header Title: Groove Style & Drum Kit
+    char header[36];
     const char *gname = GROOVE_NAMES[preset->groove_style % 5];
+    const char *dname = DRUM_NAMES[preset->drum_kit % 3];
     int hlen = 0;
-    header[hlen++] = 'P';
-    header[hlen++] = '0' + ((preset_idx + 1) / 10);
-    header[hlen++] = '0' + ((preset_idx + 1) % 10);
-    header[hlen++] = ':';
+    while (*gname && hlen < 16) header[hlen++] = *gname++;
     header[hlen++] = ' ';
-    while (*gname && hlen < 28) header[hlen++] = *gname++;
+    header[hlen++] = '[';
+    while (*dname && hlen < 32) header[hlen++] = *dname++;
+    header[hlen++] = ']';
     header[hlen] = '\0';
     hal_draw_text_box(0, 6, 240, 0, header, RGB(255, 190, 0), 1);
 
@@ -139,10 +149,15 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
     hal_fill_rect(0, 208, 240, 16, C_BLACK);
     hal_draw_text_box(0, 208, 240, 0, status_str, status_col, 1);
 
-    char footer[32];
-    const char *aname = ALGO_NAMES[preset->ep_tone_algo % 4];
+    char footer[40];
+    const char *aname = ALGO_NAMES[preset->ep_tone_algo % 8];
+    const char *lname = LEAD_NAMES[preset->lead_instrument % 4];
     int flen = 0;
-    while (*aname && flen < 20) footer[flen++] = *aname++;
+    while (*aname && flen < 16) footer[flen++] = *aname++;
+    footer[flen++] = ' ';
+    footer[flen++] = '*';
+    footer[flen++] = ' ';
+    while (*lname && flen < 36) footer[flen++] = *lname++;
     footer[flen] = '\0';
     hal_fill_rect(0, 224, 240, 16, C_BLACK);
     hal_draw_text_box(0, 224, 240, 0, footer, RGB(140, 140, 140), 1);
@@ -165,12 +180,13 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
         hal_draw_text_box(0, 8, 240, 0, "TB-1 BAND MIXER", RGB(255, 190, 0), 1);
     }
 
-    render_meter(35,  "BASS VOL",  preset->bass_vol,  127, RGB(80, 160, 255));
-    render_meter(65,  "KEYS VOL",  preset->keys_vol,  127, RGB(255, 180, 40));
-    render_meter(95,  "DRUMS VOL", preset->drums_vol, 127, RGB(255, 80, 80));
-    render_meter(125, "REVERB",    preset->reverb_mix,127, RGB(180, 100, 255));
-    render_meter(155, "SPICE",     hs->spice_level,   100, RGB(255, 220, 50));
-    render_meter(185, "SWING",     preset->swing,     100, RGB(80, 240, 120));
+    render_meter(32,  "BASS VOL",  preset->bass_vol,  127, RGB(80, 160, 255));
+    render_meter(58,  "KEYS VOL",  preset->keys_vol,  127, RGB(255, 180, 40));
+    render_meter(84,  "DRUMS VOL", preset->drums_vol, 127, RGB(255, 80, 80));
+    render_meter(110, "LEAD VOL",  preset->lead_vol > 0 ? preset->lead_vol : 115, 127, RGB(240, 120, 255));
+    render_meter(136, "REVERB",    preset->reverb_mix,127, RGB(180, 100, 255));
+    render_meter(162, "SPICE",     hs->spice_level,   100, RGB(255, 220, 50));
+    render_meter(188, "SWING",     preset->swing,     100, RGB(80, 240, 120));
 
     hal_fill_rect(0, 218, 240, 18, C_BLACK);
     hal_draw_text_box(0, 218, 240, 0, "PRESS HOME: LEAD SHEET", RGB(140, 140, 140), 1);
@@ -179,8 +195,9 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
 void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
     uint8_t screen_switched = (screen_id != g_last_screen);
     uint8_t header_changed = screen_switched || (preset_idx != g_last_preset) ||
-                             (preset->groove_style != g_last_groove) || (hs->root_semitone != g_last_key) ||
-                             (preset->bpm != g_last_bpm) || (hs->spice_level != g_last_spice) || force_redraw;
+                             (preset->groove_style != g_last_groove) || (preset->drum_kit != g_last_drum) ||
+                             (hs->root_semitone != g_last_key) || (preset->bpm != g_last_bpm) ||
+                             (hs->spice_level != g_last_spice) || force_redraw;
 
     uint8_t full_grid_needed = screen_switched || (preset_idx != g_last_preset) ||
                               (hs->root_semitone != g_last_key) || (hs->form_mode != preset->form_mode) || force_redraw;
@@ -211,8 +228,11 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
             render_beat_pips(hs);
         }
 
-        if (screen_switched || hs->is_playing != g_last_playing || preset->ep_tone_algo != g_last_algo ||
-            hs->stop_time_counter != 0 || hs->is_vamp_mode != 0 || hs->ending_armed != 0) {
+        uint8_t footer_changed = screen_switched || (hs->is_playing != g_last_playing) ||
+                                 (preset->ep_tone_algo != g_last_algo) || (preset->lead_instrument != g_last_lead) ||
+                                 (hs->stop_time_counter != 0) || (hs->is_vamp_mode != 0) || (hs->ending_armed != 0);
+
+        if (footer_changed || force_redraw) {
             render_status_and_footer(hs, preset);
         }
     } else {
@@ -225,6 +245,9 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     g_last_preset = preset_idx;
     g_last_key = hs->root_semitone;
     g_last_algo = preset->ep_tone_algo;
+    g_last_bass_inst = preset->bass_instrument;
+    g_last_drum = preset->drum_kit;
+    g_last_lead = preset->lead_instrument;
     g_last_playing = hs->is_playing;
     g_last_groove = preset->groove_style;
     g_last_spice = hs->spice_level;
