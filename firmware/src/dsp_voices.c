@@ -145,7 +145,7 @@ void dsp_note_on_bass(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) 
     } else {
         g_bass.env_q15 >>= 1; // Legato tie
     }
-    g_bass.gate_samples = 16000; // ~360 ms walking bass note sustain
+    g_bass.gate_samples = 11000; // ~250 ms plucked walking bass gate
     g_bass.pluck_samples = 2200; // ~50 ms initial pluck snap
     g_bass.active = 1;
 }
@@ -296,22 +296,23 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
             mix += (b_sample * b_amp) >> 7; // Driving, punchy walking bass
 
-            // Attack micro-ramp
-            if (g_bass.env_q15 < g_bass.target_env) {
+            // Attack micro-ramp, then clear target_env so plucked-string decay runs freely
+            if (g_bass.target_env > 0) {
                 g_bass.env_q15 += (g_bass.target_env - g_bass.env_q15 + 15) >> 4;
-            }
-
-            if (g_bass.gate_samples > 0) {
-                g_bass.gate_samples--;
-                if (preset->bass_instrument == BASS_MUTED_TICTAC) {
-                    g_bass.env_q15 = (g_bass.env_q15 * 32300) >> 15; // Tight palm-mute decay
-                } else {
-                    g_bass.env_q15 = (g_bass.env_q15 * 32766) >> 15; // Natural string decay
+                if (g_bass.env_q15 >= g_bass.target_env - 64) {
+                    g_bass.target_env = 0;
                 }
+            } else if (g_bass.gate_samples > 0) {
+                g_bass.gate_samples--;
+                int32_t decay = 32725; // P-Bass: ~200 ms half-life
+                if (preset->bass_instrument == BASS_MUTED_TICTAC) decay = 32620;      // ~80 ms tight mute
+                else if (preset->bass_instrument == BASS_UPRIGHT)   decay = 32710;      // ~150 ms acoustic woody decay
+                else if (preset->bass_instrument == BASS_MOOG_FUNK) decay = 32715;      // ~160 ms synth pluck
+                g_bass.env_q15 = (g_bass.env_q15 * decay) >> 15;
             } else {
-                g_bass.env_q15 = (g_bass.env_q15 * 32650) >> 15;
+                g_bass.env_q15 = (g_bass.env_q15 * 32500) >> 15; // Smooth ~45 ms release tail
             }
-            if (g_bass.env_q15 < 100) g_bass.active = 0;
+            if (g_bass.target_env == 0 && g_bass.env_q15 < 100) g_bass.active = 0;
         }
 
         // 2. Keys Synth Engine: 4-Voice Polyphony across 8 Instruments
