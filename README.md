@@ -20,7 +20,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 ## Quick Start (Web Installer — No Setup Required)
 
-> **Compatibility & Backup:** Built and tested on the **M-VAVE FM-1** (original hardware). Before flashing custom firmware, back up any stock FM-1 patterns/presets you want to keep using M-Vave's desktop/web tool. You can restore stock firmware anytime (see [Recovery](#recovery--restoring-stock-firmware)).
+> **Compatibility, Backup & Disclaimer:** Built and tested on the **M-VAVE FM-1** (original hardware). Before flashing custom firmware, back up any stock FM-1 patterns/presets you want to keep using M-Vave's desktop/web tool. **Use at your own risk**—this firmware is provided as-is with no warranty, and the author is not responsible if flashing or using it damages or bricks your device. You can restore stock firmware using the steps in [Recovery](#recovery--restoring-stock-firmware).
 
 1. Plug the FM-1 into your computer with a USB-C data cable and power it on.
 2. Open the **[Blues Box Web Installer](https://provostprovost.github.io/blues/)** in **Chrome, Edge, or Opera** and click **Connect & Install Blues Box** *(zero Python or CLI setup needed)*.
@@ -163,8 +163,7 @@ gcc -DSTANDALONE_TEST -O2 -Wall -Wextra -Werror -Ifirmware/src \
 
 ## Recovery & Restoring Stock Firmware
 
-The FM-1 bootloader cannot be bricked:
-- **USB Rescue Mode:** Hold **`OCT-`** while turning on the power switch to boot straight into the USB updater.
+- **USB Rescue Mode:** Hold **`OCT-`** while turning on the power switch to boot into the USB updater.
 - **Reflash Blues Box:** `python3 tools/fm1_install.py build/bluesbox.fwsc --yes`
 - **Restore Stock Firmware:** Use M-Vave's updater with your factory firmware package, or flash a backup package with `tools/fm1_install.py`.
 
