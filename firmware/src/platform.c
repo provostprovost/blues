@@ -57,7 +57,7 @@ enum { ENC_SELECT = 0, ENC_ALGORITHM = 1, ENC_KNOB1 = 2, ENC_KNOB2 = 3, ENC_KNOB
 static void fm1_led_key_glow(uint32_t id, int on) { (void)id; (void)on; }   /* (no key LEDs: the pads glow) */
 #else
 #define FM1_SETTLE_US 100u                      /* the boot scan (OCT- for the rescue): 10 us read no key on an FM-1, the tick waits 100 too */
-#define FM1_GLOW_NS   35000u                    /* ~37% duty (~70-75% perceived brightness) for scale notes vs 100% chord root */
+#define FM1_GLOW_NS   14000u                    /* ~15% duty (~45-50% perceived brightness): readable scale notes, bright root contrast */
 #include "fm1_input.h"
 static void fm1_led_key_glow(uint32_t id, int on)   /* as fm1_led_key, the dim layer (~1/24): "there is something here" */
 {
