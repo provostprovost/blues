@@ -16,9 +16,13 @@ jobs:
       build: |
         V="${GITHUB_REF_NAME#v}"
         V="${V:-0.0}"
+        BOARD=smk37 sh build.sh
+        BOARD=smk37 MODEL=elite sh build.sh
+        BOARD=smk37 MODEL=mke sh build.sh
+        sh build.sh
         BOARD=smk37 sh build.sh --release "$V"
         BOARD=smk37 MODEL=elite sh build.sh --release "$V"
         BOARD=smk37 MODEL=mke sh build.sh --release "$V"
         sh build.sh --release "$V"
-        sh tests/run_tests.sh
+      tests: sh tests/run_tests.sh
       packages: build/bluesbox-[0-9]*.fwsc

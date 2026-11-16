@@ -7,7 +7,7 @@
 
 Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, walking bass, and comping chords—that follows a real 12-bar or 8-bar form while you solo on guitar or play the built-in 4-voice lead keyboard.
 
-- **Real blues accompaniment:** 14 groove/drum beat patterns, 14 bass engines, 10 bass line styles, 18 chord engines, 10 keys rhythm styles, and 12 drum kits—with independent Bass, Keys, and Drums **Fullness** and **Variation** controls.
+- **Real blues accompaniment:** 14 groove/drum beat patterns, 14 bass engines, 10 bass line styles, 18 keyboard tones, 10 keys rhythm styles, and 12 drum kits—with independent Bass, Keys, and Drums **Fullness** and **Variation** controls.
 - **Playable lead synth:** 14 solo voices + 4 Lead Play Styles (`Poly`, `Legato Glide`, `Blues Bend`, `Octave Stack`) across 27 backlit keys, with the current chord's root lit full white and the active blues scale glowing under your fingers.
 - **Live jam controls:** Toggle major/minor blues, trigger stop-time breaks, vamp on a chord, cue a turnaround, or arm a root-resolving ending on the fly.
 - **16 preset slots:** Hold **`SAVE`** or **`GLO`** and tap any of the 16 white keys to save and recall up to 16 complete setups in flash.
@@ -66,9 +66,9 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **`MASTER`** | Hardware master volume | Hardware master volume | Hardware master volume | Hardware master volume |
 | **`SELECT`** | Groove Preset (14 grooves)<br>*(Hold `GLO`: Drum Kit, 12 kits)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* |
 | **`PRESETS`** | Solo Lead Voice (14 voices)<br>*(Hold `SEL`: Key `C`–`B`, Hold `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* |
-| **`ALGORITHM`** | Backing Chord Sound (18 engines) | Backing Chord Sound | Backing Chord Sound | Backing Chord Sound |
+| **`ALGORITHM`** | Backing Keyboard Tone (18 tones) | Backing Keyboard Tone | Backing Keyboard Tone | Backing Keyboard Tone |
 | **`KNOB1`** | Tempo (40–240 BPM)<br>*(Hold `GLO`: Swing 0%–100%)* | Bass Volume<br>*(Hold `GLO`: Reverb Mix)* | Bass Line Style (10 styles)<br>*(Hold `GLO`: Bass Sound, 14)* | Bass Fullness (0%–100%)<br>*(Hold `GLO`: Bass Variation)* |
-| **`KNOB2`** | Master Variation (0%–100%)<br>*(Hold `GLO`: Tuning 440/432/442)* | Keys Volume<br>*(Hold `GLO`: Drive / Warmth)* | Keys Rhythm Style (10 styles)<br>*(Hold `GLO`: Chord Sound, 18)* | Keys Fullness (0%–100%)<br>*(Hold `GLO`: Keys Variation)* |
+| **`KNOB2`** | Master Variation (0%–100%)<br>*(Hold `GLO`: Tuning 440/432/442)* | Keys Volume<br>*(Hold `GLO`: Drive / Warmth)* | Keys Rhythm Style (10 styles)<br>*(Hold `GLO`: Keyboard Tone, 18)* | Keys Fullness (0%–100%)<br>*(Hold `GLO`: Keys Variation)* |
 | **`KNOB3`** | Bass Volume<br>*(Hold `GLO`: Bass Sound)* | Drums Volume<br>*(Hold `GLO`: Swing 0%–100%)* | Drum Beat Pattern (14 patterns)<br>*(Hold `GLO`: Drum Kit, 12)* | Drums Fullness (0%–100%)<br>*(Hold `GLO`: Drums Variation)* |
 | **`KNOB4`** | Keys Volume<br>*(Hold `GLO`: Reverb Mix)* | Lead Volume<br>*(Hold `GLO`: Lead Play Style)* | Blues Form (5 forms)<br>*(Hold `GLO`: Tuning 440/432/442)* | Master Fullness (all 3)<br>*(Hold `GLO`: Master Variation)* |
 
@@ -96,7 +96,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 - **Change the key:** Hold **`SEL`** and turn **`PRESETS`**. Or hold **`SEL`** and tap one of the first 12 silicone keys (`F` through `E`): a single tap queues the key change for the next chorus, and a quick double tap switches right away.
 - **Switch between Major and Minor Blues:** Press **`LFO`** for a one-tap toggle. You can also turn **`KNOB4`** on the **Band Style** screen, or hold **`SEL`** and press Key 22 (Minor) / Key 18 (Major). Minor Blues shows **`KEY:Em (MIN)`** in cyan at the top of the screen and updates all 12 chord boxes (`Em7`, `Am7`, `C7`, `B7`).
-- **Customize Bass, Keys, and Drum patterns separately:** Press **`HOME`** twice to open **Band Style**, then turn **`KNOB1`** (Bass Line), **`KNOB2`** (Keys Rhythm), **`KNOB3`** (Drum Beat), and **`KNOB4`** (Blues Form). Hold **`GLO`** on the same screen for Bass Sound, Chord Sound, Drum Kit, and Tuning.
+- **Customize Bass, Keys, and Drum patterns separately:** Press **`HOME`** twice to open **Band Style**, then turn **`KNOB1`** (Bass Line), **`KNOB2`** (Keys Rhythm), **`KNOB3`** (Drum Beat), and **`KNOB4`** (Blues Form). Hold **`GLO`** on the same screen for Bass Sound, Keyboard Tone, Drum Kit, and Tuning.
 - **Make the chords and bass jazzier:** Turn **`KNOB2`** (**Variation**). Low (0–30%) keeps it straight and simple; middle (31–65%) adds 9ths, 13ths, and chromatic bass walk-ups; high (66–100%) adds passing diminished chords, tritone subs, and turnaround chords in Bars 11–12.
 - **Dial in sparse vs. full-band energy:** Press **`HOME`** three times to open **Band Feel** for independent Bass/Keys/Drums **Fullness** (`KNOB1–3`) and **Variation** (`GLO + KNOB1–3`), or turn `KNOB4` (**Master Fullness** / `GLO + KNOB4` **Master Variation**). At `<20%` Fullness, Bass plays 1 root note per bar (`20–39%` plays `1–5`) and Drums strip down to rimshot on beats 2 & 4 (`20–44%` adds quarter-note hat + Beat 1 kick + snare, `45–74%` adds full shuffle hat + Beat 3 kick, `75%+` full kit); higher Variation adds chromatic bass walk-ups, 9th/13th/passing chords, ghost snares, and Bar 4/8/12 drum fills.
 - **Adjust shuffle feel:** Hold **`GLO`** and turn **`KNOB1`** (**Swing**), or press **`HOME`** to open the Band Mixer and hold **`GLO`** + turn **`KNOB3`**. 0% is straight 8ths, ~67% is a classic triplet shuffle, and 100% is a hard dotted-8th swing.
@@ -119,7 +119,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 ## The Sounds & Styles
 
 - **14 Groove / Drum Beat Patterns (`SELECT`):** 12/8 Slow Blues, Texas Shuffle, Chicago Swing, Rockin' Blues, New Orleans 2nd Line, Memphis Soul, Rhumba Blues, Boogie-Woogie, Purdie Shuffle, Train Beat, Bo Diddley, Jazz Shuffle, Gospel Swing, Delta Stomp.
-- **18 Chord Engines (`ALGORITHM`):** Rhodes FM, Bright FM EP, Wurlitzer 200A, Clean B3 Organ, Dirty Gospel B3, Clavinet D6, Archtop Rhythm Guitar, Blues Horns, Honky-Tonk Piano, Tremolo Suitcase EP, Delta Resonator Guitar, Rotary Leslie Organ, Cajun Accordion, Vibraphone, Farfisa Combo Organ, Mellotron Strings, CP-70 Electric Grand, Harmonium.
+- **18 Keyboard Tones (`ALGORITHM`):** Rhodes FM, Bright FM EP, Wurlitzer 200A, Clean B3 Organ, Dirty Gospel B3, Clavinet D6, Archtop Rhythm Guitar, Blues Horns, Honky-Tonk Piano, Tremolo Suitcase EP, Delta Resonator Guitar, Rotary Leslie Organ, Cajun Accordion, Vibraphone, Farfisa Combo Organ, Mellotron Strings, CP-70 Electric Grand, Harmonium.
 - **14 Solo Lead Voices (`PRESETS`):** Overdriven Blues Guitar, Chicago Blues Harp, Tenor Sax, Moog Lead, Warm Jazz Hollowbody, Fuzz Octave, Muted Blues Trumpet, Percussive B3 Organ, Talk-Box Vowel Lead, Slide / Lap Steel Guitar, Wavefolder Synth, Hard-Sync Analog Lead, SID Chiptune Lead, Steelpan.
 - **4 Lead Play Styles (`GLO` + `PRESETS`):** Natural Poly, Mono Legato Glide, Blues Scoop/Bend, Octave Stack.
 - **14 Bass Engines (`GLO` + `KNOB3`):** Fender P-Bass, Upright Double Bass, Muted Tic-Tac Boogie, Moog Funk Synth, 60s Jazz Bass, Flatwound Motown, Ampeg Tube Growl, Sub Octave, Lately FM Bass, Slap/Pop Bass, Hofner Beatle Bass, Acid 303 Bass, NOLA Tuba, Distorted Pick Bass.
@@ -133,7 +133,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 Press **`HOME`** to cycle through the four screens:
 
-1. **12-Bar Lead Sheet:** Shows the groove and drum kit at the top, Key + Form (`(MAJ)` or cyan `(MIN)`), BPM, and Variation below it, the 12-bar chord grid with the active bar highlighted in amber, 4 beat pips, live playback status (and 1.5s parameter toasts), and the footer (`<Solo Lead> * <Chord Engine>`).
+1. **12-Bar Lead Sheet:** Shows the groove and drum kit at the top, Key + Form (`(MAJ)` or cyan `(MIN)`), BPM, and Variation below it, the 12-bar chord grid with the active bar highlighted in amber, 4 beat pips, live playback status (and 1.5s parameter toasts), and the footer (`<Solo Lead> * <Keyboard Tone>`).
 2. **Band Mixer:** Live controls for `BASS VOL`, `KEYS VOL`, `DRUMS VOL`, `LEAD VOL` (`KNOB1–4`) and `REVERB`, `DRIVE`, `SWING`, `LEAD PLAY` (`GLO` + `KNOB1–4`).
 3. **Band Style:** Direct rhythm & tone editor for `BASS LINE`, `KEYS RHY`, `DRUM BEAT`, and `FORM` (`KNOB1–4`), plus `[G] BASS`, `[G] KEYS`, `[G] KIT`, and `[G] TUNE` (`GLO` + `KNOB1–4`).
 4. **Band Feel:** Per-instrument `BASS FUL`, `KEYS FUL`, `DRUMS FUL`, `MSTR FUL` (`KNOB1–4`) and `[G]BS VAR`, `[G]KY VAR`, `[G]DR VAR`, `[G]MS VAR` (`GLO` + `KNOB1–4`).
