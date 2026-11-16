@@ -90,13 +90,13 @@ The 4 lower knobs dynamically re-map when switching between **Lead Sheet View** 
 #### On Lead Sheet View (Default)
 | Encoder | Label | Primary Function (Turn) | Secondary Function (Hold `GLO` + Turn) |
 |---|---|---|---|
-| **Encoder 0** | `SELECT` | **Groove Style**: Cycles 5 groove styles | **Drum Kit**: Studio Punch, Vintage Brush, Retro 808 |
-| **Encoder 1** | `ALGORITHM` | **Chord Engine**: 8 classic electric piano, organ, guitar & horn engines | — |
+| **Encoder 0** | `SELECT` | **Groove Style**: Cycles 8 groove styles | **Drum Kit**: Studio, Brush, Retro 808, Stax Tight |
+| **Encoder 1** | `ALGORITHM` | **Chord Engine**: 12 electric piano, organ, acoustic piano, guitar & horn engines | — |
 | **Encoder 2** | `KNOB 1` | **Tempo**: Adjusts BPM ($40\text{--}240\text{ BPM}$) | **Swing %**: Adjusts shuffle swing ($50\%\text{--}80\%$) |
 | **Encoder 3** | `KNOB 2` | **Spice Level**: Adjusts harmonic complexity ($0\%\text{--}100\%$) | **Master Tuning**: $440\text{ Hz}$, $432\text{ Hz}$, or $442\text{ Hz}$ |
 | **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Engine**: P-Bass, Upright, Muted Boogie, Moog Funk |
 | **Encoder 5** | `KNOB 4` | **Keys Volume**: Adjusts comping chord level | **Reverb Mix**: Schroeder room reverb wet level |
-| **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: Blues Guitar, Harp, Tenor Sax, Moog | **Key Select** (Hold `SEL` or `GLO`): Scrolls keys `C..B` |
+| **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: 8 expressive guitar, harp, horn, moog & organ voices | **Key Select** (Hold `SEL` or `GLO`): Scrolls keys `C..B` |
 
 #### On Band Mixer View (`HOME` Pressed)
 On the Band Mixer view, Knobs 1--4 act as dedicated hardware mixing faders:
@@ -117,8 +117,8 @@ All 14 front-panel buttons have dedicated functions:
 |---|---|---|
 | **`PLAY`** | Transport | **Start / Stop**: Toggles playback (Green LED illuminates when playing). |
 | **`REC`** | Metronome | **Count-in Toggle**: Enables 1-bar count-in rimshot click. Pulses on Beat 1. |
-| **`OCT-`** | Tempo Down | Decrements tempo by **-4 BPM**. |
-| **`OCT+`** | Tempo Up | Increments tempo by **+4 BPM**. |
+| **`OCT-`** | Octave Down | **Keyboard Octave Down**: Shifts solo keyboard down (-2 to +2 octaves). Hold `SEL` + `OCT-` to nudge tempo down (-4 BPM). |
+| **`OCT+`** | Octave Up | **Keyboard Octave Up**: Shifts solo keyboard up (-2 to +2 octaves). Hold `SEL` + `OCT+` to nudge tempo up (+4 BPM). |
 | **`HOME`** | Display | **Screen Toggle**: Switches between **12-Bar Lead Sheet** and **Band Mixer**. |
 | **`SAVE`** | Storage | **Commit to Flash**: Saves current preset and parameters immediately to flash. |
 | **`GLO`** | Shift | **Shift Layer**: Hold down to access secondary functions on Knobs 1--4. |
@@ -186,7 +186,20 @@ Press **`HOME`** to toggle between the two non-blocking 240x240 RGB TFT screens:
 
 ---
 
-## Sound Engines & Instruments
+## Sound Engines & Grooves
+
+### 8 Selectable Groove Styles
+Adjusted via **Encoder 0 (`SELECT`)**:
+1. **12/8 Slow Blues**: Classic B.B. King / Buddy Guy slow triplet blues ballad with rolling 12/8 pulse.
+2. **Texas Shuffle**: Driving Stevie Ray Vaughan / Albert Collins Texas shuffle with tight walking bass.
+3. **Chicago Swing**: Muddy Waters / Little Walter bouncy, swinging shuffle with backbeat accents.
+4. **Rockin' Blues**: Chuck Berry / Allman Brothers straight-8s driving blues-rock groove.
+5. **New Orleans 2nd Line**: Professor Longhair syncopated street march beat with loose snare accents.
+6. **Memphis Soul Blues**: Stax / Albert King 16th-note tight groove with locked bass stabs.
+7. **Rhumba Blues**: B.B. King / Albert King *"Crosscut Saw"* 3-3-2 syncopated Afro-Cuban crosscut rhythm.
+8. **Jump Blues / Boogie-Woogie**: Louis Jordan high-energy 8-to-the-bar walking bass and galloping swing drums.
+
+---
 
 ### 4 Selectable Bass Engines
 Adjusted via **Encoder 4 (`KNOB 3`)** with `GLO` held:
@@ -197,7 +210,7 @@ Adjusted via **Encoder 4 (`KNOB 3`)** with `GLO` held:
 
 ---
 
-### 8 Selectable Chord Engines
+### 12 Selectable Chord Engines
 Adjusted via **Encoder 1 (`ALGORITHM`)**:
 1. **Rhodes FM (Algo 0)**: 2-Operator FM synthesis producing a sweet bell/tine attack that dissolves into a warm, mellow electric piano body.
 2. **Bright FM EP (Algo 1)**: 2:1 FM chime algorithm with crisp attack transients and rich overtones.
@@ -207,23 +220,32 @@ Adjusted via **Encoder 1 (`ALGORITHM`)**:
 6. **Funk Clavinet D6 (Algo 5)**: Biting 3:1 plucked FM algorithm with fast percussive decay and sharp pick attack.
 7. **Archtop Rhythm Guitar (Algo 6)**: Warm hollowbody jazz/blues comping guitar with string pluck transient and wooden acoustic resonance.
 8. **Blues Horn Section (Algo 7)**: Tenor sax and trumpet brass ensemble with swelling attack and rich harmonized brass overtones.
+9. **Honky-Tonk Piano (Algo 8)**: Barrelhouse upright acoustic piano with dual-chorus detuned strings and crisp hammer strike.
+10. **Tremolo Suitcase EP (Algo 9)**: Warm electric piano with vintage optical tremolo amplitude modulation.
+11. **Delta Resonator Guitar (Algo 10)**: Metallic acoustic Dobro body pluck with resonant acoustic mid-range bite.
+12. **Rotary Leslie Organ (Algo 11)**: Gospel drawbar organ with dynamic dual-rotor rotary chorus swirl.
 
 ---
 
-### 3 Selectable Drum Kits
+### 4 Selectable Drum Kits
 Adjusted via **Encoder 0 (`SELECT`)** with `GLO` held:
-1. **Studio Punch**: Punchy sine-sweep kick, crisp snap snare, clean metallic hi-hat, and wooden rimshot.
+1. **Studio Punch**: Deep acoustic kick punch (300 ms sub-sweep), crisp backbeat snare, sizzle shuffle hats, and woody rimshot.
 2. **Vintage Brush**: Soft acoustic thud kick, textured sandpaper brush stir/swirl snare, and dark sizzle ride cymbal.
 3. **Retro 808 / Lo-Fi**: Deep boomy 808 sub kick, snappy 808 clap/snare, sizzly metallic hats, and synthetic rim tick.
+4. **Stax / Memphis Tight**: Dampened kick ("pillow in the kick drum"), tight dry snare crack, and crisp closed hats.
 
 ---
 
-### 4 Solo Lead Voice Engines
+### 8 Solo Lead Voice Engines
 Adjusted via direct turn of **Encoder 6 (`PRESETS`)**:
 1. **Overdriven Blues Guitar**: Singing electric lead guitar with tube clipping bite, harmonic sustain, and touch sensitivity.
 2. **Chicago Blues Harp**: Amplified green bullet harmonica with authentic nasal reed pulse, throat bite, and pitch-bend nuance.
 3. **Tenor Saxophone**: Breathy acoustic tenor sax with acoustic throat resonance, expressive swell, and subtle reed growl.
 4. **Moog Solo Lead**: Classic analog monosynth lead with detuned dual oscillators, singing filter resonance, and portamento glide.
+5. **Warm Jazz Hollowbody ("Lucille")**: Mellow neck pickup tone with warm rolled-off tone pot and round singing fundamental.
+6. **Fuzz Octave Stompbox**: Aggressive full-wave rectified octave-up distortion (Hendrix Band of Gypsys / Buddy Guy style).
+7. **Muted Blues Trumpet**: Brassy harmon-muted trumpet with nasal odd harmonics and expressive formant bite.
+8. **Percussive B3 Organ Lead**: Jimmy Smith style fast 3rd harmonic percussive key-click decaying into drawbar flutes.
 
 ---
 

@@ -1,6 +1,6 @@
 #include "blues_arranger.h"
 
-static const GrooveTemplate GROOVE_TEMPLATES[5] = {
+static const GrooveTemplate GROOVE_TEMPLATES[8] = {
     { GROOVE_SLOW_12_8, 67,
       {127,0,0,90, 100,0,0,90, 110,0,0,90, 100,0,0,90},
       {100,0,0,0,  0,0,80,0,   100,0,0,0,  0,0,80,0},
@@ -20,7 +20,19 @@ static const GrooveTemplate GROOVE_TEMPLATES[5] = {
     { GROOVE_SECOND_LINE, 55,
       {127,0,90,0, 0,90,110,0, 127,0,90,0, 0,90,110,0},
       {100,0,0,90, 0,100,0,0,  100,0,0,90, 0,100,0,0},
-      {127,90,100,90, 127,90,100,90, 127,90,100,90, 127,90,100,90} }
+      {127,90,100,90, 127,90,100,90, 127,90,100,90, 127,90,100,90} },
+    { GROOVE_MEMPHIS_SOUL, 52,
+      {127,0,90,0, 0,90,110,0, 127,0,90,0, 0,90,110,0},
+      {0,0,100,0,  110,0,0,90, 0,0,100,0,  110,0,0,90},
+      {120,80,100,80, 120,80,100,80, 120,80,100,80, 120,80,100,80} },
+    { GROOVE_RHUMBA_BLUES, 50,
+      {127,0,0,100, 0,0,110,0, 127,0,0,100, 0,0,110,0},
+      {0,0,90,0,   110,0,0,0,  0,0,90,0,   110,0,0,0},
+      {110,70,70,100, 70,70,110,70, 110,70,70,100, 70,70,110,70} },
+    { GROOVE_BOOGIE_WOOGIE, 65,
+      {127,0,110,0, 120,0,110,0, 127,0,110,0, 120,0,110,0},
+      {0,0,0,0,    110,0,0,0,  0,0,0,0,    110,0,0,0},
+      {127,0,90,0, 127,0,90,0, 127,0,90,0, 127,0,90,0} }
 };
 
 static uint16_t g_hmnz_lfsr = 0x5EEDu;
@@ -205,7 +217,7 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         if (hs->current_beat > 0) return;
     }
 
-    const GrooveTemplate *gt = &GROOVE_TEMPLATES[preset->groove_style % 5];
+    const GrooveTemplate *gt = &GROOVE_TEMPLATES[preset->groove_style % 8];
     uint8_t sub_slot = 0xFF;
 
     if (gt->style == GROOVE_SLOW_12_8) {

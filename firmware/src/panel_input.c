@@ -11,6 +11,7 @@ static uint32_t g_last_key_press_ms[ZONE1_COUNT] = {0};
 static uint8_t  g_save_pending = 0;
 static uint32_t g_last_param_change_ms = 0;
 static uint32_t g_last_tap_ms = 0;
+static int8_t   g_lead_octave_shift = 0;
 
 void panel_init(void) {
     g_prev_key_mask = 0;
@@ -20,6 +21,7 @@ void panel_init(void) {
     g_save_pending = 0;
     g_last_param_change_ms = 0;
     g_last_tap_ms = 0;
+    g_lead_octave_shift = 0;
 }
 
 uint8_t panel_check_autosave_needed(uint32_t ms_now) {
@@ -125,18 +127,22 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         }
     }
     if (btn_edges & (1u << BTN_OCT_DOWN)) {
-        if (p->bpm > 44) p->bpm -= 4;
-        else p->bpm = 40;
+        if (sel_held) {
+            if (p->bpm > 44) p->bpm -= 4;
+            else p->bpm = 40;
+        } else {
+            if (g_lead_octave_shift > -2) g_lead_octave_shift--;
+        }
         hs->ui_dirty = 1;
-        g_save_pending = 1;
-        g_last_param_change_ms = ms_now;
     }
     if (btn_edges & (1u << BTN_OCT_UP)) {
-        if (p->bpm < 236) p->bpm += 4;
-        else p->bpm = 240;
+        if (sel_held) {
+            if (p->bpm < 236) p->bpm += 4;
+            else p->bpm = 240;
+        } else {
+            if (g_lead_octave_shift < 2) g_lead_octave_shift++;
+        }
         hs->ui_dirty = 1;
-        g_save_pending = 1;
-        g_last_param_change_ms = ms_now;
     }
     if (btn_edges & (1u << BTN_SAVE)) {
         // Immediate explicit preset save
@@ -197,7 +203,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // 2. Rotary Encoders
     int8_t delta;
 
-    // ENC_PRESETS (Encoder 6): Select Lead Instrument (0..3), or Root Key with SEL or GLO held
+    // ENC_PRESETS (Encoder 6): Select Lead Instrument (0..7), or Root Key with SEL or GLO held
     if ((delta = hal_get_encoder_delta(ENC_PRESETS)) != 0) {
         if (sel_held || glo_held) {
             int32_t nk = (int32_t)hs->root_semitone + delta;
@@ -209,38 +215,32 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             g_last_param_change_ms = ms_now;
         } else {
             int32_t nl = (int32_t)p->lead_instrument + delta;
-            while (nl < 0) nl += 4;
-            p->lead_instrument = (uint8_t)(nl % 4);
+            while (nl < 0) nl += 8;
+            p->lead_instrument = (uint8_t)(nl % 8);
             hs->ui_dirty = 1;
-            g_save_pending = 1;
-            g_last_param_change_ms = ms_now;
         }
     }
 
-    // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..7)
+    // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..11)
     if ((delta = hal_get_encoder_delta(ENC_ALGORITHM)) != 0) {
         int32_t na = (int32_t)p->ep_tone_algo + delta;
-        while (na < 0) na += 8;
-        p->ep_tone_algo = (uint8_t)(na % 8);
+        while (na < 0) na += 12;
+        p->ep_tone_algo = (uint8_t)(na % 12);
         hs->ui_dirty = 1;
-        g_save_pending = 1;
-        g_last_param_change_ms = ms_now;
     }
 
-    // ENC_SELECT (Encoder 0): Groove Style (0..4) or Drum Kit with GLO (0..2)
+    // ENC_SELECT (Encoder 0): Groove Style (0..7) or Drum Kit with GLO (0..3)
     if ((delta = hal_get_encoder_delta(ENC_SELECT)) != 0) {
         if (glo_held) {
             int32_t nd = (int32_t)p->drum_kit + delta;
-            while (nd < 0) nd += 3;
-            p->drum_kit = (uint8_t)(nd % 3);
+            while (nd < 0) nd += 4;
+            p->drum_kit = (uint8_t)(nd % 4);
         } else {
             int32_t ng = (int32_t)p->groove_style + delta;
-            while (ng < 0) ng += 5;
-            p->groove_style = (uint8_t)(ng % 5);
+            while (ng < 0) ng += 8;
+            p->groove_style = (uint8_t)(ng % 8);
         }
         hs->ui_dirty = 1;
-        g_save_pending = 1;
-        g_last_param_change_ms = ms_now;
     }
 
     uint8_t is_mixer = (ui_screen && *ui_screen == 1);
@@ -383,14 +383,20 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         if (pressed) {
             for (uint8_t k = 0; k < 27; k++) {
                 if (pressed & (1u << k)) {
-                    dsp_note_on_lead((uint8_t)(KEY_LEAD_BASE + k), 115, p->master_tuning);
+                    int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
+                    if (note_val < 0) note_val = 0;
+                    if (note_val > 127) note_val = 127;
+                    dsp_note_on_lead((uint8_t)note_val, 115, p->master_tuning);
                 }
             }
         }
         if (released) {
             for (uint8_t k = 0; k < 27; k++) {
                 if (released & (1u << k)) {
-                    dsp_note_off_lead((uint8_t)(KEY_LEAD_BASE + k));
+                    int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
+                    if (note_val < 0) note_val = 0;
+                    if (note_val > 127) note_val = 127;
+                    dsp_note_off_lead((uint8_t)note_val);
                 }
             }
         }
@@ -471,7 +477,8 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     if (hs->is_playing && !sel_held) {
         // Minor Blues Scale: 1, b3, 4, b5, 5, b7 (offsets 0, 3, 5, 6, 7, 10 relative to root)
         for (uint8_t k = 0; k < 27; k++) {
-            uint8_t note = (uint8_t)(KEY_LEAD_BASE + k);
+            int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
+            uint8_t note = (uint8_t)((note_val < 0) ? 0 : (note_val > 127) ? 127 : note_val);
             uint8_t interval = (uint8_t)((note + 12 - hs->root_semitone) % 12);
             uint8_t is_blues = (interval == 0 || interval == 3 || interval == 5 ||
                                 interval == 6 || interval == 7 || interval == 10);

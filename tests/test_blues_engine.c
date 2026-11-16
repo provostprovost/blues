@@ -467,8 +467,8 @@ void test_stage4_panel_ui(void) {
         presets[i].opening_var = VAR_FLAT_FOUR;
         presets[i].outro_type = OUTRO_TAG;
         presets[i].bass_instrument = (uint8_t)(i % 4);
-        presets[i].drum_kit = (uint8_t)(i % 3);
-        presets[i].lead_instrument = (uint8_t)(i % 4);
+        presets[i].drum_kit = (uint8_t)(i % 4);
+        presets[i].lead_instrument = (uint8_t)(i % 8);
         presets[i].lead_vol = 115;
     }
 
@@ -547,8 +547,8 @@ void test_stage5_integration(void) {
         presets[i].opening_var = VAR_FLAT_FOUR;
         presets[i].outro_type = OUTRO_TAG;
         presets[i].bass_instrument = (uint8_t)(i % 4);
-        presets[i].drum_kit = (uint8_t)(i % 3);
-        presets[i].lead_instrument = (uint8_t)(i % 4);
+        presets[i].drum_kit = (uint8_t)(i % 4);
+        presets[i].lead_instrument = (uint8_t)(i % 8);
         presets[i].lead_vol = 115;
     }
 

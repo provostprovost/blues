@@ -212,16 +212,52 @@ static void init_factory_presets(void) {
                 p->lead_instrument = LEAD_HARMONICA;
                 p->form_mode = FORM_MINOR_BLUES;
                 break;
+            case 6: // Memphis Soul
+                p->root_key = 4; // E
+                p->groove_style = GROOVE_MEMPHIS_SOUL;
+                p->bpm = 104;
+                p->spice = 55;
+                p->swing = 52;
+                p->ep_tone_algo = KEYS_TREMOLO_EP;
+                p->bass_instrument = BASS_P_BASS;
+                p->drum_kit = DRUM_STAX_TIGHT;
+                p->lead_instrument = LEAD_WARM_JAZZ;
+                p->form_mode = FORM_12BAR;
+                break;
+            case 7: // Rhumba Blues
+                p->root_key = 4; // E
+                p->groove_style = GROOVE_RHUMBA_BLUES;
+                p->bpm = 118;
+                p->spice = 50;
+                p->swing = 50;
+                p->ep_tone_algo = KEYS_RESONATOR;
+                p->bass_instrument = BASS_P_BASS;
+                p->drum_kit = DRUM_STUDIO;
+                p->lead_instrument = LEAD_MUTED_TRUMPET;
+                p->form_mode = FORM_12BAR;
+                break;
+            case 8: // Boogie Woogie
+                p->root_key = 4; // E
+                p->groove_style = GROOVE_BOOGIE_WOOGIE;
+                p->bpm = 158;
+                p->spice = 60;
+                p->swing = 65;
+                p->ep_tone_algo = KEYS_HONKY_TONK;
+                p->bass_instrument = BASS_MUTED_TICTAC;
+                p->drum_kit = DRUM_STUDIO;
+                p->lead_instrument = LEAD_PERC_ORGAN;
+                p->form_mode = FORM_12BAR;
+                break;
             default: // Varied Blues Jam slots
                 p->root_key = 4; // E
-                p->groove_style = (uint8_t)(i % 5);
-                p->bpm = (uint8_t)(90 + (i * 6));
+                p->groove_style = (uint8_t)(i % 8);
+                p->bpm = (uint8_t)(90 + (i * 5));
                 p->spice = 50;
                 p->swing = 65;
-                p->ep_tone_algo = (uint8_t)(i % 8);
+                p->ep_tone_algo = (uint8_t)(i % 12);
                 p->bass_instrument = (uint8_t)(i % 4);
-                p->drum_kit = (uint8_t)(i % 3);
-                p->lead_instrument = (uint8_t)(i % 4);
+                p->drum_kit = (uint8_t)(i % 4);
+                p->lead_instrument = (uint8_t)(i % 8);
                 p->form_mode = (i % 3 == 0) ? FORM_MINOR_BLUES : FORM_12BAR;
                 break;
         }

@@ -3,11 +3,11 @@
 #include "blues_harmony.h"
 
 static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
-static const char *GROOVE_NAMES[5] = { "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE" };
-static const char *ALGO_NAMES[8]   = { "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET", "ARCHTOP GTR", "BLUES HORNS" };
+static const char *GROOVE_NAMES[8] = { "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE", "MEMPHIS SOUL", "RHUMBA BLUES", "BOOGIE WOOGIE" };
+static const char *ALGO_NAMES[12]  = { "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET", "ARCHTOP GTR", "BLUES HORNS", "HONKY-TONK", "TREMOLO EP", "RESONATOR", "LESLIE ORGAN" };
 static const char *BASS_NAMES[4]   = { "P-BASS", "UPRIGHT", "MUTED BOOGIE", "MOOG FUNK" };
-static const char *DRUM_NAMES[3]   = { "STUDIO", "BRUSH", "RETRO 808" };
-static const char *LEAD_NAMES[4]   = { "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD" };
+static const char *DRUM_NAMES[4]   = { "STUDIO", "BRUSH", "RETRO 808", "STAX TIGHT" };
+static const char *LEAD_NAMES[8]   = { "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "MUTED TRPT", "PERC ORGAN" };
 
 static uint8_t g_last_bar = 0xFF;
 static uint8_t g_last_beat = 0xFF;
@@ -107,8 +107,8 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
 
     // Header Title: Groove Style & Drum Kit
     char header[36];
-    const char *gname = GROOVE_NAMES[preset->groove_style % 5];
-    const char *dname = DRUM_NAMES[preset->drum_kit % 3];
+    const char *gname = GROOVE_NAMES[preset->groove_style % 8];
+    const char *dname = DRUM_NAMES[preset->drum_kit % 4];
     int hlen = 0;
     while (*gname && hlen < 16) header[hlen++] = *gname++;
     header[hlen++] = ' ';
@@ -166,8 +166,8 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
     hal_draw_text_box(0, 208, 240, 0, status_str, status_col, 1);
 
     char footer[40];
-    const char *aname = ALGO_NAMES[preset->ep_tone_algo % 8];
-    const char *lname = LEAD_NAMES[preset->lead_instrument % 4];
+    const char *aname = ALGO_NAMES[preset->ep_tone_algo % 12];
+    const char *lname = LEAD_NAMES[preset->lead_instrument % 8];
     int flen = 0;
     while (*aname && flen < 16) footer[flen++] = *aname++;
     footer[flen++] = ' ';
