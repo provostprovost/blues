@@ -923,11 +923,12 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         g_comb_lp2 = (int16_t)div2_trunc(c2 + g_comb_lp2);
         g_comb_lp3 = (int16_t)div2_trunc(c3 + g_comb_lp3);
 
+        int32_t rev_fb = 22500 + ((preset->reverb_mix * 5500) >> 7);
         int32_t rev_sum = div4_trunc(g_comb_lp0 + g_comb_lp1 + g_comb_lp2 + g_comb_lp3);
-        int32_t comb_in0 = mix + q15_mul_trunc(g_comb_lp0, 22500);
-        int32_t comb_in1 = mix + q15_mul_trunc(g_comb_lp1, 22500);
-        int32_t comb_in2 = mix + q15_mul_trunc(g_comb_lp2, 22500);
-        int32_t comb_in3 = mix + q15_mul_trunc(g_comb_lp3, 22500);
+        int32_t comb_in0 = mix + q15_mul_trunc(g_comb_lp0, rev_fb);
+        int32_t comb_in1 = mix + q15_mul_trunc(g_comb_lp1, rev_fb);
+        int32_t comb_in2 = mix + q15_mul_trunc(g_comb_lp2, rev_fb);
+        int32_t comb_in3 = mix + q15_mul_trunc(g_comb_lp3, rev_fb);
 
         if (comb_in0 > 32767)  comb_in0 = 32767;
         if (comb_in0 < -32767) comb_in0 = -32767;
@@ -948,7 +949,8 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         if (++g_comb_ptr2 >= 1013) g_comb_ptr2 = 0;
         if (++g_comb_ptr3 >= 1153) g_comb_ptr3 = 0;
 
-        mix += (rev_sum * preset->reverb_mix) >> 7;
+        int32_t rev_wet = (int32_t)preset->reverb_mix + ((int32_t)preset->reverb_mix >> 1);
+        mix += (rev_sum * rev_wet) >> 7;
 
         // Q15 Polynomial Soft-Clip Saturator: x - (x^3 / 4)
         int32_t mix_q15 = mix;

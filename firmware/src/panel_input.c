@@ -377,7 +377,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             }
         } else if (is_mixer) {
             if (glo_held) {
-                set_master_spice(hs, p, clamp_step_u8(hs->spice_level, delta * 5, 0, 100));
+                p->drive_level = clamp_step_u8(p->drive_level, delta * 4, 0, 127);
             } else {
                 p->keys_vol = clamp_step_u8(p->keys_vol, delta * 4, 0, 127);
             }
@@ -437,7 +437,8 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             }
         } else if (is_mixer) {
             if (glo_held) {
-                set_master_fullness(hs, p, clamp_step_u8(hs->fullness, delta * 5, 0, 100));
+                p->lead_play_style = wrap_step_u8(p->lead_play_style, delta, NUM_LEAD_PLAY_STYLES);
+                dsp_set_lead_play_style(p->lead_play_style);
             } else {
                 p->lead_vol = clamp_step_u8(p->lead_vol, delta * 4, 0, 127);
             }

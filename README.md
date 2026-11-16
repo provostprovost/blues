@@ -59,9 +59,9 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **`PRESETS`** | Solo Lead Voice (14 voices)<br>*(Hold `SEL`: Key `C`–`B`, Hold `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* |
 | **`ALGORITHM`** | Backing Chord Sound (18 engines) | Backing Chord Sound | Backing Chord Sound | Backing Chord Sound |
 | **`KNOB1`** | Tempo (40–240 BPM)<br>*(Hold `GLO`: Swing 0%–100%)* | Bass Volume<br>*(Hold `GLO`: Reverb Mix)* | Bass Line Style (10 styles)<br>*(Hold `GLO`: Bass Sound, 14)* | Bass Fullness (0%–100%)<br>*(Hold `GLO`: Bass Spice)* |
-| **`KNOB2`** | Master Spice (0%–100%)<br>*(Hold `GLO`: Tuning 440/432/442)* | Keys Volume<br>*(Hold `GLO`: Master Spice)* | Keys Rhythm Style (10 styles)<br>*(Hold `GLO`: Chord Sound, 18)* | Keys Fullness (0%–100%)<br>*(Hold `GLO`: Keys Spice)* |
+| **`KNOB2`** | Master Spice (0%–100%)<br>*(Hold `GLO`: Tuning 440/432/442)* | Keys Volume<br>*(Hold `GLO`: Drive / Warmth)* | Keys Rhythm Style (10 styles)<br>*(Hold `GLO`: Chord Sound, 18)* | Keys Fullness (0%–100%)<br>*(Hold `GLO`: Keys Spice)* |
 | **`KNOB3`** | Bass Volume<br>*(Hold `GLO`: Bass Sound)* | Drums Volume<br>*(Hold `GLO`: Swing 0%–100%)* | Drum Beat Pattern (14 patterns)<br>*(Hold `GLO`: Drum Kit, 12)* | Drums Fullness (0%–100%)<br>*(Hold `GLO`: Drums Spice)* |
-| **`KNOB4`** | Keys Volume<br>*(Hold `GLO`: Reverb Mix)* | Lead Volume<br>*(Hold `GLO`: Master Fullness)* | Blues Form (5 forms)<br>*(Hold `GLO`: Tuning 440/432/442)* | Master Fullness (all 3)<br>*(Hold `GLO`: Master Spice)* |
+| **`KNOB4`** | Keys Volume<br>*(Hold `GLO`: Reverb Mix)* | Lead Volume<br>*(Hold `GLO`: Lead Play Style)* | Blues Form (5 forms)<br>*(Hold `GLO`: Tuning 440/432/442)* | Master Fullness (all 3)<br>*(Hold `GLO`: Master Spice)* |
 
 ### Buttons
 
