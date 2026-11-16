@@ -321,7 +321,7 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
     }
 
     if (hs->stop_time_counter > 0) {
-        if (hs->current_beat > 0) return;
+        if (hs->current_beat > 0 || hs->current_subdiv > 0) return;
     }
 
     const GrooveTemplate *gt = &GROOVE_TEMPLATES[hs->drum_pattern % 8];

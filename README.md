@@ -75,7 +75,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **`GLO`** | Secondary knob layer (bottom half of Mixer & Band Style, plus quick Lead Sheet tweaks). |
 | **`ARP`** | Tap Tempo—tap in rhythm to set the BPM. |
 | **`FX`** | Trigger a manual full-band accent stab + crash. |
-| **`EDIT`** | Early Turnaround—jump straight to Bar 9 (the V chord) at the next bar. |
+| **`EDIT`** | Arm or cancel a tag ending at the end of the current chorus. |
 | **`ENV`** | Vamp Mode—freeze the progression and loop the current chord. |
 | **`SEQ`** | Trigger a 4-bar stop-time break with beat-1 stabs. |
 | **`LFO`** | Toggle **Major 12-Bar** ↔ **Minor Blues**. |

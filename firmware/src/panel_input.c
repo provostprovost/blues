@@ -148,7 +148,11 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             hs->current_bar = 0;
             hs->current_beat = 0;
             hs->current_subdiv = 0;
+            hs->count_in_bars_remaining = hs->count_in_enabled ? 1 : 0;
         } else {
+            hs->count_in_bars_remaining = 0;
+            hs->stop_time_counter = 0;
+            hs->queued_cue = CUE_NONE;
             dsp_all_notes_off();
         }
         hs->ui_dirty = 1;
@@ -217,19 +221,29 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         hs->ui_dirty = 1;
     }
     if (btn_edges & (1u << BTN_EDIT)) {
-        // Early Turnaround Cue
-        hs->queued_cue = CUE_FORCE_TURNAROUND;
-        hs->ui_dirty = 1;
+        // Arm/cancel song ending (tag ending at end of chorus)
+        hs->ending_armed = !hs->ending_armed;
+        set_toast(hs, ms_now, hs->ending_armed ? "ENDING: ARMED" : "ENDING: OFF");
     }
     if (btn_edges & (1u << BTN_ENV)) {
-        // Toggle Vamp Mode on current chord
-        hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP);
-        hs->ui_dirty = 1;
+        // Immediate Vamp Mode toggle on current chord
+        hs->is_vamp_mode = !hs->is_vamp_mode;
+        hs->vamp_bar_counter = 0;
+        hs->queued_cue = CUE_NONE;
+        set_toast(hs, ms_now, hs->is_vamp_mode ? "VAMP: ON" : "VAMP: OFF");
     }
     if (btn_edges & (1u << BTN_SEQ)) {
-        // Trigger 4-Bar Stop-Time Break
-        hs->queued_cue = CUE_STOP_TIME;
-        hs->ui_dirty = 1;
+        // Trigger 4-Bar Stop-Time Break (next bar if playing)
+        if (hs->is_playing) {
+            if (hs->stop_time_counter > 0) {
+                hs->stop_time_counter = 0;
+                hs->queued_cue = CUE_NONE;
+                set_toast(hs, ms_now, "STOP-TIME: OFF");
+            } else {
+                hs->queued_cue = CUE_STOP_TIME;
+                set_toast(hs, ms_now, "STOP-TIME QUEUED");
+            }
+        }
     }
     if (btn_edges & (1u << BTN_LFO)) {
         // Toggle Minor Blues Form

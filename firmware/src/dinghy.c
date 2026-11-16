@@ -297,6 +297,7 @@ static void app_main(void) {
     g_harmony.bass_style = g_presets[g_active_preset].bass_style;
     g_harmony.keys_style = g_presets[g_active_preset].keys_style;
     g_harmony.drum_pattern = g_presets[g_active_preset].drum_pattern;
+    g_harmony.count_in_enabled = g_presets[g_active_preset].count_in_enabled;
     g_harmony.form_mode = (FormMode)g_presets[g_active_preset].form_mode;
     g_last_voicing.count = 0;
 
