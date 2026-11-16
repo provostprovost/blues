@@ -243,7 +243,7 @@ void test_stage2_arranger(void) {
                     ChordContext c1 = { k, CHORD_DOM7 };
                     ChordContext c2 = { (uint8_t)((k + 5) % 12), CHORD_DOM7 };
                     uint8_t b_note = bass_compute_note(c1, c2, beat, sub, spices[sp]);
-                    assert(b_note >= 40 && b_note <= 62);
+                    assert(b_note >= 28 && b_note <= 50);
                 }
             }
         }
@@ -253,7 +253,7 @@ void test_stage2_arranger(void) {
     ChordContext c_c = { 0, CHORD_DOM7 }; // C
     ChordContext c_f = { 5, CHORD_DOM7 }; // F
     uint8_t b_asc = bass_compute_note(c_c, c_f, 3, 0, 50);
-    assert(b_asc >= 40 && b_asc <= 62);
+    assert(b_asc >= 28 && b_asc <= 50);
 
     // 2. Comping Voice Leading Tests
     Voicing prev = { {0}, 0 };
@@ -261,7 +261,7 @@ void test_stage2_arranger(void) {
     Voicing v_shell = voice_lead_select(prev, DEG_I7, 4, 20);
     assert(v_shell.count == 2);
     for (int i = 0; i < v_shell.count; i++) {
-        assert(v_shell.notes[i] >= 48 && v_shell.notes[i] <= 76);
+        assert(v_shell.notes[i] >= 58 && v_shell.notes[i] <= 80);
     }
 
     // Spice 40 -> 3-note voicing
@@ -272,7 +272,7 @@ void test_stage2_arranger(void) {
     Voicing v_i7 = voice_lead_select(prev, DEG_I7, 4, 65);
     assert(v_i7.count == 4);
     for (int i = 0; i < v_i7.count; i++) {
-        assert(v_i7.notes[i] >= 48 && v_i7.notes[i] <= 76);
+        assert(v_i7.notes[i] >= 58 && v_i7.notes[i] <= 80);
     }
 
     // Voice leading from I7 to IV7: smooth guide-tone motion

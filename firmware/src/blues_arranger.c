@@ -33,14 +33,14 @@ static inline int8_t get_hmnz_jitter(uint8_t spice) {
 
 uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t spice) {
     uint8_t r = current.root_note % 12;
-    uint8_t curr_root = (uint8_t)(40 + ((r + 8) % 12)); // Map to E2..Eb3 (40..51)
-    while (curr_root < 40) curr_root += 12;
-    while (curr_root > 51) curr_root -= 12;
+    uint8_t curr_root = (uint8_t)(28 + ((r + 8) % 12)); // Map to E1..Eb2 (28..39)
+    while (curr_root < 28) curr_root += 12;
+    while (curr_root > 39) curr_root -= 12;
 
     uint8_t nr = next.root_note % 12;
-    uint8_t next_target = (uint8_t)(40 + ((nr + 8) % 12));
-    while (next_target < 40) next_target += 12;
-    while (next_target > 51) next_target -= 12;
+    uint8_t next_target = (uint8_t)(28 + ((nr + 8) % 12));
+    while (next_target < 28) next_target += 12;
+    while (next_target > 39) next_target -= 12;
 
     uint8_t note = curr_root;
 
@@ -51,7 +51,7 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
     } else if (sub_idx == 1 && spice > 75) {
         note = curr_root + 2;
     } else if (sub_idx == 3 && spice > 75) {
-        note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
+        note = (next_target > 28) ? (next_target - 1) : (next_target + 1);
     } else {
         switch (beat) {
             case 0:
@@ -76,19 +76,19 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
             case 3:
             default: {
                 if (spice < 30) {
-                    note = (next_target >= 47) ? (next_target - 7) : (next_target + 5);
+                    note = (next_target >= 35) ? (next_target - 7) : (next_target + 5);
                 } else if (next_target >= curr_root) {
-                    note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
+                    note = (next_target > 28) ? (next_target - 1) : (next_target + 1);
                 } else {
-                    note = (next_target < 61) ? (next_target + 1) : (next_target - 1);
+                    note = (next_target < 49) ? (next_target + 1) : (next_target - 1);
                 }
                 break;
             }
         }
     }
 
-    while (note < 40) note += 12;
-    while (note > 62) note -= 12;
+    while (note < 28) note += 12;
+    while (note > 50) note -= 12;
     return note;
 }
 
@@ -101,51 +101,52 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
     uint8_t seventh = (info.quality == CHORD_DIM7) ? 9 : 10;
     uint8_t ninth = 14;
 
-    // Pitch anchor: ensure guide tones (3rd and 7th) sit in clear upper-mid range (G3..G4)
-    uint8_t t_note = 48 + ((root + third) % 12);
-    while (t_note < 52) t_note += 12; // E3..Eb4
-    while (t_note > 64) t_note -= 12;
+    // Pitch anchor: ensure guide tones (3rd and 7th) sit in sweet comping pocket (E4..G5, 330..784 Hz)
+    uint8_t t_note = 60 + ((root + third) % 12);
+    while (t_note < 64) t_note += 12; // E4..Eb5 (64..75)
+    while (t_note > 75) t_note -= 12;
 
-    uint8_t s_note = 48 + ((root + seventh) % 12);
-    while (s_note < 52) s_note += 12; // E3..Eb4
-    while (s_note > 64) s_note -= 12;
+    uint8_t s_note = 60 + ((root + seventh) % 12);
+    while (s_note < 64) s_note += 12; // E4..Eb5 (64..75)
+    while (s_note > 75) s_note -= 12;
 
-    uint8_t n_note = 48 + ((root + ninth) % 12);
-    while (n_note < 57) n_note += 12; // A3..G#4
-    while (n_note > 69) n_note -= 12;
+    uint8_t n_note = 60 + ((root + ninth) % 12);
+    while (n_note < 66) n_note += 12; // F#4..F5 (66..77)
+    while (n_note > 77) n_note -= 12;
 
-    uint8_t f_note = 48 + ((root + fifth) % 12);
-    while (f_note < 55) f_note += 12; // G3..F#4
-    while (f_note > 67) f_note -= 12;
+    uint8_t f_note = 60 + ((root + fifth) % 12);
+    while (f_note < 67) f_note += 12; // G4..F#5 (67..78)
+    while (f_note > 78) f_note -= 12;
 
-    uint8_t r_note = 48 + (root % 12);
-    while (r_note < 60) r_note += 12; // C4..B4
-    while (r_note > 72) r_note -= 12;
+    uint8_t r_note = 60 + (root % 12);
+    while (r_note < 60) r_note += 12; // C4..B4 (60..71)
+    while (r_note > 71) r_note -= 12;
 
-    // Candidate 0: Authentic Blues Shell (3rd + 7th + 5th)
+    // Candidate 0: Authentic Blues Shell (3rd + 7th + 5th + root)
     candidates[0].notes[0] = t_note;
     candidates[0].notes[1] = s_note;
     candidates[0].notes[2] = f_note;
     candidates[0].notes[3] = r_note;
     candidates[0].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
 
-    // Candidate 1: Evans/Ray Charles 9th Voicing (3rd + 7th + 9th)
+    // Candidate 1: Evans/Ray Charles 9th Voicing (3rd + 7th + 9th + 5th)
     candidates[1].notes[0] = t_note;
     candidates[1].notes[1] = s_note;
     candidates[1].notes[2] = n_note;
     candidates[1].notes[3] = f_note;
     candidates[1].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
 
-    // Candidate 2: Inverted Guide Tone Voicing (7th in bass + 3rd + 9th)
-    candidates[2].notes[0] = (uint8_t)(s_note > 55 ? s_note - 12 : s_note);
+    // Candidate 2: Inverted Guide Tone Voicing (7th in lower guide voice + 3rd + 9th + root)
+    candidates[2].notes[0] = (uint8_t)(s_note > 68 ? s_note - 12 : s_note);
     candidates[2].notes[1] = t_note;
     candidates[2].notes[2] = n_note;
     candidates[2].notes[3] = r_note;
     candidates[2].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
 
     // Candidate 3: Open 13th Blues Voicing (3rd + 7th + 13th + 9th)
-    uint8_t th_note = 48 + ((root + 21) % 12);
-    while (th_note < 57) th_note += 12;
+    uint8_t th_note = 60 + ((root + 21) % 12);
+    while (th_note < 69) th_note += 12; // A4..G#5 (69..80)
+    while (th_note > 80) th_note -= 12;
     candidates[3].notes[0] = t_note;
     candidates[3].notes[1] = s_note;
     candidates[3].notes[2] = th_note;
