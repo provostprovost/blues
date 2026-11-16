@@ -171,14 +171,14 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             int32_t b_sample;
             if (g_bass.pluck_samples > 0) {
                 g_bass.pluck_samples--;
-                // Accentuate 2nd & subtle 3rd harmonic during initial ~50 ms pick bite
-                b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 3);
+                // Accentuate 2nd & 3rd harmonics during initial ~50 ms pick bite
+                b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
             } else {
-                b_sample = (b_fund * 3) / 4 + (b_harm >> 2);
+                b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 3);
             }
 
             int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
-            mix += (b_sample * b_amp) >> 8; // Punchy, balanced bass level with clean headroom
+            mix += (b_sample * b_amp) >> 7; // Driving, punchy walking bass (audible and fat on internal speaker)
 
             // Attack micro-ramp (smooth 2 ms ramp up to eliminate note-on click/pop)
             if (g_bass.env_q15 < g_bass.target_env) {

@@ -243,7 +243,7 @@ void test_stage2_arranger(void) {
                     ChordContext c1 = { k, CHORD_DOM7 };
                     ChordContext c2 = { (uint8_t)((k + 5) % 12), CHORD_DOM7 };
                     uint8_t b_note = bass_compute_note(c1, c2, beat, sub, spices[sp]);
-                    assert(b_note >= 28 && b_note <= 50);
+                    assert(b_note >= 40 && b_note <= 62);
                 }
             }
         }
@@ -253,7 +253,7 @@ void test_stage2_arranger(void) {
     ChordContext c_c = { 0, CHORD_DOM7 }; // C
     ChordContext c_f = { 5, CHORD_DOM7 }; // F
     uint8_t b_asc = bass_compute_note(c_c, c_f, 3, 0, 50);
-    assert(b_asc >= 28 && b_asc <= 50);
+    assert(b_asc >= 40 && b_asc <= 62);
 
     // 2. Comping Voice Leading Tests
     Voicing prev = { {0}, 0 };

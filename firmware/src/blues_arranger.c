@@ -33,14 +33,14 @@ static inline int8_t get_hmnz_jitter(uint8_t spice) {
 
 uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t spice) {
     uint8_t r = current.root_note % 12;
-    uint8_t curr_root = (uint8_t)(28 + ((r + 8) % 12)); // Map to E1..Eb2 (28..39)
-    while (curr_root < 28) curr_root += 12;
-    while (curr_root > 39) curr_root -= 12;
+    uint8_t curr_root = (uint8_t)(40 + ((r + 8) % 12)); // Map to E2..Eb3 (40..51, 82..155 Hz for pocket speaker projection)
+    while (curr_root < 40) curr_root += 12;
+    while (curr_root > 51) curr_root -= 12;
 
     uint8_t nr = next.root_note % 12;
-    uint8_t next_target = (uint8_t)(28 + ((nr + 8) % 12));
-    while (next_target < 28) next_target += 12;
-    while (next_target > 39) next_target -= 12;
+    uint8_t next_target = (uint8_t)(40 + ((nr + 8) % 12));
+    while (next_target < 40) next_target += 12;
+    while (next_target > 51) next_target -= 12;
 
     uint8_t note = curr_root;
 
@@ -51,7 +51,7 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
     } else if (sub_idx == 1 && spice > 75) {
         note = curr_root + 2;
     } else if (sub_idx == 3 && spice > 75) {
-        note = (next_target > 28) ? (next_target - 1) : (next_target + 1);
+        note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
     } else {
         switch (beat) {
             case 0:
@@ -76,19 +76,19 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
             case 3:
             default: {
                 if (spice < 30) {
-                    note = (next_target >= 35) ? (next_target - 7) : (next_target + 5);
+                    note = (next_target >= 47) ? (next_target - 7) : (next_target + 5);
                 } else if (next_target >= curr_root) {
-                    note = (next_target > 28) ? (next_target - 1) : (next_target + 1);
+                    note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
                 } else {
-                    note = (next_target < 49) ? (next_target + 1) : (next_target - 1);
+                    note = (next_target < 61) ? (next_target + 1) : (next_target - 1);
                 }
                 break;
             }
         }
     }
 
-    while (note < 28) note += 12;
-    while (note > 50) note -= 12;
+    while (note < 40) note += 12;
+    while (note > 62) note -= 12;
     return note;
 }
 
