@@ -1,7 +1,7 @@
 # Firmware Makefile for Blues Box
 # Supports host verification, unit testing, and bridge to target build
 
-FELUCCA_ID := FM-1_960
+FELUCCA_ID := FM-1_615000
 APP_NAME   := "BLUES BOX"
 TARGET     := build/bluesbox.fwsc
 SRCS       := src/dinghy.c

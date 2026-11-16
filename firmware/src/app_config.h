@@ -6,7 +6,7 @@
 #undef APP_NAME
 #define APP_NAME                  "BLUES BOX"
 #ifndef FELUCCA_ID
-#define FELUCCA_ID                "FM-1_960"
+#define FELUCCA_ID                "FM-1_615000"
 #endif
 
 #define AUDIO_SAMPLE_RATE         44100
