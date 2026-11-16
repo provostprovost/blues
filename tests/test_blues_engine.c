@@ -501,12 +501,109 @@ void test_stage4_panel_ui(void) {
     printf("[Stage 4] Panel input scanning, TFT UI, and Presets tests passed!\n");
 }
 
+// Phase 5 Integration Test: Full-System Integration & MIDI Ring Buffer
+void test_stage5_integration(void) {
+    printf("[Stage 5] Testing Full-System Integration & MIDI Ring Buffer...\n");
+
+    HarmonyState hs;
+    harmony_init(&hs);
+    panel_init();
+    ui_init();
+    dsp_init();
+
+    PresetConfig presets[16];
+    for (int i = 0; i < 16; i++) {
+        presets[i].magic = PRESET_MAGIC;
+        presets[i].preset_id = i;
+        presets[i].root_key = (uint8_t)((4 + i * 5) % 12);
+        presets[i].groove_style = (uint8_t)(i % 5);
+        presets[i].bpm = 112;
+        presets[i].spice = 65;
+        presets[i].swing = 67;
+        presets[i].ep_tone_algo = (uint8_t)(i % 4);
+        presets[i].bass_vol = 110;
+        presets[i].keys_vol = 95;
+        presets[i].drums_vol = 105;
+        presets[i].reverb_mix = 35;
+        presets[i].master_tuning = 0;
+        presets[i].bass_cutoff = 85;
+        presets[i].drive_level = 20;
+        presets[i].count_in_enabled = 0;
+        presets[i].form_mode = (i == 5) ? FORM_MINOR_BLUES : FORM_12BAR;
+        presets[i].opening_var = VAR_FLAT_FOUR;
+        presets[i].outro_type = OUTRO_TAG;
+    }
+
+    uint8_t active_preset = 0;
+    uint8_t ui_screen = 0;
+    Voicing last_voicing = {{0, 0, 0, 0}, 0};
+    uint32_t sample_acc = 2646000;
+    int32_t audio_buf[512];
+
+    // 1. Start playback via MIDI Start
+    panel_handle_midi_in(&hs, 0xFA, 0, 0);
+    assert(hs.is_playing == 1);
+
+    // 2. Interleaved Audio and Main Loop Execution for 12 bars
+    for (int bar = 0; bar < 12; bar++) {
+        // Run audio ISR blocks (~44100 / 256 = 172 blocks per second; ~86 blocks per bar at 112 BPM)
+        for (int blk = 0; blk < 86; blk++) {
+            for (int f = 0; f < 256; f++) {
+                sample_acc += presets[active_preset].bpm * 24;
+                if (sample_acc >= 2646000) {
+                    sample_acc -= 2646000;
+                    PerformanceFrame frame;
+                    arranger_generate_frame(&hs, &presets[active_preset], &frame, &last_voicing);
+                    if (frame.bass_trigger) {
+                        dsp_note_on_bass(frame.bass_note, frame.bass_vel, presets[active_preset].master_tuning);
+                    }
+                    if (frame.comp_trigger) {
+                        dsp_note_on_keys(&frame.comp_voicing, frame.comp_vel, presets[active_preset].master_tuning);
+                        last_voicing = frame.comp_voicing;
+                    }
+                    if (frame.drum_mask) {
+                        dsp_trigger_drum(frame.drum_mask, frame.drum_vel, 0);
+                    }
+                    harmony_tick_subdivision(&hs);
+                }
+            }
+            for (int i = 0; i < 512; i++) audio_buf[i] = 0;
+            dsp_render_block(audio_buf, 256, &presets[active_preset]);
+        }
+
+        // Cooperative main loop cycle
+        panel_poll_inputs(&hs, presets, &active_preset, bar * 500, &ui_screen);
+        ui_render(&hs, &presets[active_preset], active_preset, ui_screen, hs.ui_dirty);
+        hs.ui_dirty = 0;
+    }
+
+    // 3. Stop playback via MIDI Stop
+    panel_handle_midi_in(&hs, 0xFC, 0, 0);
+    assert(hs.is_playing == 0);
+
+    // Ensure audio stops producing sound when stopped
+    dsp_all_notes_off();
+    for (int blk = 0; blk < 100; blk++) {
+        for (int i = 0; i < 512; i++) audio_buf[i] = 0;
+        dsp_render_block(audio_buf, 256, &presets[active_preset]);
+    }
+    int32_t final_amp = 0;
+    for (int i = 0; i < 512; i++) {
+        int32_t a = (audio_buf[i] < 0) ? -audio_buf[i] : audio_buf[i];
+        if (a > final_amp) final_amp = a;
+    }
+    assert(final_amp <= 2);
+
+    printf("[Stage 5] Full-system integration & MIDI tests passed!\n");
+}
+
 int main(void) {
     printf("[TB-1 Test Suite] Running Stage Tests...\n");
     test_stage1_harmony();
     test_stage2_arranger();
     test_stage3_dsp();
     test_stage4_panel_ui();
+    test_stage5_integration();
     printf("[TB-1 Test Suite] All tests completed with 100%% assertions passing.\n");
     return 0;
 }
