@@ -12,6 +12,10 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 - **Live jam controls:** Toggle major/minor blues, trigger stop-time breaks, vamp on a chord, cue a turnaround, or arm a root-resolving ending on the fly.
 - **16 preset slots:** Hold **`SAVE`** or **`GLO`** and tap any of the 16 white keys to save and recall up to 16 complete setups in flash.
 
+| Lead Sheet | Band Mixer | Band Style | Band Feel |
+|---|---|---|---|
+| ![Lead Sheet](assets/screenshots/screen1.jpg) | ![Band Mixer](assets/screenshots/screen2.jpg) | ![Band Style](assets/screenshots/screen3.jpg) | ![Band Feel](assets/screenshots/screen4.jpg) |
+
 ---
 
 ## Quick Start (60 Seconds)
