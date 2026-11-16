@@ -5,8 +5,13 @@
 static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
 static const char *GROOVE_NAMES[8] = { "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE", "MEMPHIS SOUL", "RHUMBA BLUES", "BOOGIE WOOGIE" };
 static const char *ALGO_NAMES[12]  = { "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET", "ARCHTOP GTR", "BLUES HORNS", "HONKY-TONK", "TREMOLO EP", "RESONATOR", "LESLIE ORGAN" };
-static const char *DRUM_NAMES[8]   = { "STUDIO", "BRUSH", "RETRO 808", "STAX TIGHT", "CHI ROOM", "DRY VINT", "JAZZ CLUB", "BLUES ROCK" };
-static const char *LEAD_NAMES[8]   = { "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "MUTED TRPT", "PERC ORGAN" };
+static const char *DRUM_NAMES[8]       = { "STUDIO", "BRUSH", "RETRO 808", "STAX TIGHT", "CHI ROOM", "DRY VINT", "JAZZ CLUB", "BLUES ROCK" };
+static const char *LEAD_NAMES[8]       = { "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "MUTED TRPT", "PERC ORGAN" };
+static const char *BASS_NAMES[8]       = { "P-BASS", "UPRIGHT", "MUTED BOOGIE", "MOOG FUNK", "60S JAZZ", "FLATWOUND", "AMPEG TUBE", "SUB OCTAVE" };
+static const char *BASS_STYLE_NAMES[5] = { "WALKING 4/4", "SHUFFLE", "BOOGIE BOX", "ROOT-5TH", "FUNK SYNC" };
+static const char *KEYS_STYLE_NAMES[5] = { "CHARLESTON", "BACKBEAT 2&4", "CALL & RESP", "SPARSE PAD", "CHOP 4/4" };
+static const char *FORM_NAMES[5]       = { "12-BAR MAJ", "QUICK CHG", "1-4-5 OPEN", "8-BAR BLUES", "MINOR BLUES" };
+static const char *TUNE_NAMES[3]       = { "440 HZ", "432 HZ", "442 HZ" };
 
 static uint8_t g_last_bar = 0xFF;
 static uint8_t g_last_beat = 0xFF;
@@ -34,6 +39,15 @@ static uint8_t g_last_m_spice = 0xFF;
 static uint8_t g_last_m_swing = 0xFF;
 static uint8_t g_last_m_fullness = 0xFF;
 
+static uint8_t g_last_s_bstyle = 0xFF;
+static uint8_t g_last_s_kstyle = 0xFF;
+static uint8_t g_last_s_dpat = 0xFF;
+static uint8_t g_last_s_form = 0xFF;
+static uint8_t g_last_s_bass = 0xFF;
+static uint8_t g_last_s_keys = 0xFF;
+static uint8_t g_last_s_drum = 0xFF;
+static uint8_t g_last_s_tune = 0xFF;
+
 void ui_init(void) {
     g_last_bar = 0xFF;
     g_last_beat = 0xFF;
@@ -60,6 +74,14 @@ void ui_init(void) {
     g_last_m_spice = 0xFF;
     g_last_m_swing = 0xFF;
     g_last_m_fullness = 0xFF;
+    g_last_s_bstyle = 0xFF;
+    g_last_s_kstyle = 0xFF;
+    g_last_s_dpat = 0xFF;
+    g_last_s_form = 0xFF;
+    g_last_s_bass = 0xFF;
+    g_last_s_keys = 0xFF;
+    g_last_s_drum = 0xFF;
+    g_last_s_tune = 0xFF;
 }
 
 static void format_chord_str(char *buf, uint8_t root_key, ScaleDegree deg) {
@@ -246,7 +268,7 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
         hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND MIXER", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BAS K2:KEY K3:DRM K4:LD", RGB(0, 220, 255), 1);
         hal_draw_text_box(0, 198, 240, 0, "[GLO]: REV/SPC/SWG/FUL", RGB(255, 180, 0), 1);
-        hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);
+        hal_draw_text_box(0, 216, 240, 0, "HOME: BAND STYLE VIEW", RGB(140, 140, 140), 1);
     }
 
     uint8_t l_vol = preset->lead_vol > 0 ? preset->lead_vol : 115;
@@ -258,6 +280,45 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
     render_meter(119, "SPICE",     hs->spice_level,   100, RGB(255, 220, 50), full_redraw, &g_last_m_spice);
     render_meter(138, "SWING",     preset->swing,     100, RGB(80, 240, 120), full_redraw, &g_last_m_swing);
     render_meter(157, "FULLNESS",  hs->fullness,      100, RGB(0, 220, 255), full_redraw, &g_last_m_fullness);
+}
+
+static void render_style_row(int y, const char *label, const char *val, uint16_t color, uint8_t full_redraw, uint8_t cur_idx, uint8_t *last_idx) {
+    if (full_redraw) {
+        hal_draw_text_box(8, y, 88, 0, label, RGB(180, 180, 180), 0);
+    }
+    if (full_redraw || cur_idx != *last_idx) {
+        hal_fill_rect(98, y, 134, 16, RGB(24, 24, 24));
+        hal_draw_text_box(102, y, 128, 0, val, color, 0);
+        *last_idx = cur_idx;
+    }
+}
+
+static void render_style_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t full_redraw) {
+    if (full_redraw) {
+        hal_fill_rect(0, 0, 240, 240, C_BLACK);
+        hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND STYLE", RGB(255, 190, 0), 1);
+        hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:FRM", RGB(0, 220, 255), 1);
+        hal_draw_text_box(0, 198, 240, 0, "[GLO]: BASS / KEYS / KIT / TUNE", RGB(255, 180, 0), 1);
+        hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);
+    }
+
+    uint8_t bs = hs->bass_style % 5;
+    uint8_t ks = hs->keys_style % 5;
+    uint8_t dp = hs->drum_pattern % 8;
+    uint8_t fm = (uint8_t)hs->form_mode % 5;
+    uint8_t bi = preset->bass_instrument % 8;
+    uint8_t ki = preset->ep_tone_algo % 12;
+    uint8_t di = preset->drum_kit % 8;
+    uint8_t tn = preset->master_tuning % 3;
+
+    render_style_row(24,  "BASS LINE", BASS_STYLE_NAMES[bs], RGB(80, 180, 255),  full_redraw, bs, &g_last_s_bstyle);
+    render_style_row(43,  "KEYS RHY",  KEYS_STYLE_NAMES[ks], RGB(255, 190, 60),  full_redraw, ks, &g_last_s_kstyle);
+    render_style_row(62,  "DRUM BEAT", GROOVE_NAMES[dp],     RGB(255, 95, 95),   full_redraw, dp, &g_last_s_dpat);
+    render_style_row(81,  "FORM",      FORM_NAMES[fm],       RGB(80, 240, 140),  full_redraw, fm, &g_last_s_form);
+    render_style_row(100, "[G] BASS",  BASS_NAMES[bi],       RGB(140, 210, 255), full_redraw, bi, &g_last_s_bass);
+    render_style_row(119, "[G] KEYS",  ALGO_NAMES[ki],       RGB(255, 220, 120), full_redraw, ki, &g_last_s_keys);
+    render_style_row(138, "[G] KIT",   DRUM_NAMES[di],       RGB(255, 150, 150), full_redraw, di, &g_last_s_drum);
+    render_style_row(157, "[G] TUNE",  TUNE_NAMES[tn],       RGB(200, 160, 255), full_redraw, tn, &g_last_s_tune);
 }
 
 void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
@@ -313,8 +374,10 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
         }
         g_last_toast_active = toast_active;
         g_last_toast_until = hs->toast_until_ms;
-    } else {
+    } else if (screen_id == 1) {
         render_mixer_view(hs, preset, preset_idx, screen_switched || force_redraw);
+    } else {
+        render_style_view(hs, preset, screen_switched || force_redraw);
     }
 
     g_last_bar = hs->current_bar;

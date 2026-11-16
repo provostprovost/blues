@@ -52,16 +52,16 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 ### Knobs
 
-| Knob | Normal Turn | Hold `GLO` + Turn | Hold `SEL` + Turn |
+| Knob | Lead Sheet (Screen 1) | Band Mixer (Screen 2) | Band Style (Screen 3) |
 |---|---|---|---|
-| **`MASTER`** | Hardware master volume | — | — |
-| **`SELECT`** | Groove Style (8 styles) | Drum Kit (8 kits) | Blues Form (Major, Quick-Change, 1-4-5, 8-Bar, Minor) |
-| **`PRESETS`** | Solo Lead Voice (8 voices) | Key (`C`–`B`) | Key (`C`–`B`) |
-| **`ALGORITHM`** | Backing Chord Engine (12 engines) | — | Keys Comping Style (Charleston, Backbeat, Call & Resp, Pad, Chop) |
-| **`KNOB1`** | Tempo (40–240 BPM)<br>*(Mixer: Bass Volume)* | Swing (0%–100%)<br>*(Mixer: Reverb Mix)* | Drum Beat Pattern (8 patterns) |
-| **`KNOB2`** | Spice (0%–100%)<br>*(Mixer: Keys Volume)* | Master Tuning (440 / 432 / 442 Hz)<br>*(Mixer: Spice)* | Fullness (0%–100%, sparse vs. rocking) |
-| **`KNOB3`** | Bass Volume<br>*(Mixer: Drums Volume)* | Bass Sound (8 basses)<br>*(Mixer: Swing)* | Bass Line Style (Walking, Shuffle, Boogie, Root-5th, Funk) |
-| **`KNOB4`** | Keys Volume<br>*(Mixer: Lead Volume)* | Reverb Mix<br>*(Mixer: Fullness 0%–100%)* | — |
+| **`MASTER`** | Hardware master volume | Hardware master volume | Hardware master volume |
+| **`SELECT`** | Groove Preset (sets Bass, Keys, Drums & Swing)<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* |
+| **`PRESETS`** | Solo Lead Voice (8 voices)<br>*(Hold `SEL`: Key `C`–`B`)* | Solo Lead Voice<br>*(Hold `SEL`: Key `C`–`B`)* | Solo Lead Voice<br>*(Hold `SEL`: Key `C`–`B`)* |
+| **`ALGORITHM`** | Backing Chord Sound (12 engines) | Backing Chord Sound | Backing Chord Sound |
+| **`KNOB1`** | Tempo (40–240 BPM)<br>*(Hold `GLO`: Swing 0%–100%)* | Bass Volume<br>*(Hold `GLO`: Reverb Mix)* | Bass Line Style (5 styles)<br>*(Hold `GLO`: Bass Sound)* |
+| **`KNOB2`** | Spice (0%–100%)<br>*(Hold `GLO`: Tuning 440/432/442)* | Keys Volume<br>*(Hold `GLO`: Spice 0%–100%)* | Keys Rhythm Style (5 styles)<br>*(Hold `GLO`: Chord Sound)* |
+| **`KNOB3`** | Bass Volume<br>*(Hold `GLO`: Bass Sound)* | Drums Volume<br>*(Hold `GLO`: Swing 0%–100%)* | Drum Beat Pattern (8 patterns)<br>*(Hold `GLO`: Drum Kit)* |
+| **`KNOB4`** | Keys Volume<br>*(Hold `GLO`: Reverb Mix)* | Lead Volume<br>*(Hold `GLO`: Fullness 0%–100%)* | Blues Form (5 forms)<br>*(Hold `GLO`: Tuning 440/432/442)* |
 
 ### Buttons
 
@@ -70,25 +70,26 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **`PLAY/STOP`** | Start or stop playback (LED lights up while playing). |
 | **`REC`** | Toggle 1-bar count-in rimshot click (pulses on Beat 1). |
 | **`OCT-` / `OCT+`** | Shift the 27-key solo keyboard down or up (-2 to +2 octaves). Hold `SEL` + `OCT-`/`OCT+` to nudge tempo ±4 BPM. |
-| **`HOME`** | Switch between the **12-Bar Lead Sheet** and **Band Mixer** screens. |
-| **`SAVE`** | Save your current groove, tempo, key, voices, and mixer levels to flash. |
-| **`GLO`** | Shift key for secondary knob functions (Swing, Reverb, Drum Kit, Bass Engine, Tuning). |
+| **`HOME`** | Cycle screens: **Lead Sheet** → **Band Mixer** → **Band Style** → **Lead Sheet**. |
+| **`SAVE`** | Save your current groove, tempo, key, voices, styles, and mixer levels to flash. |
+| **`GLO`** | Secondary knob layer (bottom half of Mixer & Band Style, plus quick Lead Sheet tweaks). |
 | **`ARP`** | Tap Tempo—tap in rhythm to set the BPM. |
 | **`FX`** | Trigger a manual full-band accent stab + crash. |
 | **`EDIT`** | Early Turnaround—jump straight to Bar 9 (the V chord) at the next bar. |
 | **`ENV`** | Vamp Mode—freeze the progression and loop the current chord. |
 | **`SEQ`** | Trigger a 4-bar stop-time break with beat-1 stabs. |
 | **`LFO`** | Toggle **Major 12-Bar** ↔ **Minor Blues**. |
-| **`SEL`** | Shift key for `SELECT` (form), `PRESETS` (key), `OCT-`/`OCT+` (tempo), and silicone key shortcuts. |
+| **`SEL`** | Key & shortcut modifier: `SEL` + `PRESETS` (Key), `SEL` + `OCT-`/`OCT+` (BPM ±4), and `SEL` + silicone keys. |
 
 ---
 
 ## "How Do I…" Quick Recipes
 
-- **Change the key:** Hold **`SEL`** (or **`GLO`**) and turn **`PRESETS`**. Or hold **`SEL`** and tap one of the first 12 silicone keys (`F` through `E`): a single tap queues the key change for the next chorus, and a quick double tap switches right away.
-- **Switch between Major and Minor Blues:** Press **`LFO`** for a one-tap toggle. You can also hold **`SEL`** and turn **`SELECT`**, or hold **`SEL`** and press Key 22 (Minor) / Key 18 (Major). Minor Blues shows **`KEY:Em (MIN)`** in cyan at the top of the screen and updates all 12 chord boxes (`Em7`, `Am7`, `C7`, `B7`).
+- **Change the key:** Hold **`SEL`** and turn **`PRESETS`**. Or hold **`SEL`** and tap one of the first 12 silicone keys (`F` through `E`): a single tap queues the key change for the next chorus, and a quick double tap switches right away.
+- **Switch between Major and Minor Blues:** Press **`LFO`** for a one-tap toggle. You can also turn **`KNOB4`** on the **Band Style** screen, or hold **`SEL`** and press Key 22 (Minor) / Key 18 (Major). Minor Blues shows **`KEY:Em (MIN)`** in cyan at the top of the screen and updates all 12 chord boxes (`Em7`, `Am7`, `C7`, `B7`).
+- **Customize Bass, Keys, and Drum patterns separately:** Press **`HOME`** twice to open **Band Style**, then turn **`KNOB1`** (Bass Line), **`KNOB2`** (Keys Rhythm), **`KNOB3`** (Drum Beat), and **`KNOB4`** (Blues Form). Hold **`GLO`** on the same screen for Bass Sound, Chord Sound, Drum Kit, and Tuning.
 - **Make the chords and bass jazzier:** Turn **`KNOB2`** (**Spice**). Low (0–30%) keeps it straight and simple; middle (31–65%) adds 9ths, 13ths, and chromatic bass walk-ups; high (66–100%) adds passing diminished chords, tritone subs, and turnaround chords in Bars 11–12.
-- **Dial in sparse vs. full-band energy:** On the Band Mixer (`HOME`), hold **`GLO`** and turn **`KNOB4`** (**Fullness**), or on the Lead Sheet hold **`SEL`** and turn **`KNOB2`**. Low (<35%) strips the band down to a thin, intimate trio (half-note bass, soft backbeat chords, light rimshot/hat); high (>70%) adds driving bass anticipations, push comping stabs, ghost snares, and punchy Bar 4/8/12 drum fills.
+- **Dial in sparse vs. full-band energy:** On the **Band Mixer** (`HOME`), hold **`GLO`** and turn **`KNOB4`** (**Fullness**). Low (<35%) strips the band down to a thin, intimate trio (half-note bass, soft backbeat chords, light rimshot/hat); high (>70%) adds driving bass anticipations, push comping stabs, ghost snares, and punchy Bar 4/8/12 drum fills.
 - **Adjust shuffle feel:** Hold **`GLO`** and turn **`KNOB1`** (**Swing**), or press **`HOME`** to open the Band Mixer and hold **`GLO`** + turn **`KNOB3`**. 0% is straight 8ths, ~67% is a classic triplet shuffle, and 100% is a hard dotted-8th swing.
 - **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While playing, the LEDs always stay at a clean **6 notes per octave**: **Minor Blues** (`1, b3, 4, b5, 5, b7`) in Minor Blues (the default startup mode in E Minor); in Major forms, **Major Blues** (`1, 2, b3, 3, 5, 6`) on `I7` bars and **Minor Blues** (`1, b3, 4, b5, 5, b7`) on `IV7`/`V7` bars, with a quick Beat-1 flash on the root.
 - **Arm an ending:** Hold **`SEL`** and tap Keys 23–26 (23: Hard Stop, 24: Tag Ending, 25: Triple Turnaround, 26: Chromatic Slide).
@@ -118,10 +119,11 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 ## Display Screens
 
-Press **`HOME`** to flip between the two screens:
+Press **`HOME`** to cycle through the three screens:
 
-1. **12-Bar Lead Sheet:** Shows the groove and drum kit at the top, Key + Form (`(MAJ)` or cyan `(MIN)`), BPM, and Spice below it, the 12-bar chord grid with the active bar highlighted in amber, 4 beat pips, live playback status, and the footer (`<Solo Lead> * <Chord Engine>`, aligned left-to-right with `PRESETS` and `ALGORITHM`).
+1. **12-Bar Lead Sheet:** Shows the groove and drum kit at the top, Key + Form (`(MAJ)` or cyan `(MIN)`), BPM, and Spice below it, the 12-bar chord grid with the active bar highlighted in amber, 4 beat pips, live playback status (and 1.5s parameter toasts), and the footer (`<Solo Lead> * <Chord Engine>`, aligned left-to-right with `PRESETS` and `ALGORITHM`).
 2. **Band Mixer:** Live level bars for `BASS VOL`, `KEYS VOL`, `DRUMS VOL`, `LEAD VOL`, `REVERB`, `SPICE`, `SWING` (0%–100%), and `FULLNESS` (0%–100%).
+3. **Band Style:** Direct rhythm & tone editor for `BASS LINE`, `KEYS RHY`, `DRUM BEAT`, and `FORM` (`KNOB1–4`), plus `[G] BASS`, `[G] KEYS`, `[G] KIT`, and `[G] TUNE` (`GLO` + `KNOB1–4`).
 
 ---
 

@@ -47,6 +47,12 @@ static uint8_t clamp_step_u8(uint8_t cur, int32_t delta_step, uint8_t min_v, uin
     return (uint8_t)nv;
 }
 
+static uint8_t wrap_step_u8(uint8_t cur, int32_t delta, uint8_t count) {
+    int32_t v = (int32_t)cur + delta;
+    while (v < 0) v += count;
+    return (uint8_t)(v % count);
+}
+
 void panel_init(void) {
     g_prev_key_mask = 0;
     for (uint32_t i = 0; i < ZONE1_COUNT; i++) {
@@ -156,7 +162,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     }
     if (btn_edges & (1u << BTN_HOME)) {
         if (ui_screen) {
-            *ui_screen = !(*ui_screen);
+            *ui_screen = (uint8_t)((*ui_screen + 1) % 3);
             hs->ui_dirty = 1;
         }
     }
@@ -241,87 +247,55 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // 2. Rotary Encoders
     int8_t delta;
 
-    // ENC_PRESETS (Encoder 6): Select Lead Instrument (0..7), or Root Key with SEL or GLO held
+    // ENC_PRESETS: Lead Voice (0..7), or Key (0..11) with SEL held
     if ((delta = hal_get_encoder_delta(ENC_PRESETS)) != 0) {
-        if (sel_held || glo_held) {
-            int32_t nk = (int32_t)hs->root_semitone + delta;
-            while (nk < 0) nk += 12;
-            hs->root_semitone = (uint8_t)(nk % 12);
+        if (sel_held) {
+            hs->root_semitone = wrap_step_u8(hs->root_semitone, delta, 12);
             p->root_key = hs->root_semitone;
-            hs->ui_dirty = 1;
             g_save_pending = 1;
             g_last_param_change_ms = ms_now;
         } else {
-            int32_t nl = (int32_t)p->lead_instrument + delta;
-            while (nl < 0) nl += 8;
-            p->lead_instrument = (uint8_t)(nl % 8);
-            hs->ui_dirty = 1;
+            p->lead_instrument = wrap_step_u8(p->lead_instrument, delta, 8);
         }
+        hs->ui_dirty = 1;
     }
 
-    static const char *KEYS_STYLE_LABELS[5] = {
-        "KEYS: CHARLESTON", "KEYS: BACKBEAT 2&4", "KEYS: CALL & RESP", "KEYS: SPARSE PAD", "KEYS: CHOP 4/4"
-    };
-    static const char *BASS_STYLE_LABELS[5] = {
-        "BASS LINE: WALKING", "BASS LINE: SHUFFLE", "BASS LINE: BOOGIE", "BASS LINE: ROOT-5TH", "BASS LINE: FUNK SYNC"
-    };
-    static const char *DRUM_PAT_LABELS[8] = {
-        "DRUMS: 12/8 SLOW", "DRUMS: TX SHUFFLE", "DRUMS: CHI SWING", "DRUMS: ROCK BLUES",
-        "DRUMS: 2ND LINE", "DRUMS: MEMPHIS SOUL", "DRUMS: RHUMBA", "DRUMS: BOOGIE"
-    };
     static const char *TUNE_LABELS[3] = { "TUNE: 440 HZ", "TUNE: 432 HZ", "TUNE: 442 HZ" };
     static const char *BASS_LABELS[8] = {
         "BASS: P-BASS", "BASS: UPRIGHT", "BASS: MUTED BOOGIE", "BASS: MOOG FUNK",
         "BASS: 60S JAZZ", "BASS: FLATWOUND", "BASS: AMPEG TUBE", "BASS: SUB OCTAVE"
     };
 
-    // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..11), or Keys Comping Style with SEL (0..4)
+    // ENC_ALGORITHM: Backing Chord Sound (0..11)
     if ((delta = hal_get_encoder_delta(ENC_ALGORITHM)) != 0) {
-        if (sel_held) {
-            int32_t nks = (int32_t)hs->keys_style + delta;
-            while (nks < 0) nks += 5;
-            hs->keys_style = (uint8_t)(nks % 5);
-            p->keys_style = hs->keys_style;
-            set_toast(hs, ms_now, KEYS_STYLE_LABELS[hs->keys_style]);
-        } else {
-            int32_t na = (int32_t)p->ep_tone_algo + delta;
-            while (na < 0) na += 12;
-            p->ep_tone_algo = (uint8_t)(na % 12);
-        }
+        p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, 12);
         hs->ui_dirty = 1;
     }
 
-    // ENC_SELECT (Encoder 0): Groove Style (0..7), Drum Kit with GLO (0..7), or Form Mode with SEL (0..4)
+    // ENC_SELECT: Groove Preset (0..7), or Drum Kit (0..7) with GLO held
     if ((delta = hal_get_encoder_delta(ENC_SELECT)) != 0) {
         if (glo_held) {
-            int32_t nd = (int32_t)p->drum_kit + delta;
-            while (nd < 0) nd += 8;
-            p->drum_kit = (uint8_t)(nd % 8);
-        } else if (sel_held) {
-            int32_t nf = (int32_t)hs->form_mode + delta;
-            while (nf < 0) nf += 5;
-            hs->form_mode = (FormMode)(nf % 5);
-            p->form_mode = hs->form_mode;
-            g_save_pending = 1;
-            g_last_param_change_ms = ms_now;
+            p->drum_kit = wrap_step_u8(p->drum_kit, delta, 8);
         } else {
-            int32_t ng = (int32_t)p->groove_style + delta;
-            while (ng < 0) ng += 8;
-            arranger_apply_groove_defaults(hs, p, (GrooveStyle)(ng % 8));
+            uint8_t ng = wrap_step_u8(p->groove_style, delta, 8);
+            arranger_apply_groove_defaults(hs, p, (GrooveStyle)ng);
         }
         hs->ui_dirty = 1;
     }
 
-    uint8_t is_mixer = (ui_screen && *ui_screen == 1);
+    uint8_t scr = ui_screen ? *ui_screen : 0;
+    uint8_t is_mixer = (scr == 1);
+    uint8_t is_style = (scr == 2);
 
-    // ENC_KNOB1 (Encoder 2): BPM / Swing / Drum Pattern (SEL) (or Bass Vol / Reverb Mix on Mixer view)
+    // KNOB 1: Lead Sheet (BPM / GLO:Swing) | Mixer (Bass Vol / GLO:Reverb) | Band Style (Bass Line / GLO:Bass Sound)
     if ((delta = hal_get_encoder_delta(ENC_KNOB1)) != 0) {
-        if (sel_held) {
-            int32_t ndp = (int32_t)hs->drum_pattern + delta;
-            while (ndp < 0) ndp += 8;
-            hs->drum_pattern = (uint8_t)(ndp % 8);
-            p->drum_pattern = hs->drum_pattern;
-            set_toast(hs, ms_now, DRUM_PAT_LABELS[hs->drum_pattern]);
+        if (is_style) {
+            if (glo_held) {
+                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, 8);
+            } else {
+                hs->bass_style = wrap_step_u8(hs->bass_style, delta, 5);
+                p->bass_style = hs->bass_style;
+            }
         } else if (is_mixer) {
             if (glo_held) p->reverb_mix = clamp_step_u8(p->reverb_mix, delta * 4, 0, 127);
             else          p->bass_vol   = clamp_step_u8(p->bass_vol,   delta * 4, 0, 127);
@@ -338,12 +312,15 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB2 (Encoder 3): Spice / Tuning / Fullness (SEL) (or Keys Vol / Spice on Mixer view)
+    // KNOB 2: Lead Sheet (Spice / GLO:Tuning) | Mixer (Keys Vol / GLO:Spice) | Band Style (Keys Rhythm / GLO:Chord Sound)
     if ((delta = hal_get_encoder_delta(ENC_KNOB2)) != 0) {
-        if (sel_held) {
-            hs->fullness = clamp_step_u8(hs->fullness, delta * 5, 0, 100);
-            p->fullness = hs->fullness;
-            set_toast_val(hs, ms_now, "FULLNESS: ", hs->fullness, "%");
+        if (is_style) {
+            if (glo_held) {
+                p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, 12);
+            } else {
+                hs->keys_style = wrap_step_u8(hs->keys_style, delta, 5);
+                p->keys_style = hs->keys_style;
+            }
         } else if (is_mixer) {
             if (glo_held) {
                 hs->spice_level = clamp_step_u8(hs->spice_level, delta * 5, 0, 100);
@@ -353,9 +330,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             }
         } else {
             if (glo_held) {
-                int32_t nt = (int32_t)p->master_tuning + delta;
-                while (nt < 0) nt += 3;
-                p->master_tuning = (uint8_t)(nt % 3);
+                p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
                 set_toast(hs, ms_now, TUNE_LABELS[p->master_tuning]);
             } else {
                 hs->spice_level = clamp_step_u8(hs->spice_level, delta * 5, 0, 100);
@@ -367,22 +342,21 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB3 (Encoder 4): Bass Vol / Bass Engine (0..7) / Bass Line Style (SEL) (or Drums Vol / Swing on Mixer view)
+    // KNOB 3: Lead Sheet (Bass Vol / GLO:Bass Sound) | Mixer (Drums Vol / GLO:Swing) | Band Style (Drum Beat / GLO:Drum Kit)
     if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
-        if (sel_held) {
-            int32_t nbs = (int32_t)hs->bass_style + delta;
-            while (nbs < 0) nbs += 5;
-            hs->bass_style = (uint8_t)(nbs % 5);
-            p->bass_style = hs->bass_style;
-            set_toast(hs, ms_now, BASS_STYLE_LABELS[hs->bass_style]);
+        if (is_style) {
+            if (glo_held) {
+                p->drum_kit = wrap_step_u8(p->drum_kit, delta, 8);
+            } else {
+                hs->drum_pattern = wrap_step_u8(hs->drum_pattern, delta, 8);
+                p->drum_pattern = hs->drum_pattern;
+            }
         } else if (is_mixer) {
             if (glo_held) p->swing     = clamp_step_u8(p->swing,     delta * 2, 0, 100);
             else          p->drums_vol = clamp_step_u8(p->drums_vol, delta * 4, 0, 127);
         } else {
             if (glo_held) {
-                int32_t nb = (int32_t)p->bass_instrument + delta;
-                while (nb < 0) nb += 8;
-                p->bass_instrument = (uint8_t)(nb % 8);
+                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, 8);
                 set_toast(hs, ms_now, BASS_LABELS[p->bass_instrument]);
             } else {
                 p->bass_vol = clamp_step_u8(p->bass_vol, delta * 4, 0, 127);
@@ -394,9 +368,16 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB4 (Encoder 5): Keys Vol / Reverb Mix (or Lead Vol / Fullness on Mixer view)
+    // KNOB 4: Lead Sheet (Keys Vol / GLO:Reverb) | Mixer (Lead Vol / GLO:Fullness) | Band Style (Blues Form / GLO:Tuning)
     if ((delta = hal_get_encoder_delta(ENC_KNOB4)) != 0) {
-        if (is_mixer) {
+        if (is_style) {
+            if (glo_held) {
+                p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
+            } else {
+                hs->form_mode = (FormMode)wrap_step_u8((uint8_t)hs->form_mode, delta, 5);
+                p->form_mode = hs->form_mode;
+            }
+        } else if (is_mixer) {
             if (glo_held) {
                 hs->fullness = clamp_step_u8(hs->fullness, delta * 5, 0, 100);
                 p->fullness = hs->fullness;
