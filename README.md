@@ -1,4 +1,4 @@
-# TexasBlues-1 (TB-1)
+# Blues Box
 
 **A standalone 12-bar blues backing band firmware for the M-VAVE FM-1 pocket synthesizer.**
 
@@ -23,9 +23,9 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
    pip install mido python-rtmidi
    ```
 2. Plug the FM-1 into your computer with a USB-C data cable and power it on.
-3. Download **`dinghy.fwsc`** from the [Releases page](https://github.com/provostprovost/blues/releases) *(or clone the repo and run `./build.sh` first)*, then flash it:
+3. Download **`bluesbox.fwsc`** from the [Releases page](https://github.com/provostprovost/blues/releases) *(or clone the repo and run `./build.sh` first)*, then flash it:
    ```bash
-   python3 tools/fm1_install.py dinghy.fwsc --yes
+   python3 tools/fm1_install.py bluesbox.fwsc --yes
    ```
 4. Once the FM-1 reboots, press **`PLAY/STOP`** to start the band.
 5. Turn **`SELECT`** to change the groove, **`KNOB1`** for tempo, **`ALGORITHM`** for chords, and **`PRESETS`** for the lead keyboard sound.
@@ -146,7 +146,7 @@ gcc -DSTANDALONE_TEST -O2 -Wall -Wextra -Werror -Ifirmware/src \
     firmware/src/ui_screens.c tests/test_blues_engine.c \
     -o build/test_blues && ./build/test_blues
 
-# Build the firmware package (outputs build/dinghy.fwsc)
+# Build the firmware package (outputs build/bluesbox.fwsc)
 ./build.sh
 ```
 
@@ -156,7 +156,7 @@ gcc -DSTANDALONE_TEST -O2 -Wall -Wextra -Werror -Ifirmware/src \
 
 The FM-1 bootloader cannot be bricked:
 - **USB Rescue Mode:** Hold **`OCT-`** while turning on the power switch to boot straight into the USB updater.
-- **Reflash TB-1:** `python3 tools/fm1_install.py build/dinghy.fwsc --yes`
+- **Reflash Blues Box:** `python3 tools/fm1_install.py build/bluesbox.fwsc --yes`
 - **Restore Stock Firmware:** Use M-Vave's updater with your factory firmware package, or flash a backup package with `tools/fm1_install.py`.
 
 ---

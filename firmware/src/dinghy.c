@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* TexasBlues-1 (TB-1) Firmware for M-VAVE FM-1
+/* Blues Box Firmware for M-VAVE FM-1
  * Phase 5: Full-System Integration, MIDI Ring Buffer & Cooperative Engine
  */
 

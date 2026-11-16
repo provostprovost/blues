@@ -363,7 +363,7 @@ def smk():
             image, n = I.deinterleave(raw)
             ok(not I.package_damage(image) and I.product_of(raw) == "SMK-37 Pro_" + old.stem[-3:],
                f"stock {old.name}: {n} blocks, identity {I.product_of(raw)}, CRCs ok")
-    clean = ROOT / "build/dinghy.fwsc"
+    clean = ROOT / "build/bluesbox.fwsc"
     if clean.exists():
         raw = clean.read_bytes()
         image, n = I.deinterleave(raw)
@@ -372,8 +372,8 @@ def smk():
 
 
 def against_js():
-    clean = ROOT / "build/dinghy.fwsc"
-    for f in [clean, *sorted((ROOT / "build").glob("dinghy*-smk37*.fwsc"))]:   # (every package built)
+    clean = ROOT / "build/bluesbox.fwsc"
+    for f in [clean, *sorted((ROOT / "build").glob("bluesbox*-smk37*.fwsc"))]:   # (every package built)
         if f.exists():
             ok(I.LOADER_MARK in f.read_bytes(), f"{f.name} carries the Felucca loader marker")
     if not shutil.which("node") or not clean.exists() or not (ROOT / "web/fm1pkg.js").exists():

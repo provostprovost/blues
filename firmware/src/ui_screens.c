@@ -321,7 +321,7 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
     (void)preset_idx;
     if (full_redraw) {
         hal_fill_rect(0, 0, 240, 240, C_BLACK);
-        hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND MIXER", RGB(255, 190, 0), 1);
+        hal_draw_text_box(0, 6, 240, 0, "BLUES BOX MIXER", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BAS K2:KEY K3:DRM K4:LD", RGB(0, 220, 255), 1);
         hal_draw_text_box(0, 198, 240, 0, "[GLO]: REV/DRV/SWG/PLAY", RGB(255, 180, 0), 1);
         hal_draw_text_box(0, 216, 240, 0, "HOME: BAND STYLE VIEW", RGB(140, 140, 140), 1);
@@ -358,7 +358,7 @@ static void render_style_row(int y, const char *label, const char *val, uint16_t
 static void render_style_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t full_redraw) {
     if (full_redraw) {
         hal_fill_rect(0, 0, 240, 240, C_BLACK);
-        hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND STYLE", RGB(255, 190, 0), 1);
+        hal_draw_text_box(0, 6, 240, 0, "BLUES BOX STYLE", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:FRM", RGB(0, 220, 255), 1);
         hal_draw_text_box(0, 198, 240, 0, "[GLO]: BASS / KEYS / KIT / TUNE", RGB(255, 180, 0), 1);
         hal_draw_text_box(0, 216, 240, 0, "HOME: BAND FEEL VIEW", RGB(140, 140, 140), 1);
@@ -386,7 +386,7 @@ static void render_style_view(const HarmonyState *hs, const PresetConfig *preset
 static void render_feel_view(const HarmonyState *hs, uint8_t full_redraw) {
     if (full_redraw) {
         hal_fill_rect(0, 0, 240, 240, C_BLACK);
-        hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND FEEL", RGB(255, 190, 0), 1);
+        hal_draw_text_box(0, 6, 240, 0, "BLUES BOX FEEL", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:ALL", RGB(0, 220, 255), 1);
         hal_draw_text_box(0, 198, 240, 0, "[GLO]: TRACK SPICE", RGB(255, 180, 0), 1);
         hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);

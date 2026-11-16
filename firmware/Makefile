@@ -1,9 +1,9 @@
-# Firmware Makefile for TexasBlues-1 (TB-1)
+# Firmware Makefile for Blues Box
 # Supports host verification, unit testing, and bridge to target build
 
 FELUCCA_ID := FM-1_960
-APP_NAME   := "TB-1"
-TARGET     := build/tb1_blues.fwsc
+APP_NAME   := "BLUES BOX"
+TARGET     := build/bluesbox.fwsc
 SRCS       := src/dinghy.c
 
 CC ?= gcc
