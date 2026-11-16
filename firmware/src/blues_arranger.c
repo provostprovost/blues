@@ -33,14 +33,14 @@ static inline int8_t get_hmnz_jitter(uint8_t spice) {
 
 uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t spice) {
     uint8_t r = current.root_note % 12;
-    uint8_t curr_root = (uint8_t)(28 + ((r + 8) % 12)); // Map to E1..Eb2 (28..39)
-    while (curr_root < 28) curr_root += 12;
-    while (curr_root > 39) curr_root -= 12;
+    uint8_t curr_root = (uint8_t)(40 + ((r + 8) % 12)); // Map to E2..Eb3 (40..51)
+    while (curr_root < 40) curr_root += 12;
+    while (curr_root > 51) curr_root -= 12;
 
     uint8_t nr = next.root_note % 12;
-    uint8_t next_target = (uint8_t)(28 + ((nr + 8) % 12));
-    while (next_target < 28) next_target += 12;
-    while (next_target > 39) next_target -= 12;
+    uint8_t next_target = (uint8_t)(40 + ((nr + 8) % 12));
+    while (next_target < 40) next_target += 12;
+    while (next_target > 51) next_target -= 12;
 
     uint8_t note = curr_root;
 
@@ -51,7 +51,7 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
     } else if (sub_idx == 1 && spice > 75) {
         note = curr_root + 2;
     } else if (sub_idx == 3 && spice > 75) {
-        note = (next_target > 28) ? (next_target - 1) : (next_target + 1);
+        note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
     } else {
         switch (beat) {
             case 0:
@@ -76,19 +76,19 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
             case 3:
             default: {
                 if (spice < 30) {
-                    note = (next_target >= 35) ? (next_target - 7) : (next_target + 5);
+                    note = (next_target >= 47) ? (next_target - 7) : (next_target + 5);
                 } else if (next_target >= curr_root) {
-                    note = (next_target > 28) ? (next_target - 1) : (next_target + 1);
+                    note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
                 } else {
-                    note = (next_target < 49) ? (next_target + 1) : (next_target - 1);
+                    note = (next_target < 61) ? (next_target + 1) : (next_target - 1);
                 }
                 break;
             }
         }
     }
 
-    while (note < 28) note += 12;
-    while (note > 50) note -= 12;
+    while (note < 40) note += 12;
+    while (note > 62) note -= 12;
     return note;
 }
 
@@ -98,32 +98,45 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
     uint8_t root = (root_semitone + info.semitone_offset) % 12;
     uint8_t base_root = 48 + root; // C3 + root
     uint8_t third = (info.quality == CHORD_MIN7 || info.quality == CHORD_DIM7) ? 3 : 4;
+    uint8_t fifth = (info.quality == CHORD_DIM7) ? 6 : 7;
     uint8_t seventh = (info.quality == CHORD_DIM7) ? 9 : 10;
     uint8_t ninth = 14;
-    uint8_t thirteenth = 21;
 
-    // Type A: 3 - b7 - 9 - 13
+    // Type 0: Root Position (1 - 3 - 5 - b7)
     candidates[0].count = 4;
-    candidates[0].notes[0] = base_root + third;
-    candidates[0].notes[1] = base_root + seventh;
-    candidates[0].notes[2] = base_root + ninth;
-    candidates[0].notes[3] = base_root + thirteenth;
+    candidates[0].notes[0] = base_root;
+    candidates[0].notes[1] = base_root + third;
+    candidates[0].notes[2] = base_root + fifth;
+    candidates[0].notes[3] = base_root + seventh;
 
-    // Type B: b7 - 3 - 13 - 9
+    // Type 1: Inversion (5 - b7 - 1 - 3)
     candidates[1].count = 4;
-    candidates[1].notes[0] = (uint8_t)(base_root + seventh - 12);
-    candidates[1].notes[1] = base_root + third;
-    candidates[1].notes[2] = (uint8_t)(base_root + thirteenth - 12);
-    candidates[1].notes[3] = base_root + ninth;
+    candidates[1].notes[0] = (uint8_t)(base_root + fifth - 12);
+    candidates[1].notes[1] = (uint8_t)(base_root + seventh - 12);
+    candidates[1].notes[2] = base_root;
+    candidates[1].notes[3] = base_root + third;
 
-    // Octave Variations for Type A & B
-    for (int i = 0; i < 2; i++) {
-        candidates[i + 2] = candidates[i];
-        for (int n = 0; n < 4; n++) candidates[i + 2].notes[n] += 12;
+    // Type 2: 9th Color Voicing (3 - b7 - 9 - 1)
+    candidates[2].count = 4;
+    candidates[2].notes[0] = base_root + third;
+    candidates[2].notes[1] = base_root + seventh;
+    candidates[2].notes[2] = base_root + ninth;
+    candidates[2].notes[3] = base_root + 12;
+
+    // Type 3: Lower Inversion with 9th (b7 - 3 - 1 - 9)
+    candidates[3].count = 4;
+    candidates[3].notes[0] = (uint8_t)(base_root + seventh - 12);
+    candidates[3].notes[1] = base_root + third;
+    candidates[3].notes[2] = base_root;
+    candidates[3].notes[3] = base_root + ninth;
+
+    // Octave Variations for candidates 0..3 -> 4..7
+    for (int i = 0; i < 4; i++) {
         candidates[i + 4] = candidates[i];
-        for (int n = 0; n < 4; n++) candidates[i + 4].notes[n] -= 12;
-        candidates[i + 6] = candidates[i + 2];
-        for (int n = 0; n < 4; n++) candidates[i + 6].notes[n] += 12;
+        for (int n = 0; n < 4; n++) {
+            if (candidates[i].notes[n] <= 64) candidates[i + 4].notes[n] += 12;
+            else candidates[i + 4].notes[n] -= 12;
+        }
     }
 
     // Clamp each candidate strictly to C3..E5 (48..76) and sort notes

@@ -59,6 +59,7 @@ static int16_t   g_comb_buf3[1153];
 static uint16_t  g_comb_ptr0 = 0, g_comb_ptr1 = 0, g_comb_ptr2 = 0, g_comb_ptr3 = 0;
 static int16_t   g_comb_lp0 = 0, g_comb_lp1 = 0, g_comb_lp2 = 0, g_comb_lp3 = 0;
 static uint32_t  g_lfsr = 0xACE1u;
+static int32_t   g_eq_lp = 0;
 
 void dsp_init(void) {
     g_bass.active = 0;
@@ -66,6 +67,7 @@ void dsp_init(void) {
     g_bass.svf_low = 0;
     g_bass.svf_band = 0;
     g_bass.env_q15 = 0;
+    g_eq_lp = 0;
     for (int k = 0; k < 4; k++) {
         g_keys[k].active = 0;
         g_keys[k].phase_c = 0;
@@ -172,7 +174,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             if (g_bass.svf_band < -32767) g_bass.svf_band = -32767;
 
             int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
-            mix += (g_bass.svf_low * b_amp) >> 7;
+            mix += (g_bass.svf_low * b_amp) >> 6; // +6 dB boost for single bass voice
 
             g_bass.env_q15 = (g_bass.env_q15 * 32700) >> 15;
             if (g_bass.env_q15 < 100) g_bass.active = 0;
@@ -183,15 +185,17 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             if (g_keys[k].active) {
                 int16_t car = 0;
                 if (preset->ep_tone_algo == 0) { // Rhodes 2-Op FM
+                    g_keys[k].phase_c += g_keys[k].inc_c;
                     g_keys[k].phase_m += g_keys[k].inc_m;
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    g_keys[k].phase_c += g_keys[k].inc_c + (((uint32_t)((int32_t)mod * 500)) << 8);
-                    car = hal_sine_q15(g_keys[k].phase_c);
+                    uint32_t pmod = (uint32_t)((int32_t)mod * 22000);
+                    car = hal_sine_q15(g_keys[k].phase_c + pmod);
                 } else if (preset->ep_tone_algo == 1) { // Bright FM EP
+                    g_keys[k].phase_c += g_keys[k].inc_c;
                     g_keys[k].phase_m += g_keys[k].inc_c * 3;
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    g_keys[k].phase_c += g_keys[k].inc_c + (((uint32_t)((int32_t)mod * 1200)) << 8);
-                    car = hal_sine_q15(g_keys[k].phase_c);
+                    uint32_t pmod = (uint32_t)((int32_t)mod * 42000);
+                    car = hal_sine_q15(g_keys[k].phase_c + pmod);
                 } else if (preset->ep_tone_algo == 2) { // B3 Drawbar Organ (4 Harmonics)
                     g_keys[k].phase_c += g_keys[k].inc_c;
                     int16_t h1 = hal_sine_q15(g_keys[k].phase_c);
@@ -200,14 +204,15 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     int16_t h4 = hal_sine_q15(g_keys[k].phase_c * 4);
                     car = (h1 >> 2) + (h2 >> 2) + (h3 >> 3) + (h4 >> 3);
                 } else { // Clavinet (Phase-Modulated Pluck 1:3)
+                    g_keys[k].phase_c += g_keys[k].inc_c;
                     g_keys[k].phase_m += g_keys[k].inc_c * 3;
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    g_keys[k].phase_c += g_keys[k].inc_c + (((uint32_t)((int32_t)mod * 2000)) << 8);
-                    car = hal_sine_q15(g_keys[k].phase_c);
+                    uint32_t pmod = (uint32_t)((int32_t)mod * 55000);
+                    car = hal_sine_q15(g_keys[k].phase_c + pmod);
                 }
 
                 int32_t k_amp = (g_keys[k].env_q15 * preset->keys_vol) >> 15;
-                mix += (car * k_amp) >> 7;
+                mix += (car * k_amp) >> 8; // Tame 4-voice polyphonic keyboard level
 
                 if (preset->ep_tone_algo == 2 && g_keys[k].gate_samples > 0) {
                     g_keys[k].gate_samples--;
@@ -310,7 +315,11 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         x3 = (x3 * x) >> 15;
         int32_t sat_out = x - (x3 >> 2);
 
-        buf[i * 2]     += sat_out;
-        buf[i * 2 + 1] += sat_out;
+        // Speaker / Headphone EQ: softens harsh high sizzle while keeping bass/mids punchy
+        g_eq_lp += q15_mul_trunc(sat_out - g_eq_lp, 8000);
+        int32_t eq_out = g_eq_lp + div2_trunc(sat_out - g_eq_lp);
+
+        buf[i * 2]     += eq_out;
+        buf[i * 2 + 1] += eq_out;
     }
 }
