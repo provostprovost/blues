@@ -172,7 +172,7 @@ Press **`HOME`** to toggle between the two non-blocking 240x240 RGB TFT screens:
 - Displays the complete 12-bar chord grid with large, easy-to-read chord symbols (e.g. `E7`, `A7`, `B7`).
 - **Differential Tile Rendering**: Zero screen flicker. The active measure box highlights in amber, and 4 beat pips track the groove in real time.
 - **Header**: Active Groove Style & Drum Kit (e.g. `TX SHUFFLE [STUDIO]`), Session Key, BPM, and Spice %.
-- **Footer**: Live Status (`PLAYING`, `VAMP LOOP ACTIVE`, `STOP-TIME BREAK`) and Sound Engines (`RHODES FM * BLUES GTR`).
+- **Footer**: Live Status (`PLAYING`, `VAMP LOOP ACTIVE`, `STOP-TIME BREAK`) and Sound Engines (`BLUES GTR * RHODES FM`).
 
 ### 2. Band Mixer View
 - Live visual meters for all instrument levels and macro parameters:

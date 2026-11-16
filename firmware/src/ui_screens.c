@@ -166,14 +166,14 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
     hal_draw_text_box(0, 208, 240, 0, status_str, status_col, 1);
 
     char footer[40];
-    const char *aname = ALGO_NAMES[preset->ep_tone_algo % 12];
     const char *lname = LEAD_NAMES[preset->lead_instrument % 8];
+    const char *aname = ALGO_NAMES[preset->ep_tone_algo % 12];
     int flen = 0;
-    while (*aname && flen < 16) footer[flen++] = *aname++;
+    while (*lname && flen < 20) footer[flen++] = *lname++;
     footer[flen++] = ' ';
     footer[flen++] = '*';
     footer[flen++] = ' ';
-    while (*lname && flen < 36) footer[flen++] = *lname++;
+    while (*aname && flen < 38) footer[flen++] = *aname++;
     footer[flen] = '\0';
     hal_fill_rect(0, 224, 240, 16, C_BLACK);
     hal_draw_text_box(0, 224, 240, 0, footer, RGB(140, 140, 140), 1);
