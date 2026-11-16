@@ -631,9 +631,14 @@ void test_stage5_integration(void) {
     assert((pf.drum_mask & 0x08) != 0);
     assert((pf.drum_mask & 0x02) == 0);
 
-    // Beat 2 at low bass_fullness must play 5th (+7 = 47 for E2=40), NOT 6th (+9 = 49)
+    // Beat 2 at lowest bass_fullness (< 20) plays 1 note per measure (Beat 0 only)
     fhs.current_bar = 0;
     fhs.current_beat = 2;
+    arranger_generate_frame(&fhs, &fp, &pf, &fv);
+    assert(pf.bass_trigger == 0);
+
+    // Beat 2 at bass_fullness 20..39 plays 5th (+7 = 47 for E2=40), NOT 6th (+9 = 49)
+    fhs.bass_fullness = 25;
     arranger_generate_frame(&fhs, &fp, &pf, &fv);
     assert(pf.bass_trigger == 1);
     assert(pf.bass_note == 47);

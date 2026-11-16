@@ -67,7 +67,7 @@ static KeysVoice g_keys[4];
 static LeadVoice g_lead[MAX_LEAD_VOICES];
 static int32_t   g_bass_lp = 0;
 static int32_t   g_drum_env[4];
-static uint16_t  g_drum_decay[4] = { 32758, 32745, 32720, 32725 };
+static uint16_t  g_drum_decay[4] = { 32763, 32756, 32720, 32732 };
 static uint32_t  g_drum_pitch[4];
 
 // 4-Comb Schroeder Room Reverb Buffers (Prime lengths)
@@ -479,12 +479,12 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
 
         // 3. Synthesized Drums (8 Selectable Kits)
         static const uint32_t KICK_BASE_INC[8] = {
-            4380000u, 3200000u, 2200000u, 5100000u,
-            3900000u, 4700000u, 3500000u, 3600000u
+            7500000u, 6800000u, 5800000u, 8200000u,
+            7200000u, 7800000u, 7000000u, 7000000u
         };
         static const uint32_t KICK_SWEEP_MUL[8] = {
-            260u, 180u, 320u, 300u,
-            240u, 220u, 190u, 350u
+            420u, 320u, 480u, 440u,
+            390u, 360u, 340u, 520u
         };
         uint8_t dkit = preset->drum_kit % 8;
 
@@ -536,7 +536,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
             int16_t n_sample = (int16_t)(g_lfsr & 0xFFFF);
             int32_t d2_amp = (g_drum_env[2] * preset->drums_vol) >> 15;
-            mix += (n_sample * d2_amp) >> 8;
+            mix += (n_sample * d2_amp) >> 9; // Sit hats behind kick & snare
             g_drum_env[2] = (g_drum_env[2] * g_drum_decay[2]) >> 15;
         }
 

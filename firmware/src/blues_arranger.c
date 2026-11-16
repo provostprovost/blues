@@ -356,15 +356,17 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         // Bass engine trigger: per-instrument Fullness & Spice
         uint8_t bass_vel_mask = BASS_STYLE_MASKS[b_style][step16 % 16];
         uint8_t bass_hit = (bass_vel_mask > 0);
-        if (b_full < 35) {
-            bass_hit = ((hs->current_beat == 0 || hs->current_beat == 2) && sub_slot == 0);
+        if (b_full < 20) {
+            bass_hit = (hs->current_beat == 0 && sub_slot == 0); // Lowest fullness: 1 note per measure (Root)
+        } else if (b_full < 40) {
+            bass_hit = ((hs->current_beat == 0 || hs->current_beat == 2) && sub_slot == 0); // Sparse: 1 - 5
         } else if (b_full > 85 && hs->current_beat == 3 && sub_slot == 2) {
             bass_hit = 1;
         }
         if (bass_hit) {
             frame->bass_trigger = 1;
             int base_v = (bass_vel_mask > 0) ? bass_vel_mask : 86;
-            int bv = base_v + j_vel + ((b_full > 75) ? 8 : (b_full < 35) ? -10 : 0);
+            int bv = base_v + j_vel + ((b_full > 75) ? 8 : (b_full < 40) ? -8 : 0);
             frame->bass_vel = (uint8_t)((bv < 1) ? 1 : (bv > 127) ? 127 : bv);
 
             BarSlot next_slot = harmony_get_next_bar_slot(hs);
@@ -372,8 +374,8 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             ScaleDegreeInfo next_info = harmony_get_degree_info(next_slot.primary);
             ChordContext c_curr = { (uint8_t)((hs->root_semitone + curr_info.semitone_offset) % 12), curr_info.quality };
             ChordContext c_next = { (uint8_t)((hs->root_semitone + next_info.semitone_offset) % 12), next_info.quality };
-            if (b_full < 35) {
-                // Sparse half-note pocket: always 1 - 5 - 1 - 5 (never 1 - 6 - 1 - 6)
+            if (b_full < 40) {
+                // Sparse pocket: always 1 (or 1 - 5), never 1 - 6 - 1 - 6
                 uint8_t fifth_off = (c_curr.quality == CHORD_DIM7) ? 6 : 7;
                 frame->bass_note = bass_compute_styled_note(c_curr, c_next, (hs->current_beat == 0) ? 0 : 2, 0, 0, BASS_STYLE_ROOT_FIFTH);
                 if (hs->current_beat == 2 && fifth_off == 6) frame->bass_note--;
@@ -403,47 +405,49 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             hs->manual_stab_pending = 0;
         }
 
-        // Drum channels: Hi-hat / Ride
-        if (gt->drum_hat_mask[step16 % 16] > 0) {
-            frame->drum_mask |= 0x04;
-            int dv = gt->drum_hat_mask[step16 % 16] + j_vel + ((d_full < 35) ? -20 : (d_full > 75) ? 8 : 0);
-            frame->drum_vel[2] = (uint8_t)((dv < 1) ? 1 : (dv > 127) ? 127 : dv);
+        // Drum channels: Hi-hat / Ride (gated by Drums Fullness: <20 none, 20..44 quarter-notes, >=45 full pattern)
+        if (gt->drum_hat_mask[step16 % 16] > 0 && d_full >= 20) {
+            if (d_full >= 45 || sub_slot == 0) {
+                frame->drum_mask |= 0x04;
+                int dv = gt->drum_hat_mask[step16 % 16] + j_vel + ((d_full < 45) ? -22 : (d_full > 75) ? 6 : 0);
+                frame->drum_vel[2] = (uint8_t)((dv < 1) ? 1 : (dv > 127) ? 127 : dv);
+            }
         }
 
-        // Kick Drum: Beat 0 downbeat (+ syncopated kick at high Drum Fullness/Spice)
-        if (hs->current_beat == 0 && hs->current_subdiv == 0) {
+        // Kick Drum: Beat 1 downbeat (d_full >= 20), Beat 3 (d_full >= 55), plus syncopated pushes (d_spc / d_full > 65)
+        if (d_full >= 20 && hs->current_subdiv == 0 && (hs->current_beat == 0 || (d_full >= 55 && hs->current_beat == 2))) {
             frame->drum_mask |= 0x01;
-            int dv0 = 110 + j_vel + ((d_full > 75) ? 10 : (d_full < 35) ? -15 : 0);
+            int dv0 = 112 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -14 : 0);
             frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
         }
-        if ((d_full > 70 || d_spc > 70) && d_full >= 35 && sub_slot == 2 && hs->current_beat == 3) {
+        if (d_full >= 45 && d_spc > 65 && sub_slot == 2 && (hs->current_beat == 3 || (d_full > 75 && hs->current_beat == 1))) {
             frame->drum_mask |= 0x01;
-            int dv0 = 95 + j_vel;
+            int dv0 = 96 + j_vel;
             frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
         }
 
-        // Snare / Rimshot: Backbeat on Beats 1 and 3
+        // Snare / Rimshot: Backbeat on Beats 2 and 4 (current_beat == 1 || 3)
         if ((hs->current_beat == 1 || hs->current_beat == 3) && hs->current_subdiv == 0) {
             if (d_full < 20) {
-                frame->drum_mask |= 0x08;
-                int dv3 = 80 + j_vel;
+                frame->drum_mask |= 0x08; // Ultra-sparse: rimshot only on 2 & 4
+                int dv3 = 82 + j_vel;
                 frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
             } else {
                 frame->drum_mask |= 0x02;
-                int dv1 = 100 + j_vel + ((d_full > 75) ? 10 : (d_full < 35) ? -18 : 0);
+                int dv1 = 104 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -16 : 0);
                 frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
             }
         }
-        // Snare ghost note on beat 2 offbeat
-        if (d_full >= 40 && d_spc >= 35 && sub_slot == 2 && hs->current_beat == 2) {
+        // Snare ghost notes (controlled by Drums Spice & Fullness)
+        if (d_full >= 40 && d_spc >= 26 && sub_slot == 2 && (hs->current_beat == 2 || (d_spc > 65 && hs->current_beat == 0))) {
             frame->drum_mask |= 0x02;
-            int dv1 = 45 + j_vel + ((d_full > 75) ? 12 : 0);
+            int dv1 = 48 + j_vel + ((d_spc > 65) ? 15 : 0);
             frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
         }
 
-        // Automatic phrase-end drum fills on Bar 4, Bar 8, and Bar 12 (or manual fill)
-        uint8_t is_phrase_end = (hs->current_bar == 3 || hs->current_bar == 7 || hs->current_bar == 11);
-        if ((is_phrase_end && d_full >= 25 && d_spc >= 20) || hs->fill_pending) {
+        // Automatic phrase-end drum fills: Bar 12 (d_spc > 25), Bar 4 & 8 (d_spc > 65)
+        uint8_t is_phrase_end = (hs->current_bar == 11) || (d_spc > 65 && (hs->current_bar == 3 || hs->current_bar == 7));
+        if ((is_phrase_end && d_full >= 25 && d_spc > 25) || hs->fill_pending) {
             if (hs->current_beat == 3) {
                 uint8_t is_turnaround_bar = (hs->current_bar == 11 || hs->fill_pending);
                 if (sub_slot == 0) {

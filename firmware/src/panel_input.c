@@ -352,7 +352,6 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             if (glo_held) {
                 hs->keys_spice = clamp_step_u8(hs->keys_spice, delta * 5, 0, 100);
                 p->keys_spice = hs->keys_spice;
-                hs->spice_level = hs->keys_spice; p->spice = hs->keys_spice;
             } else {
                 hs->keys_fullness = clamp_step_u8(hs->keys_fullness, delta * 5, 0, 100);
                 p->keys_fullness = hs->keys_fullness;
