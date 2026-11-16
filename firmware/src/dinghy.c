@@ -281,9 +281,9 @@ static void app_main(void) {
         // Update Button & Status LEDs
         panel_update_leds(&g_harmony, g_active_preset);
 
-        // Debounced Autosave (strictly executed when playback is silent/stopped)
-        if (panel_check_autosave_needed(ms_now) && !g_harmony.is_playing) {
-            hal_blob_save(0, g_presets, sizeof(g_presets));
+        // Flash Persistence: explicit commit via BTN_SAVE prevents accidental corruption
+        // of factory presets during live jamming and temporary form variations.
+        if (panel_check_autosave_needed(ms_now)) {
             panel_clear_autosave_needed();
         }
 
