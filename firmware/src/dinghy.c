@@ -137,7 +137,7 @@ static void init_factory_presets(void) {
         p->outro_type = OUTRO_TAG;
 
         switch (i) {
-            case 0: // Texas Shuffle in E
+            case 0: // Texas Shuffle
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_TEXAS_SHUFFLE;
                 p->bpm = 112;
@@ -146,8 +146,8 @@ static void init_factory_presets(void) {
                 p->ep_tone_algo = 0; // Rhodes FM
                 p->form_mode = FORM_12BAR;
                 break;
-            case 1: // Slow 12/8 Blues in A
-                p->root_key = 9; // A
+            case 1: // Slow 12/8 Blues
+                p->root_key = 4; // E
                 p->groove_style = GROOVE_SLOW_12_8;
                 p->bpm = 68;
                 p->spice = 50;
@@ -155,8 +155,8 @@ static void init_factory_presets(void) {
                 p->ep_tone_algo = 2; // B3 Organ
                 p->form_mode = FORM_12BAR;
                 break;
-            case 2: // Chicago Swing in G
-                p->root_key = 7; // G
+            case 2: // Chicago Swing
+                p->root_key = 4; // E
                 p->groove_style = GROOVE_CHICAGO_SWING;
                 p->bpm = 130;
                 p->spice = 55;
@@ -164,8 +164,8 @@ static void init_factory_presets(void) {
                 p->ep_tone_algo = 1; // Bright EP
                 p->form_mode = FORM_12BAR;
                 break;
-            case 3: // Rockin' 8s in C
-                p->root_key = 0; // C
+            case 3: // Rockin' 8s
+                p->root_key = 4; // E
                 p->groove_style = GROOVE_STRAIGHT_ROCK;
                 p->bpm = 140;
                 p->spice = 40;
@@ -173,8 +173,8 @@ static void init_factory_presets(void) {
                 p->ep_tone_algo = 3; // Clavinet
                 p->form_mode = FORM_12BAR;
                 break;
-            case 4: // New Orleans 2nd Line in F
-                p->root_key = 5; // F
+            case 4: // New Orleans 2nd Line
+                p->root_key = 4; // E
                 p->groove_style = GROOVE_SECOND_LINE;
                 p->bpm = 96;
                 p->spice = 70;
@@ -182,8 +182,8 @@ static void init_factory_presets(void) {
                 p->ep_tone_algo = 0; // Rhodes FM
                 p->form_mode = FORM_12BAR;
                 break;
-            case 5: // Minor Blues in Am
-                p->root_key = 9; // A
+            case 5: // Minor Blues
+                p->root_key = 4; // Em
                 p->groove_style = GROOVE_SLOW_12_8;
                 p->bpm = 84;
                 p->spice = 60;
@@ -192,7 +192,7 @@ static void init_factory_presets(void) {
                 p->form_mode = FORM_MINOR_BLUES;
                 break;
             default: // Varied Blues Jam slots
-                p->root_key = (uint8_t)((4 + i * 5) % 12);
+                p->root_key = 4; // E
                 p->groove_style = (uint8_t)(i % 5);
                 p->bpm = (uint8_t)(90 + (i * 6));
                 p->spice = 50;

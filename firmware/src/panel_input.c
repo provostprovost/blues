@@ -211,7 +211,8 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             while (np < 0) np += NUM_PRESET_SLOTS;
             *active_preset_idx = (uint8_t)(np % NUM_PRESET_SLOTS);
             PresetConfig *new_p = &presets[*active_preset_idx];
-            hs->root_semitone = new_p->root_key;
+            // Preserve active session key: preset browsing changes accompaniment style & sound without yanking the player's key
+            new_p->root_key = hs->root_semitone;
             hs->spice_level = new_p->spice;
             hs->form_mode = (FormMode)new_p->form_mode;
             hs->opening_var = (OpeningVar)new_p->opening_var;
