@@ -9,6 +9,7 @@ static uint32_t g_prev_key_mask = 0;
 static uint32_t g_last_key_press_ms[ZONE1_COUNT] = {0};
 static uint8_t  g_save_pending = 0;
 static uint32_t g_last_param_change_ms = 0;
+static uint32_t g_last_tap_ms = 0;
 
 void panel_init(void) {
     g_prev_key_mask = 0;
@@ -17,6 +18,7 @@ void panel_init(void) {
     }
     g_save_pending = 0;
     g_last_param_change_ms = 0;
+    g_last_tap_ms = 0;
 }
 
 uint8_t panel_check_autosave_needed(uint32_t ms_now) {
@@ -93,6 +95,7 @@ void panel_handle_midi_in(HarmonyState *hs, uint8_t status, uint8_t d1, uint8_t 
 void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_preset_idx, uint32_t ms_now, uint8_t *ui_screen) {
     PresetConfig *p = &presets[*active_preset_idx];
     uint8_t glo_held = hal_get_glo_held();
+    uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
 
     // 1. Buttons
     uint16_t btn_edges = hal_get_btn_edges();
@@ -143,23 +146,79 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_save_pending = 0;
         hs->ui_dirty = 1;
     }
+    if (btn_edges & (1u << BTN_ARP)) {
+        // Tap Tempo on ARP button
+        if (g_last_tap_ms > 0 && (ms_now - g_last_tap_ms >= 200) && (ms_now - g_last_tap_ms <= 2000)) {
+            uint32_t interval = ms_now - g_last_tap_ms;
+            uint32_t tap_bpm = 60000 / interval;
+            if (tap_bpm >= 40 && tap_bpm <= 240) {
+                p->bpm = (uint8_t)tap_bpm;
+                hs->ui_dirty = 1;
+                g_save_pending = 1;
+                g_last_param_change_ms = ms_now;
+            }
+        }
+        g_last_tap_ms = ms_now;
+    }
+    if (btn_edges & (1u << BTN_FX)) {
+        // Instant Manual Accent Stab
+        hs->manual_stab_pending = 1;
+        hs->ui_dirty = 1;
+    }
+    if (btn_edges & (1u << BTN_EDIT)) {
+        // Early Turnaround Cue
+        hs->queued_cue = CUE_FORCE_TURNAROUND;
+        hs->ui_dirty = 1;
+    }
+    if (btn_edges & (1u << BTN_ENV)) {
+        // Toggle Vamp Mode on current chord
+        hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP);
+        hs->ui_dirty = 1;
+    }
+    if (btn_edges & (1u << BTN_SEQ)) {
+        // Trigger 4-Bar Stop-Time Break
+        hs->queued_cue = CUE_STOP_TIME;
+        hs->ui_dirty = 1;
+    }
+    if (btn_edges & (1u << BTN_LFO)) {
+        // Toggle Minor Blues Form
+        if (hs->form_mode == FORM_MINOR_BLUES) {
+            hs->form_mode = FORM_12BAR;
+        } else {
+            hs->form_mode = FORM_MINOR_BLUES;
+        }
+        p->form_mode = hs->form_mode;
+        hs->ui_dirty = 1;
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
+    }
 
     // 2. Rotary Encoders
     int8_t delta;
 
-    // ENC_PRESETS (Encoder 6): Select Preset 0..15
+    // ENC_PRESETS (Encoder 6): Select Preset 0..15 (or Select Key when holding BTN_SEL)
     if ((delta = hal_get_encoder_delta(ENC_PRESETS)) != 0) {
-        int32_t np = (int32_t)(*active_preset_idx) + delta;
-        while (np < 0) np += NUM_PRESET_SLOTS;
-        *active_preset_idx = (uint8_t)(np % NUM_PRESET_SLOTS);
-        PresetConfig *new_p = &presets[*active_preset_idx];
-        hs->root_semitone = new_p->root_key;
-        hs->spice_level = new_p->spice;
-        hs->form_mode = (FormMode)new_p->form_mode;
-        hs->opening_var = (OpeningVar)new_p->opening_var;
-        hs->outro_type = (OutroType)new_p->outro_type;
-        hs->count_in_enabled = new_p->count_in_enabled;
-        hs->ui_dirty = 1;
+        if (sel_held) {
+            int32_t nk = (int32_t)hs->root_semitone + delta;
+            while (nk < 0) nk += 12;
+            hs->root_semitone = (uint8_t)(nk % 12);
+            p->root_key = hs->root_semitone;
+            hs->ui_dirty = 1;
+            g_save_pending = 1;
+            g_last_param_change_ms = ms_now;
+        } else {
+            int32_t np = (int32_t)(*active_preset_idx) + delta;
+            while (np < 0) np += NUM_PRESET_SLOTS;
+            *active_preset_idx = (uint8_t)(np % NUM_PRESET_SLOTS);
+            PresetConfig *new_p = &presets[*active_preset_idx];
+            hs->root_semitone = new_p->root_key;
+            hs->spice_level = new_p->spice;
+            hs->form_mode = (FormMode)new_p->form_mode;
+            hs->opening_var = (OpeningVar)new_p->opening_var;
+            hs->outro_type = (OutroType)new_p->outro_type;
+            hs->count_in_enabled = new_p->count_in_enabled;
+            hs->ui_dirty = 1;
+        }
     }
 
     // ENC_ALGORITHM (Encoder 1): Keys Sound Algorithm (0..3)
