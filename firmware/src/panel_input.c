@@ -277,37 +277,49 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // 2. Rotary Encoders
     int8_t delta;
 
-    // ENC_PRESETS: Lead Voice (0..7), or Key (0..11) with SEL held
+    static const char *LEAD_PLAY_LABELS[NUM_LEAD_PLAY_STYLES] = {
+        "LEAD: POLY", "LEAD: LEGATO GLIDE", "LEAD: BLUES BEND", "LEAD: OCTAVE STACK"
+    };
+
+    // ENC_PRESETS: Lead Voice (0..13), Key (0..11) with SEL held, Lead Play Style (0..3) with GLO held
     if ((delta = hal_get_encoder_delta(ENC_PRESETS)) != 0) {
         if (sel_held) {
             hs->root_semitone = wrap_step_u8(hs->root_semitone, delta, 12);
             p->root_key = hs->root_semitone;
             g_save_pending = 1;
             g_last_param_change_ms = ms_now;
+        } else if (glo_held) {
+            p->lead_play_style = wrap_step_u8(p->lead_play_style, delta, NUM_LEAD_PLAY_STYLES);
+            dsp_set_lead_play_style(p->lead_play_style);
+            set_toast(hs, ms_now, LEAD_PLAY_LABELS[p->lead_play_style]);
+            g_save_pending = 1;
+            g_last_param_change_ms = ms_now;
         } else {
-            p->lead_instrument = wrap_step_u8(p->lead_instrument, delta, 8);
+            p->lead_instrument = wrap_step_u8(p->lead_instrument, delta, NUM_LEAD_INSTRUMENTS);
         }
         hs->ui_dirty = 1;
     }
 
     static const char *TUNE_LABELS[3] = { "TUNE: 440 HZ", "TUNE: 432 HZ", "TUNE: 442 HZ" };
-    static const char *BASS_LABELS[8] = {
+    static const char *BASS_LABELS[NUM_BASS_INSTRUMENTS] = {
         "BASS: P-BASS", "BASS: UPRIGHT", "BASS: MUTED BOOGIE", "BASS: MOOG FUNK",
-        "BASS: 60S JAZZ", "BASS: FLATWOUND", "BASS: AMPEG TUBE", "BASS: SUB OCTAVE"
+        "BASS: 60S JAZZ", "BASS: FLATWOUND", "BASS: AMPEG TUBE", "BASS: SUB OCTAVE",
+        "BASS: LATELY FM", "BASS: SLAP POP", "BASS: HOFNER", "BASS: ACID 303",
+        "BASS: TUBA", "BASS: PICK ROCK"
     };
 
-    // ENC_ALGORITHM: Backing Chord Sound (0..11)
+    // ENC_ALGORITHM: Backing Chord Sound (0..17)
     if ((delta = hal_get_encoder_delta(ENC_ALGORITHM)) != 0) {
-        p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, 12);
+        p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, NUM_KEYS_INSTRUMENTS);
         hs->ui_dirty = 1;
     }
 
-    // ENC_SELECT: Groove Preset (0..7), or Drum Kit (0..7) with GLO held
+    // ENC_SELECT: Groove Preset (0..13), or Drum Kit (0..11) with GLO held
     if ((delta = hal_get_encoder_delta(ENC_SELECT)) != 0) {
         if (glo_held) {
-            p->drum_kit = wrap_step_u8(p->drum_kit, delta, 8);
+            p->drum_kit = wrap_step_u8(p->drum_kit, delta, NUM_DRUM_KITS);
         } else {
-            uint8_t ng = wrap_step_u8(p->groove_style, delta, 8);
+            uint8_t ng = wrap_step_u8(p->groove_style, delta, NUM_DRUM_PATTERNS);
             arranger_apply_groove_defaults(hs, p, (GrooveStyle)ng);
         }
         hs->ui_dirty = 1;
@@ -325,9 +337,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             else          { hs->bass_fullness = clamp_step_u8(hs->bass_fullness, delta * 5, 0, 100); p->bass_fullness = hs->bass_fullness; }
         } else if (is_style) {
             if (glo_held) {
-                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, 8);
+                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, NUM_BASS_INSTRUMENTS);
             } else {
-                hs->bass_style = wrap_step_u8(hs->bass_style, delta, 5);
+                hs->bass_style = wrap_step_u8(hs->bass_style, delta, NUM_BASS_STYLES);
                 p->bass_style = hs->bass_style;
             }
         } else if (is_mixer) {
@@ -358,9 +370,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             }
         } else if (is_style) {
             if (glo_held) {
-                p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, 12);
+                p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, NUM_KEYS_INSTRUMENTS);
             } else {
-                hs->keys_style = wrap_step_u8(hs->keys_style, delta, 5);
+                hs->keys_style = wrap_step_u8(hs->keys_style, delta, NUM_KEYS_STYLES);
                 p->keys_style = hs->keys_style;
             }
         } else if (is_mixer) {
@@ -389,9 +401,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             else          { hs->drums_fullness = clamp_step_u8(hs->drums_fullness, delta * 5, 0, 100); p->drums_fullness = hs->drums_fullness; }
         } else if (is_style) {
             if (glo_held) {
-                p->drum_kit = wrap_step_u8(p->drum_kit, delta, 8);
+                p->drum_kit = wrap_step_u8(p->drum_kit, delta, NUM_DRUM_KITS);
             } else {
-                hs->drum_pattern = wrap_step_u8(hs->drum_pattern, delta, 8);
+                hs->drum_pattern = wrap_step_u8(hs->drum_pattern, delta, NUM_DRUM_PATTERNS);
                 p->drum_pattern = hs->drum_pattern;
             }
         } else if (is_mixer) {
@@ -399,7 +411,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             else          p->drums_vol = clamp_step_u8(p->drums_vol, delta * 4, 0, 127);
         } else {
             if (glo_held) {
-                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, 8);
+                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, NUM_BASS_INSTRUMENTS);
                 set_toast(hs, ms_now, BASS_LABELS[p->bass_instrument]);
             } else {
                 p->bass_vol = clamp_step_u8(p->bass_vol, delta * 4, 0, 127);

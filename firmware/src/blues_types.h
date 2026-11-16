@@ -73,8 +73,16 @@ typedef enum {
     GROOVE_SECOND_LINE,
     GROOVE_MEMPHIS_SOUL,
     GROOVE_RHUMBA_BLUES,
-    GROOVE_BOOGIE_WOOGIE
+    GROOVE_BOOGIE_WOOGIE,
+    GROOVE_PURDIE_SHUFFLE,
+    GROOVE_TRAIN_BEAT,
+    GROOVE_BO_DIDDLEY,
+    GROOVE_JAZZ_SHUFFLE,
+    GROOVE_GOSPEL_SWING,
+    GROOVE_DELTA_STOMP
 } GrooveStyle;
+
+#define NUM_DRUM_PATTERNS 14
 
 typedef enum {
     BASS_P_BASS = 0,
@@ -84,24 +92,46 @@ typedef enum {
     BASS_JAZZ_60S,
     BASS_FLATWOUND,
     BASS_AMPEG_GROWL,
-    BASS_SUB_OCTAVE
+    BASS_SUB_OCTAVE,
+    BASS_LATELY_FM,
+    BASS_SLAP_POP,
+    BASS_HOFNER,
+    BASS_ACID_303,
+    BASS_TUBA,
+    BASS_PICK_ROCK
 } BassInstrument;
+
+#define NUM_BASS_INSTRUMENTS 14
 
 typedef enum {
     BASS_STYLE_WALKING = 0,
     BASS_STYLE_SHUFFLE_REP,
     BASS_STYLE_BOOGIE_BOX,
     BASS_STYLE_ROOT_FIFTH,
-    BASS_STYLE_SYNCOPATED
+    BASS_STYLE_SYNCOPATED,
+    BASS_STYLE_RUMBA,
+    BASS_STYLE_GOSPEL_WALK,
+    BASS_STYLE_SLOW_12_8,
+    BASS_STYLE_MOTOWN,
+    BASS_STYLE_SECOND_LINE
 } BassStyle;
+
+#define NUM_BASS_STYLES 10
 
 typedef enum {
     KEYS_STYLE_CHARLESTON = 0,
     KEYS_STYLE_BACKBEAT,
     KEYS_STYLE_CALL_RESP,
     KEYS_STYLE_PAD,
-    KEYS_STYLE_CHOP_4
+    KEYS_STYLE_CHOP_4,
+    KEYS_STYLE_STRIDE,
+    KEYS_STYLE_BOOGIE_8,
+    KEYS_STYLE_GOSPEL_SWELL,
+    KEYS_STYLE_RUMBA_MONTUNO,
+    KEYS_STYLE_SLOW_12_8
 } KeysStyle;
+
+#define NUM_KEYS_STYLES 10
 
 typedef enum {
     KEYS_RHODES = 0,
@@ -115,8 +145,16 @@ typedef enum {
     KEYS_HONKY_TONK,
     KEYS_TREMOLO_EP,
     KEYS_RESONATOR,
-    KEYS_LESLIE_ORGAN
+    KEYS_LESLIE_ORGAN,
+    KEYS_ACCORDION,
+    KEYS_VIBES,
+    KEYS_FARFISA,
+    KEYS_MELLOTRON,
+    KEYS_CP70,
+    KEYS_HARMONIUM
 } ChordInstrument;
+
+#define NUM_KEYS_INSTRUMENTS 18
 
 typedef enum {
     DRUM_STUDIO = 0,
@@ -126,8 +164,14 @@ typedef enum {
     DRUM_CHICAGO_ROOM,
     DRUM_DRY_VINTAGE,
     DRUM_JAZZ_CLUB,
-    DRUM_HEAVY_ROCK
+    DRUM_HEAVY_ROCK,
+    DRUM_CR78,
+    DRUM_NEW_ORLEANS,
+    DRUM_LINN_GATE,
+    DRUM_LOFI_BOX
 } DrumKit;
+
+#define NUM_DRUM_KITS 12
 
 typedef enum {
     LEAD_BLUES_GUITAR = 0,
@@ -137,8 +181,25 @@ typedef enum {
     LEAD_WARM_JAZZ,
     LEAD_FUZZ_OCTAVE,
     LEAD_MUTED_TRUMPET,
-    LEAD_PERC_ORGAN
+    LEAD_PERC_ORGAN,
+    LEAD_TALKBOX,
+    LEAD_SLIDE_GUITAR,
+    LEAD_WAVEFOLDER,
+    LEAD_HARD_SYNC,
+    LEAD_SID_CHIP,
+    LEAD_STEELPAN
 } LeadInstrument;
+
+#define NUM_LEAD_INSTRUMENTS 14
+
+typedef enum {
+    LEAD_PLAY_POLY = 0,
+    LEAD_PLAY_LEGATO_GLIDE,
+    LEAD_PLAY_BLUES_BEND,
+    LEAD_PLAY_OCTAVE_STACK
+} LeadPlayStyle;
+
+#define NUM_LEAD_PLAY_STYLES 4
 
 typedef struct {
     ScaleDegree  degree;
@@ -242,6 +303,7 @@ typedef struct {
     uint8_t  bass_style;
     uint8_t  keys_style;
     uint8_t  drum_pattern;
+    uint8_t  lead_play_style;
 } PresetConfig;
 
 typedef struct {

@@ -3,13 +3,36 @@
 #include "blues_harmony.h"
 
 static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
-static const char *GROOVE_NAMES[8] = { "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE", "MEMPHIS SOUL", "RHUMBA BLUES", "BOOGIE WOOGIE" };
-static const char *ALGO_NAMES[12]  = { "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET", "ARCHTOP GTR", "BLUES HORNS", "HONKY-TONK", "TREMOLO EP", "RESONATOR", "LESLIE ORGAN" };
-static const char *DRUM_NAMES[8]       = { "STUDIO", "BRUSH", "RETRO 808", "STAX TIGHT", "CHI ROOM", "DRY VINT", "JAZZ CLUB", "BLUES ROCK" };
-static const char *LEAD_NAMES[8]       = { "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "MUTED TRPT", "PERC ORGAN" };
-static const char *BASS_NAMES[8]       = { "P-BASS", "UPRIGHT", "MUTED BOOGIE", "MOOG FUNK", "60S JAZZ", "FLATWOUND", "AMPEG TUBE", "SUB OCTAVE" };
-static const char *BASS_STYLE_NAMES[5] = { "WALKING 4/4", "SHUFFLE", "BOOGIE BOX", "ROOT-5TH", "FUNK SYNC" };
-static const char *KEYS_STYLE_NAMES[5] = { "CHARLESTON", "BACKBEAT 2&4", "CALL & RESP", "SPARSE PAD", "CHOP 4/4" };
+static const char *GROOVE_NAMES[NUM_DRUM_PATTERNS] = {
+    "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE", "MEMPHIS SOUL", "RHUMBA BLUES", "BOOGIE WOOGIE",
+    "PURDIE SHUF", "TRAIN BEAT", "BO DIDDLEY", "JAZZ SHUFFLE", "GOSPEL SWING", "DELTA STOMP"
+};
+static const char *ALGO_NAMES[NUM_KEYS_INSTRUMENTS] = {
+    "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET",
+    "ARCHTOP GTR", "BLUES HORNS", "HONKY-TONK", "TREMOLO EP", "RESONATOR", "LESLIE ORGAN",
+    "ACCORDION", "VIBRAPHONE", "FARFISA", "MELLOTRON", "CP-70 GRAND", "HARMONIUM"
+};
+static const char *DRUM_NAMES[NUM_DRUM_KITS] = {
+    "STUDIO", "BRUSH", "RETRO 808", "STAX TIGHT", "CHI ROOM", "DRY VINT", "JAZZ CLUB", "BLUES ROCK",
+    "CR-78 ANLG", "NOLA PERC", "LINN GATE", "LOFI BOX"
+};
+static const char *LEAD_NAMES[NUM_LEAD_INSTRUMENTS] = {
+    "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "MUTED TRPT", "PERC ORGAN",
+    "TALK-BOX", "SLIDE GTR", "WAVEFOLDER", "HARD SYNC", "SID CHIP", "STEELPAN"
+};
+static const char *LEAD_PLAY_BADGES[NUM_LEAD_PLAY_STYLES] = { "", " [GLD]", " [BND]", " [OCT]" };
+static const char *BASS_NAMES[NUM_BASS_INSTRUMENTS] = {
+    "P-BASS", "UPRIGHT", "MUTED BOOGIE", "MOOG FUNK", "60S JAZZ", "FLATWOUND", "AMPEG TUBE", "SUB OCTAVE",
+    "LATELY FM", "SLAP POP", "HOFNER", "ACID 303", "TUBA", "PICK ROCK"
+};
+static const char *BASS_STYLE_NAMES[NUM_BASS_STYLES] = {
+    "WALKING 4/4", "SHUFFLE", "BOOGIE BOX", "ROOT-5TH", "FUNK SYNC",
+    "RUMBA", "GOSPEL WALK", "12/8 ROLL", "MOTOWN 8TH", "2ND LINE"
+};
+static const char *KEYS_STYLE_NAMES[NUM_KEYS_STYLES] = {
+    "CHARLESTON", "BACKBEAT 2&4", "CALL & RESP", "SPARSE PAD", "CHOP 4/4",
+    "STRIDE", "BOOGIE 8TH", "GOSPEL SWELL", "MONTUNO", "12/8 ARP"
+};
 static const char *FORM_NAMES[5]       = { "12-BAR MAJ", "QUICK CHG", "1-4-5 OPEN", "8-BAR BLUES", "MINOR BLUES" };
 static const char *TUNE_NAMES[3]       = { "440 HZ", "432 HZ", "442 HZ" };
 
@@ -22,6 +45,7 @@ static uint8_t g_last_algo = 0xFF;
 static uint8_t g_last_bass_inst = 0xFF;
 static uint8_t g_last_drum = 0xFF;
 static uint8_t g_last_lead = 0xFF;
+static uint8_t g_last_lead_play = 0xFF;
 static uint8_t g_last_playing = 0xFF;
 static uint8_t g_last_groove = 0xFF;
 static uint8_t g_last_spice = 0xFF;
@@ -161,8 +185,8 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
 
     // Header Title: Groove Style & Drum Kit
     char header[36];
-    const char *gname = GROOVE_NAMES[preset->groove_style % 8];
-    const char *dname = DRUM_NAMES[preset->drum_kit % 8];
+    const char *gname = GROOVE_NAMES[preset->groove_style % NUM_DRUM_PATTERNS];
+    const char *dname = DRUM_NAMES[preset->drum_kit % NUM_DRUM_KITS];
     int hlen = 0;
     while (*gname && hlen < 16) header[hlen++] = *gname++;
     header[hlen++] = ' ';
@@ -252,10 +276,12 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
     hal_draw_text_box(0, 208, 240, 0, status_str, status_col, 1);
 
     char footer[40];
-    const char *lname = LEAD_NAMES[preset->lead_instrument % 8];
-    const char *aname = ALGO_NAMES[preset->ep_tone_algo % 12];
+    const char *lname = LEAD_NAMES[preset->lead_instrument % NUM_LEAD_INSTRUMENTS];
+    const char *lbadge = LEAD_PLAY_BADGES[preset->lead_play_style % NUM_LEAD_PLAY_STYLES];
+    const char *aname = ALGO_NAMES[preset->ep_tone_algo % NUM_KEYS_INSTRUMENTS];
     int flen = 0;
-    while (*lname && flen < 20) footer[flen++] = *lname++;
+    while (*lname && flen < 16) footer[flen++] = *lname++;
+    while (*lbadge && flen < 22) footer[flen++] = *lbadge++;
     footer[flen++] = ' ';
     footer[flen++] = '*';
     footer[flen++] = ' ';
@@ -327,13 +353,13 @@ static void render_style_view(const HarmonyState *hs, const PresetConfig *preset
         hal_draw_text_box(0, 216, 240, 0, "HOME: BAND FEEL VIEW", RGB(140, 140, 140), 1);
     }
 
-    uint8_t bs = hs->bass_style % 5;
-    uint8_t ks = hs->keys_style % 5;
-    uint8_t dp = hs->drum_pattern % 8;
+    uint8_t bs = hs->bass_style % NUM_BASS_STYLES;
+    uint8_t ks = hs->keys_style % NUM_KEYS_STYLES;
+    uint8_t dp = hs->drum_pattern % NUM_DRUM_PATTERNS;
     uint8_t fm = (uint8_t)hs->form_mode % 5;
-    uint8_t bi = preset->bass_instrument % 8;
-    uint8_t ki = preset->ep_tone_algo % 12;
-    uint8_t di = preset->drum_kit % 8;
+    uint8_t bi = preset->bass_instrument % NUM_BASS_INSTRUMENTS;
+    uint8_t ki = preset->ep_tone_algo % NUM_KEYS_INSTRUMENTS;
+    uint8_t di = preset->drum_kit % NUM_DRUM_KITS;
     uint8_t tn = preset->master_tuning % 3;
 
     render_style_row(24,  "BASS LINE", BASS_STYLE_NAMES[bs], RGB(80, 180, 255),  full_redraw, bs, &g_last_s_bstyle);
@@ -414,6 +440,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
                                        (hs->has_queued_key != g_last_queued_key);
         uint8_t footer_changed = screen_switched || (hs->is_playing != g_last_playing) ||
                                  (preset->ep_tone_algo != g_last_algo) || (preset->lead_instrument != g_last_lead) ||
+                                 (preset->lead_play_style != g_last_lead_play) ||
                                  form_changed || (toast_active != g_last_toast_active) ||
                                  (toast_active && hs->toast_until_ms != g_last_toast_until) ||
                                  status_flags_changed;
@@ -444,6 +471,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     g_last_bass_inst = preset->bass_instrument;
     g_last_drum = preset->drum_kit;
     g_last_lead = preset->lead_instrument;
+    g_last_lead_play = preset->lead_play_style;
     g_last_playing = hs->is_playing;
     g_last_groove = preset->groove_style;
     g_last_spice = hs->spice_level;

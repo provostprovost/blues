@@ -139,6 +139,7 @@ static void init_factory_presets(void) {
         p->bass_instrument = (uint8_t)(i % 4);
         p->drum_kit = (uint8_t)(i % 3);
         p->lead_instrument = (uint8_t)(i % 4);
+        p->lead_play_style = LEAD_PLAY_POLY;
 
         switch (i) {
             case 0: // Texas Shuffle

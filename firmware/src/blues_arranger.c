@@ -1,6 +1,6 @@
 #include "blues_arranger.h"
 
-static const GrooveTemplate GROOVE_TEMPLATES[8] = {
+static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
     { GROOVE_SLOW_12_8, 67,
       {127,0,0,90, 100,0,0,90, 110,0,0,90, 100,0,0,90},
       {100,0,0,0,  0,0,80,0,   100,0,0,0,  0,0,80,0},
@@ -32,7 +32,31 @@ static const GrooveTemplate GROOVE_TEMPLATES[8] = {
     { GROOVE_BOOGIE_WOOGIE, 65,
       {127,0,110,0, 120,0,110,0, 127,0,110,0, 120,0,110,0},
       {0,0,0,0,    110,0,0,0,  0,0,0,0,    110,0,0,0},
-      {127,0,90,0, 127,0,90,0, 127,0,90,0, 127,0,90,0} }
+      {127,0,90,0, 127,0,90,0, 127,0,90,0, 127,0,90,0} },
+    { GROOVE_PURDIE_SHUFFLE, 67, // Half-time shuffle: Beat 3 crack, syncopated kick, ghost snares
+      {127,0,65,0, 0,0,95,0,   120,0,60,0, 0,0,85,0},
+      {115,0,0,0,  0,0,90,0,   0,0,95,0,   0,0,0,0},
+      {127,0,105,0, 115,0,105,0, 127,0,105,0, 115,0,105,0} },
+    { GROOVE_TRAIN_BEAT, 15, // Locomotive chug: steady 4-on-floor kick + accented 16th snare train
+      {110,60,127,60, 110,60,127,60, 110,60,127,60, 110,60,127,60},
+      {110,0,0,0,  100,0,0,0,  110,0,0,0,  100,0,0,0},
+      {95,0,80,0,  95,0,80,0,  95,0,80,0,  95,0,80,0} },
+    { GROOVE_BO_DIDDLEY, 0, // Classic 3-2 clave / Bo Diddley accent pattern
+      {127,0,0,110, 0,0,115,0, 0,0,105,0, 115,0,0,0},
+      {120,0,0,0,  0,0,95,0,   110,0,0,0, 0,0,90,0},
+      {105,0,90,0, 105,0,90,0, 105,0,90,0, 105,0,90,0} },
+    { GROOVE_JAZZ_SHUFFLE, 67, // Feathered kick + crisp 2&4 + classic ride skip
+      {95,0,0,0,   110,0,0,0,  95,0,0,0,   110,0,0,0},
+      {90,0,0,0,   0,0,0,0,    90,0,0,0,   0,0,0,0},
+      {120,0,0,0,  127,0,105,0, 120,0,0,0, 127,0,105,0} },
+    { GROOVE_GOSPEL_SWING, 62, // Big church 1 & 3 kick + 2 & 4 snare + 4& push
+      {127,0,0,0,  120,0,0,0,  127,0,0,0,  120,0,90,0},
+      {120,0,0,0,  0,0,85,0,   120,0,0,0,  0,0,95,0},
+      {115,0,95,0, 115,0,95,0, 115,0,95,0, 115,0,95,0} },
+    { GROOVE_DELTA_STOMP, 55, // Heavy 4-on-floor foot stomp + backbeat clap/snare
+      {110,0,0,0,  127,0,0,0,  110,0,0,0,  127,0,0,0},
+      {127,0,0,0,  120,0,0,0,  127,0,0,0,  120,0,0,0},
+      {90,0,0,0,   100,0,0,0,  90,0,0,0,   100,0,0,0} }
 };
 
 static uint16_t g_hmnz_lfsr = 0x5EEDu;
@@ -195,36 +219,56 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
     return candidates[best_idx];
 }
 
-// 5 Independent Bass Line Patterns (16 steps per bar)
-static const uint8_t BASS_STYLE_MASKS[5][16] = {
-    {127,0,0,0,  108,0,0,0,  118,0,0,0,  108,0,0,0},  // WALKING 4/4 (quarter-note pocket)
-    {127,0,88,0, 112,0,86,0, 120,0,88,0, 112,0,86,0}, // SHUFFLE (repeats beat note on &)
-    {127,0,98,0, 115,0,98,0, 122,0,98,0, 115,0,98,0}, // BOOGIE BOX (1-3-5-6-b7-6-5-3)
-    {127,0,0,0,  0,0,95,0,   118,0,0,0,  105,0,0,0},  // ROOT-5TH (heavy root pocket)
-    {127,0,95,0, 0,0,110,0,  120,0,0,0,  105,0,95,0}  // FUNK SYNC (syncopated Memphis pocket)
+// 10 Independent Bass Line Patterns (16 steps per bar)
+static const uint8_t BASS_STYLE_MASKS[NUM_BASS_STYLES][16] = {
+    {127,0,0,0,  108,0,0,0,  118,0,0,0,  108,0,0,0},  // 0: WALKING 4/4 (quarter-note pocket)
+    {127,0,88,0, 112,0,86,0, 120,0,88,0, 112,0,86,0}, // 1: SHUFFLE (repeats beat note on &)
+    {127,0,98,0, 115,0,98,0, 122,0,98,0, 115,0,98,0}, // 2: BOOGIE BOX (1-3-5-6-b7-6-5-3)
+    {127,0,0,0,  0,0,95,0,   118,0,0,0,  105,0,0,0},  // 3: ROOT-5TH (heavy root pocket)
+    {127,0,95,0, 0,0,110,0,  120,0,0,0,  105,0,95,0}, // 4: FUNK SYNC (syncopated Memphis pocket)
+    {127,0,0,0,  0,0,110,0,  0,0,0,0,    118,0,0,0},  // 5: RUMBA / SWAMP (1 - 2& - 4 clave bass)
+    {127,0,0,0,  108,0,0,0,  118,0,0,0,  112,0,96,0}, // 6: GOSPEL WALK (1 - 2 - #2 - 3 walk-up)
+    {127,0,90,0, 106,0,90,0, 116,0,90,0, 108,0,90,0}, // 7: SLOW 12/8 ROLLING (1-3-5-b7-5-3)
+    {127,0,95,0, 0,0,108,0,  120,0,96,0, 0,0,106,0},  // 8: MOTOWN 8THS (Jamerson syncopations)
+    {127,0,0,0,  0,0,115,0,  118,0,0,0,  110,0,95,0}  // 9: SECOND LINE (NOLA street-parade tuba)
 };
 
-// 5 Independent Keys Comping Styles with 2-Bar A/B Phrasing (breathing, never metronome-dense)
-static const uint8_t KEYS_STYLE_MASKS[5][2][16] = {
-    { // CHARLESTON: Beat 1 + & of Beat 2 (classic open blues pocket)
+// 10 Independent Keys Comping Styles with 2-Bar A/B Phrasing
+static const uint8_t KEYS_STYLE_MASKS[NUM_KEYS_STYLES][2][16] = {
+    { // 0: CHARLESTON: Beat 1 + & of Beat 2 (classic open blues pocket)
       {105,0,0,0, 0,0,92,0, 0,0,0,0, 0,0,0,0},
       {105,0,0,0, 0,0,92,0, 0,0,0,0, 0,0,0,0} },
-    { // BACKBEAT 2 & 4: leaves Beats 1 & 3 wide open
+    { // 1: BACKBEAT 2 & 4: leaves Beats 1 & 3 wide open
       {0,0,0,0, 98,0,0,0, 0,0,0,0, 92,0,0,0},
       {0,0,0,0, 98,0,0,0, 0,0,0,0, 92,0,0,0} },
-    { // CALL & RESPONSE: 2-bar phrasing (Bar A: 1 + 2&, Bar B: 2& + 4)
+    { // 2: CALL & RESPONSE: 2-bar phrasing (Bar A: 1 + 2&, Bar B: 2& + 4)
       {105,0,0,0, 0,0,92,0, 0,0,0,0, 0,0,0,0},
       {0,0,0,0,   0,0,95,0, 0,0,0,0, 88,0,0,0} },
-    { // SPARSE PAD: sustained Beat 1 (+ gentle 4& push on Bar B)
+    { // 3: SPARSE PAD: sustained Beat 1 (+ gentle 4& push on Bar B)
       {95,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0},
       {95,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,78,0} },
-    { // CHOP 4/4: driving rock/boogie chop on all 4 beats
+    { // 4: CHOP 4/4: driving rock/boogie chop on all 4 beats
       {100,0,0,0, 88,0,0,0, 96,0,0,0, 88,0,0,0},
-      {100,0,0,0, 88,0,0,0, 96,0,0,0, 88,0,0,0} }
+      {100,0,0,0, 88,0,0,0, 96,0,0,0, 88,0,0,0} },
+    { // 5: STRIDE ("Oom-Pah"): Beat 1/3 bounce + heavy Beat 2/4 chord snap
+      {92,0,0,0, 114,0,0,0, 90,0,0,0, 114,0,0,0},
+      {92,0,0,0, 114,0,0,0, 90,0,0,0, 114,0,82,0} },
+    { // 6: BOOGIE 8THS: relentless 8-step bouncing piano ostinato
+      {110,0,90,0, 104,0,90,0, 110,0,90,0, 104,0,90,0},
+      {110,0,90,0, 104,0,90,0, 110,0,90,0, 104,0,90,0} },
+    { // 7: GOSPEL SWELL: Bar A 1 + 4& push, Bar B 1 + 3& + 4& church swell
+      {100,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,92,0},
+      {102,0,0,0, 0,0,0,0, 0,0,88,0, 0,0,96,0} },
+    { // 8: RUMBA MONTUNO: syncopated NOLA/Afro-Cuban 1 - 2& - 4&
+      {105,0,0,0, 0,0,96,0, 0,0,0,0, 0,0,94,0},
+      {105,0,0,0, 0,0,96,0, 0,0,90,0, 0,0,0,0} },
+    { // 9: SLOW 12/8 ARP: rolling triplet broken comping
+      {102,0,80,0, 90,0,0,0, 98,0,80,0, 90,0,82,0},
+      {102,0,80,0, 90,0,0,0, 98,0,80,0, 90,0,82,0} }
 };
 
 void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, GrooveStyle style) {
-    uint8_t idx = (uint8_t)style % 8;
+    uint8_t idx = (uint8_t)style % NUM_DRUM_PATTERNS;
     preset->groove_style = idx;
     preset->drum_pattern = idx;
     hs->drum_pattern = idx;
@@ -232,31 +276,46 @@ void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, Groo
 
     switch (idx) {
         case GROOVE_SLOW_12_8:
-            preset->bass_style = BASS_STYLE_WALKING;
-            preset->keys_style = KEYS_STYLE_PAD;
+            preset->bass_style = BASS_STYLE_SLOW_12_8;
+            preset->keys_style = KEYS_STYLE_SLOW_12_8;
             break;
         case GROOVE_TEXAS_SHUFFLE:
             preset->bass_style = BASS_STYLE_SHUFFLE_REP;
             preset->keys_style = KEYS_STYLE_CHARLESTON;
             break;
         case GROOVE_CHICAGO_SWING:
+        case GROOVE_JAZZ_SHUFFLE:
             preset->bass_style = BASS_STYLE_WALKING;
             preset->keys_style = KEYS_STYLE_CALL_RESP;
             break;
         case GROOVE_STRAIGHT_ROCK:
+        case GROOVE_TRAIN_BEAT:
+        case GROOVE_DELTA_STOMP:
             preset->bass_style = BASS_STYLE_ROOT_FIFTH;
             preset->keys_style = KEYS_STYLE_BACKBEAT;
             break;
         case GROOVE_SECOND_LINE:
+            preset->bass_style = BASS_STYLE_SECOND_LINE;
+            preset->keys_style = KEYS_STYLE_STRIDE;
+            break;
         case GROOVE_MEMPHIS_SOUL:
-        case GROOVE_RHUMBA_BLUES:
-            preset->bass_style = BASS_STYLE_SYNCOPATED;
+        case GROOVE_PURDIE_SHUFFLE:
+            preset->bass_style = BASS_STYLE_MOTOWN;
             preset->keys_style = KEYS_STYLE_CALL_RESP;
+            break;
+        case GROOVE_RHUMBA_BLUES:
+        case GROOVE_BO_DIDDLEY:
+            preset->bass_style = BASS_STYLE_RUMBA;
+            preset->keys_style = KEYS_STYLE_RUMBA_MONTUNO;
+            break;
+        case GROOVE_GOSPEL_SWING:
+            preset->bass_style = BASS_STYLE_GOSPEL_WALK;
+            preset->keys_style = KEYS_STYLE_GOSPEL_SWELL;
             break;
         case GROOVE_BOOGIE_WOOGIE:
         default:
             preset->bass_style = BASS_STYLE_BOOGIE_BOX;
-            preset->keys_style = KEYS_STYLE_CHOP_4;
+            preset->keys_style = KEYS_STYLE_BOOGIE_8;
             break;
     }
     hs->bass_style = preset->bass_style;
@@ -268,6 +327,11 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
     uint8_t curr_root = (uint8_t)(40 + ((r + 8) % 12));
     while (curr_root < 40) curr_root += 12;
     while (curr_root > 51) curr_root -= 12;
+
+    uint8_t nr = next.root_note % 12;
+    uint8_t next_target = (uint8_t)(40 + ((nr + 8) % 12));
+    while (next_target < 40) next_target += 12;
+    while (next_target > 51) next_target -= 12;
 
     uint8_t is_min = (current.quality == CHORD_MIN7 || current.quality == CHORD_DIM7);
     uint8_t third = is_min ? 3 : 4;
@@ -289,6 +353,32 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
         else if (beat == 1) note = curr_root + 10; // b7 on 2&
         else if (beat == 2) note = curr_root + fifth;
         else note = (sub_idx >= 2) ? (curr_root + third) : curr_root;
+    } else if (bass_style == BASS_STYLE_RUMBA) {
+        if (beat == 0) note = curr_root;
+        else if (beat == 1) note = curr_root + fifth;
+        else note = curr_root + (spice > 55 ? 10 : fifth);
+    } else if (bass_style == BASS_STYLE_GOSPEL_WALK) {
+        // Church walk-up: Root -> 2 -> #2/3 -> 5 -> chromatic pickup
+        if (beat == 0) note = curr_root;
+        else if (beat == 1) note = curr_root + 2;
+        else if (beat == 2) note = curr_root + third;
+        else note = (sub_idx >= 2) ? ((next_target > 40) ? next_target - 1 : next_target + 1) : (curr_root + fifth);
+    } else if (bass_style == BASS_STYLE_SLOW_12_8) {
+        // Rolling 1 - 3 - 5 - b7 - 5 - 3
+        if (beat == 0) note = (sub_idx >= 2) ? (curr_root + third) : curr_root;
+        else if (beat == 1) note = (sub_idx >= 2) ? (curr_root + fifth) : (curr_root + third);
+        else if (beat == 2) note = (sub_idx >= 2) ? (curr_root + 10) : (curr_root + fifth);
+        else note = (sub_idx >= 2) ? (curr_root + third) : (curr_root + fifth);
+    } else if (bass_style == BASS_STYLE_MOTOWN) {
+        if (beat == 0) note = (sub_idx >= 2) ? (curr_root + fifth) : curr_root;
+        else if (beat == 1) note = curr_root + (spice > 50 ? 9 : fifth);
+        else if (beat == 2) note = (sub_idx >= 2) ? (curr_root + third) : (curr_root + 12);
+        else note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
+    } else if (bass_style == BASS_STYLE_SECOND_LINE) {
+        if (beat == 0) note = curr_root;
+        else if (beat == 1) note = curr_root + fifth;
+        else if (beat == 2) note = curr_root + third;
+        else note = (sub_idx >= 2) ? (curr_root + 10) : (curr_root + fifth);
     } else if (bass_style == BASS_STYLE_SHUFFLE_REP) {
         // Shuffle repeat: & repeats the current beat's walking note instead of jumping to +7/+12
         return bass_compute_note(current, next, beat, 0, spice);
@@ -324,7 +414,7 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         if (hs->current_beat > 0 || hs->current_subdiv > 0) return;
     }
 
-    const GrooveTemplate *gt = &GROOVE_TEMPLATES[hs->drum_pattern % 8];
+    const GrooveTemplate *gt = &GROOVE_TEMPLATES[hs->drum_pattern % NUM_DRUM_PATTERNS];
     uint8_t sub_slot = 0xFF;
 
     if (gt->style == GROOVE_SLOW_12_8) {
@@ -350,8 +440,8 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         uint8_t b_spc  = hs->bass_spice;
         uint8_t k_spc  = hs->keys_spice;
         uint8_t d_spc  = hs->drums_spice;
-        uint8_t b_style = hs->bass_style % 5;
-        uint8_t k_style = hs->keys_style % 5;
+        uint8_t b_style = hs->bass_style % NUM_BASS_STYLES;
+        uint8_t k_style = hs->keys_style % NUM_KEYS_STYLES;
 
         // Bass engine trigger: per-instrument Fullness & Spice
         uint8_t bass_vel_mask = BASS_STYLE_MASKS[b_style][step16 % 16];

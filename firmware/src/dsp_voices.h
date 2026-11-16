@@ -11,6 +11,7 @@ void dsp_note_on_bass(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode);
 void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_mode);
 void dsp_note_on_lead(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode);
 void dsp_note_off_lead(uint8_t midi_note);
+void dsp_set_lead_play_style(uint8_t play_style);
 void dsp_trigger_drum(uint8_t mask, const uint8_t *drum_vel, uint8_t open_hat);
 void dsp_all_notes_off(void);
 
