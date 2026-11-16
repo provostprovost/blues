@@ -117,7 +117,7 @@ void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_m
         g_keys[i].inc_c = get_scaled_inc(voicing->notes[i], tuning_mode);
         g_keys[i].inc_m = g_keys[i].inc_c * 2;
         g_keys[i].env_q15 = (int32_t)velocity * 256;
-        g_keys[i].gate_samples = 8820; // ~200 ms gate
+        g_keys[i].gate_samples = 15000; // ~340 ms gate hold
         if (!g_keys[i].active) {
             g_keys[i].phase_c = 0;
             g_keys[i].phase_m = 0;
@@ -212,10 +212,13 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 }
 
                 int32_t k_amp = (g_keys[k].env_q15 * preset->keys_vol) >> 15;
-                mix += (car * k_amp) >> 8; // Tame 4-voice polyphonic keyboard level
+                mix += (car * k_amp) >> 7; // Balanced keys volume
 
-                if (preset->ep_tone_algo == 2 && g_keys[k].gate_samples > 0) {
+                if (g_keys[k].gate_samples > 0) {
                     g_keys[k].gate_samples--;
+                    if (preset->ep_tone_algo != 2) {
+                        g_keys[k].env_q15 = (g_keys[k].env_q15 * 32766) >> 15;
+                    }
                 } else {
                     g_keys[k].env_q15 = (g_keys[k].env_q15 * 32650) >> 15;
                 }
