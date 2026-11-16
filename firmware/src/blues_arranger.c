@@ -101,55 +101,52 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
     uint8_t seventh = (info.quality == CHORD_DIM7) ? 9 : 10;
     uint8_t ninth = 14;
 
-    // Pitch anchor: ensure guide tones (3rd and 7th) sit in sweet comping pocket (E4..G5, 330..784 Hz)
-    uint8_t t_note = 60 + ((root + third) % 12);
-    while (t_note < 64) t_note += 12; // E4..Eb5 (64..75)
-    while (t_note > 75) t_note -= 12;
+    // Pitch anchor: ensure guide tones sit in sparkling high comping register (C5..E6, 520..1320 Hz)
+    uint8_t t_note = 72 + ((root + third) % 12);
+    while (t_note < 72) t_note += 12; // C5..B5 (72..83)
+    while (t_note > 83) t_note -= 12;
 
-    uint8_t s_note = 60 + ((root + seventh) % 12);
-    while (s_note < 64) s_note += 12; // E4..Eb5 (64..75)
-    while (s_note > 75) s_note -= 12;
+    uint8_t s_note = 72 + ((root + seventh) % 12);
+    while (s_note < 72) s_note += 12; // C5..B5 (72..83)
+    while (s_note > 83) s_note -= 12;
 
-    uint8_t n_note = 60 + ((root + ninth) % 12);
-    while (n_note < 66) n_note += 12; // F#4..F5 (66..77)
-    while (n_note > 77) n_note -= 12;
+    uint8_t n_note = 72 + ((root + ninth) % 12);
+    while (n_note < 74) n_note += 12; // D5..C#6 (74..85)
+    while (n_note > 85) n_note -= 12;
 
-    uint8_t f_note = 60 + ((root + fifth) % 12);
-    while (f_note < 67) f_note += 12; // G4..F#5 (67..78)
-    while (f_note > 78) f_note -= 12;
+    uint8_t f_note = 72 + ((root + fifth) % 12);
+    while (f_note < 72) f_note += 12; // C5..B5 (72..83)
+    while (f_note > 83) f_note -= 12;
 
-    uint8_t r_note = 60 + (root % 12);
-    while (r_note < 60) r_note += 12; // C4..B4 (60..71)
-    while (r_note > 71) r_note -= 12;
+    uint8_t th_note = 72 + ((root + 21) % 12); // 13th
+    while (th_note < 76) th_note += 12; // E5..Eb6 (76..87)
+    while (th_note > 87) th_note -= 12;
 
-    // Candidate 0: Authentic Blues Shell (3rd + 7th + 5th + root)
+    // Candidate 0: Authentic Rootless Shell / 9th (3rd + 7th + 5th + 9th)
     candidates[0].notes[0] = t_note;
     candidates[0].notes[1] = s_note;
     candidates[0].notes[2] = f_note;
-    candidates[0].notes[3] = r_note;
+    candidates[0].notes[3] = n_note;
     candidates[0].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
 
-    // Candidate 1: Evans/Ray Charles 9th Voicing (3rd + 7th + 9th + 5th)
+    // Candidate 1: Bill Evans Form A (3rd + 7th + 9th + 13th)
     candidates[1].notes[0] = t_note;
     candidates[1].notes[1] = s_note;
     candidates[1].notes[2] = n_note;
-    candidates[1].notes[3] = f_note;
+    candidates[1].notes[3] = th_note;
     candidates[1].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
 
-    // Candidate 2: Inverted Guide Tone Voicing (7th in lower guide voice + 3rd + 9th + root)
-    candidates[2].notes[0] = (uint8_t)(s_note > 68 ? s_note - 12 : s_note);
+    // Candidate 2: Bill Evans Form B Inversion (7th on bottom + 3rd + 13th + 9th)
+    candidates[2].notes[0] = (uint8_t)(s_note > 78 ? s_note - 12 : s_note);
     candidates[2].notes[1] = t_note;
-    candidates[2].notes[2] = n_note;
-    candidates[2].notes[3] = r_note;
+    candidates[2].notes[2] = th_note;
+    candidates[2].notes[3] = n_note;
     candidates[2].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
 
-    // Candidate 3: Open 13th Blues Voicing (3rd + 7th + 13th + 9th)
-    uint8_t th_note = 60 + ((root + 21) % 12);
-    while (th_note < 69) th_note += 12; // A4..G#5 (69..80)
-    while (th_note > 80) th_note -= 12;
+    // Candidate 3: Open 4ths / Organ Comp (3rd + 13th + 7th + 9th)
     candidates[3].notes[0] = t_note;
-    candidates[3].notes[1] = s_note;
-    candidates[3].notes[2] = th_note;
+    candidates[3].notes[1] = th_note;
+    candidates[3].notes[2] = s_note;
     candidates[3].notes[3] = n_note;
     candidates[3].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
 

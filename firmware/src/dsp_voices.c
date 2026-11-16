@@ -178,7 +178,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             }
 
             int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
-            mix += (b_sample * b_amp) >> 6; // +6 dB punch for driving walking bass line
+            mix += (b_sample * b_amp) >> 8; // Punchy, balanced bass level with clean headroom
 
             // Attack micro-ramp (smooth 2 ms ramp up to eliminate note-on click/pop)
             if (g_bass.env_q15 < g_bass.target_env) {
@@ -194,41 +194,41 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             if (g_bass.env_q15 < 100) g_bass.active = 0;
         }
 
-        // Keys Synth: 4-voice Polyphony across 4 Algorithms
+        // Keys Synth: 4-voice Polyphony across 4 Distinct Musical Algorithms
         for (int k = 0; k < 4; k++) {
             if (g_keys[k].active) {
                 int16_t car = 0;
-                int32_t m_env = (g_keys[k].env_q15 * g_keys[k].env_q15) >> 15;
+                int32_t m_env = (g_keys[k].env_q15 * 3) / 4; // Sustained harmonic body
 
-                if (preset->ep_tone_algo == 0) { // Rhodes FM: sweet chime strike decaying into warm sine
+                if (preset->ep_tone_algo == 0) { // Rhodes FM: sweet bell tine attack with warm sustained EP body
                     g_keys[k].phase_c += g_keys[k].inc_c;
                     g_keys[k].phase_m += g_keys[k].inc_c; // 1:1 modulator
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 6000);
+                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 16000);
                     car = hal_sine_q15(g_keys[k].phase_c + pmod);
-                } else if (preset->ep_tone_algo == 1) { // Bright FM EP: crisp 2:1 chime attack
+                } else if (preset->ep_tone_algo == 1) { // Bright FM EP: crisp 2:1 chime attack with rich overtones
                     g_keys[k].phase_c += g_keys[k].inc_c;
-                    g_keys[k].phase_m += g_keys[k].inc_c * 2;
+                    g_keys[k].phase_m += g_keys[k].inc_c * 2; // 2:1 modulator
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 11000);
+                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 24000);
                     car = hal_sine_q15(g_keys[k].phase_c + pmod);
-                } else if (preset->ep_tone_algo == 2) { // B3 Drawbar Organ (4 Harmonics)
+                } else if (preset->ep_tone_algo == 2) { // B3 Drawbar Organ: cutting harmonic drawbars
                     g_keys[k].phase_c += g_keys[k].inc_c;
                     int16_t h1 = hal_sine_q15(g_keys[k].phase_c);
                     int16_t h2 = hal_sine_q15(g_keys[k].phase_c * 2);
                     int16_t h3 = hal_sine_q15(g_keys[k].phase_c * 3);
                     int16_t h4 = hal_sine_q15(g_keys[k].phase_c * 4);
-                    car = (h1 * 2) / 5 + (h2 >> 2) + (h3 >> 3) + (h4 >> 4);
-                } else { // Clavinet (Funk Pluck)
+                    car = (h1 >> 2) + (h2 >> 1) + (h3 >> 2) + (h4 >> 3);
+                } else { // Clavinet: biting 3:1 funk pluck
                     g_keys[k].phase_c += g_keys[k].inc_c;
                     g_keys[k].phase_m += g_keys[k].inc_c * 3;
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 16000);
+                    uint32_t pmod = (uint32_t)((((int32_t)mod * g_keys[k].env_q15) >> 15) * 28000);
                     car = hal_sine_q15(g_keys[k].phase_c + pmod);
                 }
 
                 int32_t k_amp = (g_keys[k].env_q15 * preset->keys_vol) >> 15;
-                mix += (car * k_amp) >> 7; // Balanced keys volume
+                mix += (car * k_amp) >> 8; // Prominent, articulate keys level
 
                 if (g_keys[k].gate_samples > 0) {
                     g_keys[k].gate_samples--;
@@ -248,7 +248,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             g_drum_pitch[0] += kick_inc;
             int16_t k_sample = hal_sine_q15(g_drum_pitch[0]);
             int32_t d0_amp = (g_drum_env[0] * preset->drums_vol) >> 15;
-            mix += (k_sample * d0_amp) >> 6;
+            mix += (k_sample * d0_amp) >> 8;
             g_drum_env[0] = (g_drum_env[0] * g_drum_decay[0]) >> 15;
         }
 
@@ -260,7 +260,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             int16_t body_sample = hal_sine_q15(g_drum_pitch[1]);
             int16_t s_sample = (noise_sample >> 1) + (body_sample >> 1);
             int32_t d1_amp = (g_drum_env[1] * preset->drums_vol) >> 15;
-            mix += (s_sample * d1_amp) >> 7;
+            mix += (s_sample * d1_amp) >> 9;
             g_drum_env[1] = (g_drum_env[1] * g_drum_decay[1]) >> 15;
         }
 
@@ -269,7 +269,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
             int16_t n_sample = (int16_t)(g_lfsr & 0xFFFF);
             int32_t d2_amp = (g_drum_env[2] * preset->drums_vol) >> 15;
-            mix += (n_sample * d2_amp) >> 8;
+            mix += (n_sample * d2_amp) >> 10;
             g_drum_env[2] = (g_drum_env[2] * g_drum_decay[2]) >> 15;
         }
 
@@ -278,7 +278,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             g_drum_pitch[3] += 12000000u;
             int16_t r_sample = hal_sine_q15(g_drum_pitch[3]);
             int32_t d3_amp = (g_drum_env[3] * preset->drums_vol) >> 15;
-            mix += (r_sample * d3_amp) >> 6;
+            mix += (r_sample * d3_amp) >> 8;
             g_drum_env[3] = (g_drum_env[3] * g_drum_decay[3]) >> 15;
         }
 
