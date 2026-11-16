@@ -386,4 +386,19 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     (void)active_preset_idx;
     hal_set_btn_led(BTN_PLAY, hs->is_playing ? 1 : 0);
     hal_set_btn_led(BTN_REC, (hs->is_playing && hs->current_beat == 0) ? 1 : 0);
+
+    // Backlight all 27 silicone keys so labels are clearly readable
+    for (uint8_t k = 0; k < 27; k++) {
+        if (k < 12) {
+            uint8_t semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
+            if (semitone == hs->root_semitone && hs->is_playing && hs->current_beat == 0) {
+                // Subtle pulse on beat 1 to identify the active root key
+                hal_set_key_led(k, 0);
+            } else {
+                hal_set_key_led(k, 1);
+            }
+        } else {
+            hal_set_key_led(k, 1);
+        }
+    }
 }
