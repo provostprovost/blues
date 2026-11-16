@@ -1,356 +1,158 @@
 # TexasBlues-1 (TB-1)
 
-**Autonomous, Generative 12-Bar Blues Accompaniment Firmware for the M-VAVE FM-1 Synthesizer**
+**A standalone 12-bar blues backing band firmware for the M-VAVE FM-1 pocket synthesizer.**
 
 [![Firmware CI](https://github.com/provostprovost/blues/actions/workflows/build.yml/badge.svg)](https://github.com/provostprovost/blues/actions)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSING.md)
-[![Hardware: M-VAVE FM-1](https://img.shields.io/badge/Hardware-M--VAVE%20FM--1-orange.svg)](https://github.com/zvenson/dinghy)
 
-TexasBlues-1 (TB-1) turns the pocket-sized **M-VAVE FM-1** synthesizer into a standalone, autonomous rhythm section designed for solo guitarists practicing or performing without a keyboard or bass player. 
+Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, walking bass, and comping chords—that follows a real 12-bar form while you solo on guitar or play the built-in 4-voice lead keyboard.
 
-Built on the open-source `zvenson/dinghy` v0.5 framework, TB-1 generates a complete, dynamic blues band in real time with zero latency:
-- **Driving Walking Electric Bass**: 4 selectable bass engines (Fender P-Bass, Upright Double Bass, Muted Tic-Tac Boogie, and Moog Funk Synth) with authentic acoustic harmonics, wooden slap transients, and directional walking lines.
-- **Guide-Tone Comping Engine**: Rootless Bill Evans and Ray Charles blues voicings across 12 sound engines (Rhodes FM, Bright FM EP, Wurlitzer 200A, Clean & Dirty B3 Organs, Clavinet D6, Archtop Guitar, Blues Horns, Honky-Tonk Piano, Tremolo EP, Resonator Dobro, and Leslie Organ) sitting in a dedicated high comping register.
-- **Punchy Acoustic Drum Machine**: 4 selectable kits (Studio Punch, Vintage Brush, Retro 808, and Stax Tight) with acoustic transient kicks, backbeat snares, sizzle cymbals, and rimshot metronome.
-- **Playable 4-Voice Polyphonic Lead Synth**: 8 solo lead voices (Blues Guitar, Chicago Harp, Tenor Sax, Moog Lead, Warm Jazz "Lucille", Fuzz Octave, Muted Trumpet, and Percussive B3) with natural blues finger vibrato and direct octave shifts.
-
-Everything runs entirely on the internal 240 MHz RISC microcontroller using pure 32-bit fixed-point integer DSP with zero floating-point overhead.
+- **Real blues accompaniment:** 8 groove styles, 4 bass engines, 12 chord engines, and 4 drum kits.
+- **Playable lead synth:** 8 solo voices across 27 backlit keys with the blues scale lit up under your fingers.
+- **Live jam controls:** Toggle major/minor blues, trigger stop-time breaks, vamp on a chord, or cue a turnaround on the fly.
+- **Save your setup:** Dial in your favorite sound and hit `SAVE` so it boots right back into your jam.
 
 ---
 
-## Table of Contents
+## Quick Start (60 Seconds)
 
-- [Quick Start & Installation](#quick-start--installation)
-- [Hardware Controls & Interface](#hardware-controls--interface)
-  - [Rotary Encoders](#rotary-encoders)
-  - [14 Hardware Buttons](#14-hardware-buttons)
-  - [27 Backlit Silicone Keys](#27-backlit-silicone-keys)
-  - [Switching Between Major & Minor Blues](#switching-between-major--minor-blues)
-- [Display Views](#display-views)
-- [Accompaniment Engine Features](#sound-engines--grooves)
-  - [8 Selectable Groove Styles](#8-selectable-groove-styles)
-  - [4 Selectable Bass Engines](#4-selectable-bass-engines)
-  - [12 Selectable Chord Engines](#12-selectable-chord-engines)
-  - [4 Selectable Drum Kits](#4-selectable-drum-kits)
-  - [8 Solo Lead Voice Engines](#8-solo-lead-voice-engines)
-  - [The "Spice" Macro](#the-spice-macro)
-  - [Key Decoupling & Preset System](#key-decoupling--preset-system)
-- [External MIDI & Footswitch Control](#external-midi--footswitch-control)
-- [Building from Source](#building-from-source)
-- [Recovery & Restoring Stock Firmware](#recovery--restoring-stock-firmware)
-- [License](#license)
-
----
-
-## Quick Start & Installation
-
-### Requirements
-- **Hardware**: M-VAVE FM-1 Pocket Synthesizer
-- **Cable**: USB-C data cable connected to your computer
-- **Python**: Python 3.8+ with `mido` and `python-rtmidi` (`pip install mido python-rtmidi`)
-
-### Installing Prebuilt Firmware
-1. Connect your M-VAVE FM-1 to your computer via USB and turn it on.
-2. Clone this repository:
+1. Install Python dependencies:
+   ```bash
+   pip install mido python-rtmidi
+   ```
+2. Plug the FM-1 into your computer with a USB-C data cable and power it on.
+3. Flash the firmware:
    ```bash
    git clone https://github.com/provostprovost/blues.git
    cd blues
-   ```
-3. Flash the firmware package directly to your device:
-   ```bash
    python3 tools/fm1_install.py build/dinghy.fwsc --yes
    ```
-4. The FM-1 screen will show an update progress bar, restart, and boot directly into TexasBlues-1!
+4. Once the FM-1 reboots, press **`PLAY/STOP`** to start the band.
+5. Turn **`SELECT`** to change the groove, **`KNOB1`** for tempo, **`ALGORITHM`** for chords, and **`PRESETS`** for the lead keyboard sound.
 
 ---
 
-## Hardware Controls & Interface
+## Panel Layout
 
+```text
++-------------------------------------------------------------------+
+| [MASTER]  [SELECT]   +---------------+   [KNOB1] [KNOB2] [KNOB3] [KNOB4]
+|                      |  240x240 LCD  |                            |
+| [PRESETS] [ALGORITHM]|  Lead Sheet / |   [FX]  [SEL] [ENV] [LFO] [EDIT] [GLO]
+|                      |  Band Mixer   |   [HOME][SAVE][ARP] [SEQ] [PLAY] [REC]
+|      [OCT-] [OCT+]   +---------------+                            |
+|                                                                   |
+|  [F] [F#] [G] [Ab] [A] [Bb] [B] [C] [C#] [D] [Eb] [E] ... (27 keys)
++-------------------------------------------------------------------+
 ```
-+-------------------------------------------------------------+
-|   [SELECT]          [ALGORITHM]           [PRESETS]         |
-| (Groove / Drum)   (Chord Engine)        (Lead / Key)        |
-|                                                             |
-|       +---------------------------------------------+       |
-|       |       240x240 RGB565 COLOR TFT LCD          |       |
-|       |  • 12-Bar Lead Sheet with Beat Pips         |       |
-|       |  • 7-Channel Band Mixer with Level Meters   |       |
-|       +---------------------------------------------+       |
-|                                                             |
-|   [KNOB 1]          [KNOB 2]          [KNOB 3]     [KNOB 4] |
-| (BPM / Bass)      (Spice / Keys)    (Bass / Drums)(Keys / Lead)|
-|                                                             |
-| [PLAY] [REC] [OCT-] [OCT+] [HOME] [SAVE] [GLO] [ARP] [FX]   |
-| [EDIT] [ENV] [SEQ]  [LFO]  [SEL]                            |
-|                                                             |
-|  [F4] [F#4] [G4] [Ab4] [A4] [Bb4] [B4] [C5] [C#5] [D5]...   |
-|  (27 White Backlit Silicone Keys with Blues Scale & Pulse)  |
-+-------------------------------------------------------------+
-```
-
-### Rotary Encoders
-
-The 4 lower knobs dynamically re-map when switching between **Lead Sheet View** and **Band Mixer View** (`HOME` button):
-
-#### On Lead Sheet View (Default)
-| Encoder | Label | Primary Function (Turn) | Secondary Function (Hold `GLO` or `SEL` + Turn) |
-|---|---|---|---|
-| **Encoder 0** | `SELECT` | **Groove Style**: Cycles 8 groove styles | **Drum Kit** (Hold `GLO`): Studio, Brush, Retro 808, Stax Tight<br>**Blues Form Mode** (Hold `SEL`): Major 12-Bar, Minor Blues, Quick Change, 8-Bar, 1-4-5 |
-| **Encoder 1** | `ALGORITHM` | **Chord Engine**: 12 electric piano, organ, acoustic piano, guitar & horn engines | — |
-| **Encoder 2** | `KNOB 1` | **Tempo**: Adjusts BPM ($40\text{--}240\text{ BPM}$) | **Swing %** (Hold `GLO`): Adjusts shuffle swing ($0\%\text{--}100\%$) |
-| **Encoder 3** | `KNOB 2` | **Spice Level**: Adjusts harmonic complexity ($0\%\text{--}100\%$) | **Master Tuning** (Hold `GLO`): $440\text{ Hz}$, $432\text{ Hz}$, or $442\text{ Hz}$ |
-| **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Engine** (Hold `GLO`): P-Bass, Upright, Muted Boogie, Moog Funk |
-| **Encoder 5** | `KNOB 4` | **Keys Volume**: Adjusts comping chord level | **Reverb Mix** (Hold `GLO`): Schroeder room reverb wet level |
-| **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: 8 expressive guitar, harp, horn, moog & organ voices | **Key Select** (Hold `SEL` or `GLO`): Scrolls keys `C..B` |
-
-#### On Band Mixer View (`HOME` Pressed)
-On the Band Mixer view, Knobs 1--4 act as dedicated hardware mixing faders:
-| Encoder | Label | Direct Turn (Fader) | Hold `GLO` + Turn |
-|---|---|---|---|
-| **Encoder 2** | `KNOB 1` | **Bass Level**: Adjusts `BASS VOL` | **Reverb Mix**: Schroeder room reverb level |
-| **Encoder 3** | `KNOB 2` | **Keys Level**: Adjusts `KEYS VOL` | **Spice Level**: Harmonic complexity ($0\%\text{--}100\%$) |
-| **Encoder 4** | `KNOB 3` | **Drums Level**: Adjusts `DRUMS VOL` | **Swing %**: Shuffle swing ($0\%\text{--}100\%$) |
-| **Encoder 5** | `KNOB 4` | **Lead Level**: Adjusts `LEAD VOL` | **Master Tuning**: $440\text{ Hz}$, $432\text{ Hz}$, $442\text{ Hz}$ |
 
 ---
 
-### 14 Hardware Buttons
+## Controls Cheat Sheet
 
-All 14 front-panel buttons have dedicated functions:
+### Knobs
 
-| Button | Live Musical Function |
+| Knob | Normal Turn | Hold `GLO` + Turn | Hold `SEL` + Turn |
+|---|---|---|---|
+| **`MASTER`** | Hardware master volume | — | — |
+| **`SELECT`** | Groove Style (8 styles) | Drum Kit (4 kits) | Blues Form (Major, Quick-Change, 1-4-5, 8-Bar, Minor) |
+| **`PRESETS`** | Solo Lead Voice (8 voices) | Key (`C`–`B`) | Key (`C`–`B`) |
+| **`ALGORITHM`** | Backing Chord Engine (12 engines) | — | — |
+| **`KNOB1`** | Tempo (40–240 BPM)<br>*(Mixer: Bass Volume)* | Swing (0%–100%)<br>*(Mixer: Reverb Mix)* | — |
+| **`KNOB2`** | Spice (0%–100%)<br>*(Mixer: Keys Volume)* | Master Tuning (440 / 432 / 442 Hz)<br>*(Mixer: Spice)* | — |
+| **`KNOB3`** | Bass Volume<br>*(Mixer: Drums Volume)* | Bass Engine (4 engines)<br>*(Mixer: Swing)* | — |
+| **`KNOB4`** | Keys Volume<br>*(Mixer: Lead Volume)* | Reverb Mix<br>*(Mixer: Master Tuning)* | — |
+
+### Buttons
+
+| Button | What It Does |
 |---|---|
-| **`PLAY`** | **Start / Stop**: Toggles playback (LED lit while playing). |
-| **`REC`** | **Count-in Toggle**: Enables 1-bar count-in rimshot click. Pulses on Beat 1. |
-| **`OCT-`** | **Keyboard Octave Down** (-2 to +2 octaves). Hold `SEL` + `OCT-` to nudge tempo down 4 BPM. |
-| **`OCT+`** | **Keyboard Octave Up** (-2 to +2 octaves). Hold `SEL` + `OCT+` to nudge tempo up 4 BPM. |
-| **`HOME`** | **Screen Toggle**: Switches between **12-Bar Lead Sheet** and **Band Mixer**. |
-| **`SAVE`** | **Commit to Flash**: Saves current preset and parameters to flash. |
-| **`GLO`** | **Shift Layer**: Hold to access secondary knob functions (Swing, Reverb, Drum Kit, etc.). |
-| **`ARP`** | **Tap Tempo**: Tap in rhythm to set BPM. |
-| **`FX`** | **Manual Accent Stab**: Immediate full-band accent stab and crash. |
-| **`EDIT`** | **Early Turnaround Cue**: Bar-quantized jump to Measure 9 (V chord). |
-| **`ENV`** | **Vamp Toggle**: Freezes the form and vamps on the current chord. |
-| **`SEQ`** | **Stop-Time Break**: 4-bar stop-time break with beat-1 stabs. |
-| **`LFO`** | **Major / Minor Blues Toggle**: One press flips between 12-Bar Major (`KEY:E (MAJ)`) and 12-Bar Minor (`KEY:Em (MIN)` in cyan). |
-| **`SEL`** | **Select Modifier**: Hold + turn `PRESETS` for Key, hold + turn `SELECT` for Blues Form, hold + press silicone keys for key/cue/form shortcuts. |
+| **`PLAY/STOP`** | Start or stop playback (LED lights up while playing). |
+| **`REC`** | Toggle 1-bar count-in rimshot click (pulses on Beat 1). |
+| **`OCT-` / `OCT+`** | Shift the 27-key solo keyboard down or up (-2 to +2 octaves). Hold `SEL` + `OCT-`/`OCT+` to nudge tempo ±4 BPM. |
+| **`HOME`** | Switch between the **12-Bar Lead Sheet** and **Band Mixer** screens. |
+| **`SAVE`** | Save your current groove, tempo, key, voices, and mixer levels to flash. |
+| **`GLO`** | Shift key for secondary knob functions (Swing, Reverb, Drum Kit, Bass Engine, Tuning). |
+| **`ARP`** | Tap Tempo—tap in rhythm to set the BPM. |
+| **`FX`** | Trigger a manual full-band accent stab + crash. |
+| **`EDIT`** | Early Turnaround—jump straight to Bar 9 (the V chord) at the next bar. |
+| **`ENV`** | Vamp Mode—freeze the progression and loop the current chord. |
+| **`SEQ`** | Trigger a 4-bar stop-time break with beat-1 stabs. |
+| **`LFO`** | Toggle **Major 12-Bar** ↔ **Minor Blues**. |
+| **`SEL`** | Shift key for `SELECT` (form), `PRESETS` (key), `OCT-`/`OCT+` (tempo), and silicone key shortcuts. |
 
 ---
 
-### 27 Backlit Silicone Keys & Live Polyphonic Keyboard
+## "How Do I…" Quick Recipes
 
-The 27 silicone keys serve dual roles: a **live 4-voice polyphonic keyboard** during playback, and a **section & key navigation matrix** when holding `SEL`.
+- **Change the key:** Hold **`SEL`** (or **`GLO`**) and turn **`PRESETS`**. Or hold **`SEL`** and tap one of the first 12 silicone keys (`F` through `E`): a single tap queues the key change for the next chorus, and a quick double tap switches right away.
+- **Switch between Major and Minor Blues:** Press **`LFO`** for a one-tap toggle. You can also hold **`SEL`** and turn **`SELECT`**, or hold **`SEL`** and press Key 22 (Minor) / Key 18 (Major). Minor Blues shows **`KEY:Em (MIN)`** in cyan at the top of the screen and updates all 12 chord boxes (`Em7`, `Am7`, `C7`, `B7`).
+- **Make the chords and bass jazzier:** Turn **`KNOB2`** (**Spice**). Low (0–30%) keeps it straight and simple; middle (31–65%) adds 9ths, 13ths, and chromatic bass walk-ups; high (66–100%) adds passing diminished chords, tritone subs, and syncopated stabs.
+- **Adjust shuffle feel:** Hold **`GLO`** and turn **`KNOB1`** (**Swing**), or press **`HOME`** to open the Band Mixer and hold **`GLO`** + turn **`KNOB3`**. 0% is straight 8ths, ~67% is a classic triplet shuffle, and 100% is a hard dotted-8th swing.
+- **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While the band is playing, the LEDs light up the **Minor Blues scale** (`1, b3, 4, b5, 5, b7`) for your active key and pulse on Beat 1.
+- **Arm an ending:** Hold **`SEL`** and tap Keys 23–26 (23: Hard Stop, 24: Tag Ending, 25: Triple Turnaround, 26: Chromatic Slide).
+- **Save your setup:** Press **`SAVE`**. Background autosave is intentionally off so temporary jam tweaks don't overwrite your saved setup.
 
-#### 1. Live Playable Polyphonic Keyboard (Without `SEL`)
-- **4-Voice Polyphony & Chords**: Pressing multiple keys simultaneously plays rich multi-note chords or harmonized lead licks across 4 dynamic DSP voices with quietest-voice stealing.
-- **Independent Note Tracking**: Holding a low drone or bass note while tapping and releasing higher notes releases only the tapped notes—the low note sustains cleanly without getting stuck.
-- **Expressive Blues Vibrato**: Sustained notes naturally bloom into an authentic $\pm 27\text{-cent}$ finger vibrato after ~40 ms of gate hold.
-- **2-Octave Lead Register ($F_4\text{--}G_6$, MIDI 65--91)**: Expressive soloing with touch velocity and instant response.
-- **Full Backlight When Stopped / In Setup**: When playback is stopped or `SEL` is held, all 27 keys illuminate with full white backlighting so you can easily read printed labels in dim lighting.
-- **Minor Blues Scale LED Guide (While Playing)**: During playback, LEDs illuminate **strictly under notes of the Minor Blues Scale** (`1, b3, 4, b5, 5, b7` relative to the active root key), providing an instant visual fretboard for soloing. The root note pulses on Beat 1 of every measure for rock-solid visual timing.
+<details>
+<summary>All <code>SEL</code> + Silicone Key Shortcuts (Keys 0–26)</summary>
 
-#### 2. Section Navigation & Form Controls (Hold `SEL`)
-> **Note**: Pressing silicone keys **never** changes the session root key unless `SEL` is actively held down. This prevents accidental key modulations while auditioning or jamming.
-- **Keys 0 to 11 (Chromatic Key Select)**:
-  - `Key 0 = F`, `Key 1 = F#`, `Key 2 = G`, `Key 3 = Ab`, `Key 4 = A`, `Key 5 = Bb`, `Key 6 = B`, `Key 7 = C`, `Key 8 = C#`, `Key 9 = D`, `Key 10 = Eb`, `Key 11 = E`.
-  - **Single Tap while playing**: Queues key modulation seamlessly at the start of the next 12-bar chorus.
-  - **Double Tap (< 250 ms) while playing**: Executes an immediate in-bar key modulation.
-- **Keys 12 to 17 (Live Performance Cues)**:
-  - Key 12: Return to Standard 12-Bar Form
-  - Key 13: Vamp Toggle (freeze on current chord)
-  - Key 14: 4-Bar Stop-Time Break
-  - Key 15: Chord Hold
-  - Key 16: Immediate Turnaround (Jump to Bar 9)
-  - Key 17: Manual Accent Stab
-- **Keys 18 to 22 (Form Variations)**:
-  - Key 18: Standard 12-Bar Major Blues
-  - Key 19: Quick-Change (IV in Bar 2)
-  - Key 20: 1-4-5 Opening Variation
-  - Key 21: 8-Bar Blues Progression
-  - Key 22: 12-Bar Minor Blues Progression
-- **Keys 23 to 26 (Outro Cadences)**:
-  - Immediate Stop, Tag Ending, Triple Turnaround, Chromatic Slide Outro.
+- **Keys 0–11 (Key Select):** `0=F`, `1=F#`, `2=G`, `3=Ab`, `4=A`, `5=Bb`, `6=B`, `7=C`, `8=C#`, `9=D`, `10=Eb`, `11=E` (single tap = next chorus, double tap = immediate)
+- **Keys 12–17 (Live Cues):** `12` Return to 12-Bar, `13` Vamp Toggle, `14` 4-Bar Stop-Time, `15` Hold Chord, `16` Jump to Turnaround, `17` Accent Stab
+- **Keys 18–22 (Form Variations):** `18` Standard 12-Bar, `19` Quick-Change (IV in Bar 2), `20` 1-4-5 Opening, `21` 8-Bar Blues, `22` Minor Blues
+- **Keys 23–26 (Outros):** `23` Stop, `24` Tag Ending, `25` Triple Turnaround, `26` Chromatic Slide
+
+</details>
 
 ---
 
-### Switching Between Major & Minor Blues
+## The Sounds
 
-TexasBlues-1 supports both **12-Bar Dominant Major Blues** ($I^7, IV^7, V^7$) and **12-Bar Minor Blues** ($i^7, iv^7, \text{bVI}^7, V^7$, e.g. *"The Thrill Is Gone"*). Three ways to switch:
-
-1. **`LFO` button**: one press toggles Major ↔ Minor.
-2. **Hold `SEL` + turn the `SELECT` knob**: cycles all 5 forms (12-Bar Major → Quick-Change → 1-4-5 → 8-Bar → Minor Blues).
-3. **Hold `SEL` + press a silicone key**: Key 22 = Minor Blues, Key 18 = Standard 12-Bar Major.
-
-#### Real-Time Visual Feedback:
-- **Subheader Color & Quality**: In Minor Blues mode, the subheader immediately switches to **`KEY: Em (MIN)`** rendered in bright **cyan** (`RGB(140, 210, 255)`), while Major Blues displays **`KEY: E (MAJ)`** in warm gray.
-- **Immediate Bar Redraw**: All 12 chord grid boxes instantaneously re-render with authentic minor quality labels (`Em7`, `Am7`, `C7`, `B7`) without waiting for bar boundaries.
-- **Status Confirmation**: The status line displays `PLAYING (MINOR BLUES)` or `STOPPED (MINOR BLUES)`.
+- **8 Groove Styles (`SELECT`):** 12/8 Slow Blues, Texas Shuffle, Chicago Swing, Rockin' Blues, New Orleans 2nd Line, Memphis Soul, Rhumba Blues (3-3-2), Boogie-Woogie.
+- **12 Chord Engines (`ALGORITHM`):** Rhodes FM, Bright FM EP, Wurlitzer 200A, Clean B3 Organ, Dirty Gospel B3, Clavinet D6, Archtop Rhythm Guitar, Blues Horns, Honky-Tonk Piano, Tremolo Suitcase EP, Delta Resonator Guitar, Rotary Leslie Organ.
+- **8 Solo Lead Voices (`PRESETS`):** Overdriven Blues Guitar, Chicago Blues Harp, Tenor Sax, Moog Lead, Warm Jazz Hollowbody ("Lucille"), Fuzz Octave, Muted Blues Trumpet, Percussive B3 Organ.
+- **4 Bass Engines (`GLO` + `KNOB3`):** Fender P-Bass, Upright Double Bass, Muted Tic-Tac Boogie, Moog Funk Synth.
+- **4 Drum Kits (`GLO` + `SELECT`):** Studio Punch, Vintage Brush, Retro 808, Stax Tight.
 
 ---
 
-## Display Views
+## Display Screens
 
-Press **`HOME`** to toggle between the two non-blocking 240x240 RGB TFT screens:
+Press **`HOME`** to flip between the two screens:
 
-### 1. 12-Bar Lead Sheet View
-- Displays the complete 12-bar chord grid with large, easy-to-read chord symbols (e.g. `E7`, `A7`, `B7` or `Em7`, `Am7`, `C7`).
-- **Differential Tile Rendering**: Zero screen flicker. The active measure box highlights in amber, and 4 beat pips track the groove in real time.
-- **Header**: Active Groove Style & Drum Kit (e.g. `TX SHUFFLE [STUDIO]`).
-- **Subheader**: Displays Session Key, Form (`(MAJ)` or cyan `(MIN)`), BPM, and Spice %.
-- **Status Line**: Live status display (`PLAYING`, `PLAYING (MINOR BLUES)`, `STOPPED`, `VAMP LOOP ACTIVE`, `STOP-TIME BREAK`, `ENDING ARMED`, `KEY MOD QUEUED`).
-- **Footer**: Displays active voices aligned with physical top-row knob positions: `<Solo Lead> * <Chord Engine>` (e.g. `BLUES GTR * RHODES FM`). Turning the left knob (`PRESETS`) adjusts the left instrument, while turning the right knob (`ALGORITHM`) adjusts the right instrument.
-
-### 2. Band Mixer View
-- Live visual meters for all instrument levels and macro parameters:
-  1. `BASS VOL`: Walking Bass Level & Engine Name
-  2. `KEYS VOL`: Comping Chord Level & Engine Name
-  3. `DRUMS VOL`: Drum Kit Level & Kit Name
-  4. `LEAD VOL`: Solo Lead Synth Level & Instrument Name
-  5. `REVERB`: 4-Comb Schroeder Room Reverb Mix
-  6. `SPICE`: Harmonic / Arrangement Complexity ($0\%\text{--}100\%$)
-  7. `SWING`: Shuffle Swing Percentage ($0\%\text{--}100\%$)
+1. **12-Bar Lead Sheet:** Shows the groove and drum kit at the top, Key + Form (`(MAJ)` or cyan `(MIN)`), BPM, and Spice below it, the 12-bar chord grid with the active bar highlighted in amber, 4 beat pips, live playback status, and the footer (`<Solo Lead> * <Chord Engine>`, aligned left-to-right with `PRESETS` and `ALGORITHM`).
+2. **Band Mixer:** Live level bars for `BASS VOL`, `KEYS VOL`, `DRUMS VOL`, `LEAD VOL`, `REVERB`, `SPICE`, and `SWING` (0%–100%).
 
 ---
 
-## Sound Engines & Grooves
+## Building from Source & Tests
 
-### 8 Selectable Groove Styles
-Adjusted via **Encoder 0 (`SELECT`)**:
-1. **12/8 Slow Blues**: Classic B.B. King / Buddy Guy slow triplet blues ballad with rolling 12/8 pulse.
-2. **Texas Shuffle**: Driving Stevie Ray Vaughan / Albert Collins Texas shuffle with tight walking bass.
-3. **Chicago Swing**: Muddy Waters / Little Walter bouncy, swinging shuffle with backbeat accents.
-4. **Rockin' Blues**: Chuck Berry / Allman Brothers straight-8s driving blues-rock groove.
-5. **New Orleans 2nd Line**: Professor Longhair syncopated street march beat with loose snare accents.
-6. **Memphis Soul Blues**: Stax / Albert King 16th-note tight groove with locked bass stabs.
-7. **Rhumba Blues**: B.B. King / Albert King *"Crosscut Saw"* 3-3-2 syncopated Afro-Cuban crosscut rhythm.
-8. **Jump Blues / Boogie-Woogie**: Louis Jordan high-energy 8-to-the-bar walking bass and galloping swing drums.
+Requires Docker (macOS/Windows) or Linux x86-64 with the JieLi toolchain, plus Python 3 (`Pillow`, `mido`, `python-rtmidi`).
 
----
-
-### 4 Selectable Bass Engines
-Adjusted via **Encoder 4 (`KNOB 3`)** with `GLO` held:
-1. **Fender P-Bass**: Resonant multi-harmonic electric bass with ~50 ms initial pick bite snap, prominent 2nd & 3rd harmonics, and roundwound string decay. Audibly tuned to $E_2\text{--}D_4$ ($82\text{--}293\text{ Hz}$) for punchy clarity on the pocket speaker.
-2. **Upright Double Bass**: Acoustic jazz/blues double bass with deep fundamental body resonance and percussive wooden fingerboard slap attack.
-3. **Muted Tic-Tac Boogie**: Palm-muted baritone guitar / boogie bass with snappy pick attack and tight percussive decay (~120 ms).
-4. **Moog Funk Synth**: Classic 24dB-style resonant analog synth bass with dynamic envelope filter sweep for 70s funk blues.
-
----
-
-### 12 Selectable Chord Engines
-Adjusted via **Encoder 1 (`ALGORITHM`)**:
-1. **Rhodes FM (Algo 0)**: 2-Operator FM synthesis producing a sweet bell/tine attack that dissolves into a warm, mellow electric piano body.
-2. **Bright FM EP (Algo 1)**: 2:1 FM chime algorithm with crisp attack transients and rich overtones.
-3. **Wurlitzer 200A (Algo 2)**: Gritty reed electric piano with rich 3rd harmonic bite and warm asymmetric reed bark.
-4. **Clean B3 Organ (Algo 3)**: Gospel jazz drawbars (88 8000 000 fundamental + octave + 5th) with smooth organ sustain.
-5. **Dirty Gospel B3 (Algo 4)**: Saturated full blues drawbars (88 8800 000) with biting tube overdrive.
-6. **Funk Clavinet D6 (Algo 5)**: Biting 3:1 plucked FM algorithm with fast percussive decay and sharp pick attack.
-7. **Archtop Rhythm Guitar (Algo 6)**: Warm hollowbody jazz/blues comping guitar with string pluck transient and wooden acoustic resonance.
-8. **Blues Horn Section (Algo 7)**: Tenor sax and trumpet brass ensemble with swelling attack and rich harmonized brass overtones.
-9. **Honky-Tonk Piano (Algo 8)**: Barrelhouse upright acoustic piano with dual-chorus detuned strings and crisp hammer strike.
-10. **Tremolo Suitcase EP (Algo 9)**: Warm electric piano with vintage optical tremolo amplitude modulation.
-11. **Delta Resonator Guitar (Algo 10)**: Metallic acoustic Dobro body pluck with resonant acoustic mid-range bite.
-12. **Rotary Leslie Organ (Algo 11)**: Gospel drawbar organ with dynamic dual-rotor rotary chorus swirl.
-
----
-
-### 4 Selectable Drum Kits
-Adjusted via **Encoder 0 (`SELECT`)** with `GLO` held:
-1. **Studio Punch**: Deep acoustic kick punch (300 ms sub-sweep), crisp backbeat snare, sizzle shuffle hats, and woody rimshot.
-2. **Vintage Brush**: Soft acoustic thud kick, textured sandpaper brush stir/swirl snare, and dark sizzle ride cymbal.
-3. **Retro 808 / Lo-Fi**: Deep boomy 808 sub kick, snappy 808 clap/snare, sizzly metallic hats, and synthetic rim tick.
-4. **Stax / Memphis Tight**: Dampened kick ("pillow in the kick drum"), tight dry snare crack, and crisp closed hats.
-
----
-
-### 8 Solo Lead Voice Engines
-Adjusted via direct turn of **Encoder 6 (`PRESETS`)**:
-1. **Overdriven Blues Guitar**: Singing electric lead guitar with tube clipping bite, harmonic sustain, and touch sensitivity.
-2. **Chicago Blues Harp**: Amplified green bullet harmonica with authentic nasal reed pulse, throat bite, and pitch-bend nuance.
-3. **Tenor Saxophone**: Breathy acoustic tenor sax with acoustic throat resonance, expressive swell, and subtle reed growl.
-4. **Moog Solo Lead**: Classic analog monosynth lead with detuned dual oscillators, singing filter resonance, and portamento glide.
-5. **Warm Jazz Hollowbody ("Lucille")**: Mellow neck pickup tone with warm rolled-off tone pot and round singing fundamental.
-6. **Fuzz Octave Stompbox**: Aggressive full-wave rectified octave-up distortion (Hendrix Band of Gypsys / Buddy Guy style).
-7. **Muted Blues Trumpet**: Brassy harmon-muted trumpet with nasal odd harmonics and expressive formant bite.
-8. **Percussive B3 Organ Lead**: Jimmy Smith style fast 3rd harmonic percussive key-click decaying into drawbar flutes.
-
----
-
-### The "Spice" Macro
-
-Controlled via **Encoder 3 (`KNOB 2`)** from $0\%$ to $100\%$:
-
-- **$0\%\text{--}30\%$ (Straight & Clean)**: 2-note guide-tone shells (3rd + 7th), simple root-fifth walking bass, and straight groove timing.
-- **$31\%\text{--}65\%$ (Authentic Blues Comping)**: 3-note and 4-note Evans voicings (adding 9ths and 13ths), directional beat-4 chromatic approaches on the bass, and dynamic velocity humanization.
-- **$66\%\text{--}100\%$ (Bebop & Modern Blues)**: Lush altered voicings, passing diminished chords, tritone substitutions, bass octave pops, and syncopated off-beat comping stabs.
-
----
-
-### Key Decoupling & Preset System
-
-- **Key Persistence**: The active musical key is **strictly decoupled from preset switching**. You can jam in the key of **E**, browse through all 16 presets (switching between Texas Shuffle, Slow 12/8, Chicago Swing, and Funk), and every preset will immediately play in **E** without interrupting your flow.
-- **Presets 0 to 15**: Full accompaniment snapshots (groove style, tempo, swing %, EP algorithm, spice level, and mixer balances).
-- **Instant Save**: Press **`SAVE`** at any time to commit your current settings to the FM-1's non-volatile onboard flash storage. Background autosaving is intentionally disabled to protect your presets from accidental overwrites during live jamming.
-
----
-
-## External MIDI & Footswitch Control
-
-Connect any USB-MIDI or 3.5mm TRS Type-A MIDI footswitch controller to operate the accompaniment hands-free while playing guitar:
-
-### MIDI Continuous Controllers (CC)
-| MIDI CC | Value Range | Mapped Function |
-|---|---|---|
-| **CC 64** (Sustain) | $\ge 64$ | **Vamp Mode Toggle**: Freeze on active chord |
-| **CC 80** | $\ge 64$ | **Early Turnaround**: Jump immediately to Measure 9 |
-| **CC 81** | $\ge 64$ | **Stop-Time Break**: Trigger 4-bar break with beat-1 stabs |
-| **CC 82** | $\ge 64$ | **Next Key**: Increment root key chromatically (+1 semitone) |
-| **CC 83** | $\ge 64$ | **Manual Accent Stab**: Trigger full-band accent crash |
-
-### MIDI Clock Synchronization
-- **Master Mode**: Transmits MIDI Clock (`0xF8`), Start (`0xFA`), and Stop (`0xFC`) to sync external drum machines, delays, and loopers via USB-MIDI OUT.
-- **Slave Mode**: Connect an external drum machine or DAW to TRS MIDI IN; TB-1 automatically locks its tempo and transport to the incoming MIDI clock stream.
-
----
-
-## Building from Source
-
-To compile the firmware yourself:
-
-### 1. Prerequisites
-- Docker (macOS or Windows) OR Linux x86-64 with the JieLi toolchain installed.
-- Python 3 with `Pillow`, `mido`, and `python-rtmidi`.
-
-### 2. Run the Unit Test Suite
-Verify all harmonic, voice-leading, DSP, and panel logic on your local machine:
 ```bash
+# Run the local C unit test suite
 gcc -DSTANDALONE_TEST -O2 -Wall -Wextra -Werror -Ifirmware/src \
     firmware/src/blues_harmony.c firmware/src/blues_arranger.c \
     firmware/src/dsp_voices.c firmware/src/panel_input.c \
     firmware/src/ui_screens.c tests/test_blues_engine.c \
     -o build/test_blues && ./build/test_blues
-```
 
-### 3. Build the Firmware Package
-Run the build script:
-```bash
+# Build the firmware package (outputs build/dinghy.fwsc)
 ./build.sh
 ```
-The output package will be generated at `build/dinghy.fwsc`.
 
 ---
 
 ## Recovery & Restoring Stock Firmware
 
-The M-VAVE FM-1 features a hardware-level bootloader that cannot be bricked:
-
-- **USB Rescue Mode**: Hold **`OCT-`** while turning on the FM-1 power switch. The device will boot directly into the USB updater without loading the application.
-- **Reflashing**: Run `python3 tools/fm1_install.py build/dinghy.fwsc --yes` to reinstall TexasBlues-1.
-- **Restoring Factory Firmware**: Upload the original stock M-VAVE firmware file via `tools/fm1_install.py <stock_firmware.bin>` or through the [FM-1 Firmware Hub](https://thefirmwarehub.com).
+The FM-1 bootloader cannot be bricked:
+- **USB Rescue Mode:** Hold **`OCT-`** while turning on the power switch to boot straight into the USB updater.
+- **Reflash TB-1:** `python3 tools/fm1_install.py build/dinghy.fwsc --yes`
+- **Restore Stock Firmware:** Use M-Vave's updater with your factory firmware package, or flash a backup package with `tools/fm1_install.py`.
 
 ---
 
 ## License
 
-TexasBlues-1 is free, open-source software distributed under the **GNU General Public License v3.0 (GPL-3.0)**. See [LICENSING.md](LICENSING.md) for details.
+Distributed under the **GNU General Public License v3.0 (GPL-3.0)**. See [LICENSING.md](LICENSING.md).
 
 Built on the [Dinghy framework](https://github.com/zvenson/dinghy) by zvenson, derived from [Felucca](https://github.com/hugelton/Felucca) by Leo Kuroshita (Hügelton Instruments) and [SLOOP](https://github.com/isod89/sloop-fm1) by isod89.
