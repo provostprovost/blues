@@ -6,7 +6,7 @@
 
 #define ZONE1_COUNT 12u
 #define KEY0_OFFSET 53u // F3 (MIDI 53)
-#define KEY_LEAD_BASE 65u // F4 (MIDI 65) - 2-octave playable solo keyboard (F4..G6)
+#define KEY_LEAD_BASE 53u // F3 (MIDI 53) - 2-octave playable solo keyboard (F3..G5)
 
 static uint32_t g_prev_key_mask = 0;
 static uint32_t g_last_key_press_ms[ZONE1_COUNT] = {0};
@@ -14,6 +14,17 @@ static uint8_t  g_save_pending = 0;
 static uint32_t g_last_param_change_ms = 0;
 static uint32_t g_last_tap_ms = 0;
 static int8_t   g_lead_octave_shift = 0;
+static uint8_t  g_save_prev_held = 0;
+static uint8_t  g_save_used_for_slot = 0;
+
+static const uint8_t WHITE_KEYS[16] = { 0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26 };
+
+static int8_t white_key_to_slot(uint8_t k) {
+    for (uint8_t s = 0; s < 16; s++) {
+        if (WHITE_KEYS[s] == k) return (int8_t)s;
+    }
+    return -1;
+}
 
 static void set_toast(HarmonyState *hs, uint32_t ms_now, const char *msg) {
     int i = 0;
@@ -51,6 +62,65 @@ static uint8_t wrap_step_u8(uint8_t cur, int32_t delta, uint8_t count) {
     int32_t v = (int32_t)cur + delta;
     while (v < 0) v += count;
     return (uint8_t)(v % count);
+}
+
+static void save_to_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8_t *active_preset_idx, uint8_t slot, uint32_t ms_now) {
+    PresetConfig *src = &presets[*active_preset_idx];
+    PresetConfig *dst = &presets[slot % NUM_PRESET_SLOTS];
+    if (dst != src) {
+        *dst = *src;
+        dst->preset_id = slot % NUM_PRESET_SLOTS;
+    }
+    dst->magic = PRESET_MAGIC;
+    dst->root_key = hs->root_semitone;
+    dst->spice = hs->spice_level;
+    dst->fullness = hs->fullness;
+    dst->bass_fullness = hs->bass_fullness;
+    dst->keys_fullness = hs->keys_fullness;
+    dst->drums_fullness = hs->drums_fullness;
+    dst->bass_spice = hs->bass_spice;
+    dst->keys_spice = hs->keys_spice;
+    dst->drums_spice = hs->drums_spice;
+    dst->bass_style = hs->bass_style;
+    dst->keys_style = hs->keys_style;
+    dst->drum_pattern = hs->drum_pattern;
+    dst->form_mode = (uint8_t)hs->form_mode;
+    dst->opening_var = (uint8_t)hs->opening_var;
+    dst->outro_type = (uint8_t)hs->outro_type;
+    dst->count_in_enabled = hs->count_in_enabled;
+    *active_preset_idx = slot % NUM_PRESET_SLOTS;
+    hal_blob_save(0, presets, sizeof(PresetConfig) * NUM_PRESET_SLOTS);
+    GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, dst->master_tuning, dst->count_in_enabled, 0 };
+    hal_settings_save(&gs, sizeof(gs));
+    g_save_pending = 0;
+    set_toast_val(hs, ms_now, "SAVED SLOT ", (int32_t)(*active_preset_idx) + 1, "");
+}
+
+static void load_from_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8_t *active_preset_idx, uint8_t slot, uint32_t ms_now) {
+    slot %= NUM_PRESET_SLOTS;
+    *active_preset_idx = slot;
+    const PresetConfig *np = &presets[slot];
+    hs->root_semitone = np->root_key % 12;
+    hs->form_mode = (FormMode)(np->form_mode % 5);
+    hs->opening_var = (OpeningVar)(np->opening_var % 4);
+    hs->outro_type = (OutroType)(np->outro_type % 4);
+    hs->spice_level = np->spice;
+    hs->bass_spice = np->bass_spice;
+    hs->keys_spice = np->keys_spice;
+    hs->drums_spice = np->drums_spice;
+    hs->fullness = np->fullness;
+    hs->bass_fullness = np->bass_fullness;
+    hs->keys_fullness = np->keys_fullness;
+    hs->drums_fullness = np->drums_fullness;
+    hs->bass_style = np->bass_style;
+    hs->keys_style = np->keys_style;
+    hs->drum_pattern = np->drum_pattern;
+    hs->count_in_enabled = np->count_in_enabled;
+    dsp_set_lead_play_style(np->lead_play_style);
+    GlobalSettings gs = { SETTINGS_MAGIC, slot, np->master_tuning, np->count_in_enabled, 0 };
+    hal_settings_save(&gs, sizeof(gs));
+    hs->ui_dirty = 1;
+    set_toast_val(hs, ms_now, "LOADED SLOT ", (int32_t)slot + 1, "");
 }
 
 static void set_master_fullness(HarmonyState *hs, PresetConfig *p, uint8_t val) {
@@ -198,25 +268,15 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             set_toast_val(hs, ms_now, (g_lead_octave_shift > 0) ? "OCTAVE: +" : "OCTAVE: ", g_lead_octave_shift, "");
         }
     }
+    uint8_t save_held = (hal_get_btns_mask() & (1u << BTN_SAVE)) != 0;
     if (btn_edges & (1u << BTN_SAVE)) {
-        // Immediate explicit preset save
-        p->root_key = hs->root_semitone;
-        p->spice = hs->spice_level;
-        p->fullness = hs->fullness;
-        p->bass_fullness = hs->bass_fullness;
-        p->keys_fullness = hs->keys_fullness;
-        p->drums_fullness = hs->drums_fullness;
-        p->bass_spice = hs->bass_spice;
-        p->keys_spice = hs->keys_spice;
-        p->drums_spice = hs->drums_spice;
-        p->bass_style = hs->bass_style;
-        p->keys_style = hs->keys_style;
-        p->drum_pattern = hs->drum_pattern;
-        p->form_mode = hs->form_mode;
-        hal_blob_save(0, presets, sizeof(PresetConfig) * NUM_PRESET_SLOTS);
-        g_save_pending = 0;
-        set_toast(hs, ms_now, "SAVED TO FLASH!");
+        g_save_used_for_slot = 0;
     }
+    if (g_save_prev_held && !save_held && !g_save_used_for_slot) {
+        // Short tap of SAVE (no white key tapped): save to active slot
+        save_to_preset_slot(hs, presets, active_preset_idx, *active_preset_idx, ms_now);
+    }
+    g_save_prev_held = save_held;
     if (btn_edges & (1u << BTN_ARP)) {
         // Tap Tempo on ARP button
         if (g_last_tap_ms > 0 && (ms_now - g_last_tap_ms >= 200) && (ms_now - g_last_tap_ms <= 2000)) {
@@ -465,7 +525,32 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     }
     g_prev_key_mask = curr_key_mask;
 
-    if (!sel_held) {
+    if (save_held) {
+        // SAVE held + white key: save current setup into preset slot 0..15
+        if (pressed) {
+            for (uint8_t k = 0; k < 27; k++) {
+                if (pressed & (1u << k)) {
+                    int8_t slot = white_key_to_slot(k);
+                    if (slot >= 0) {
+                        save_to_preset_slot(hs, presets, active_preset_idx, (uint8_t)slot, ms_now);
+                        g_save_used_for_slot = 1;
+                    }
+                }
+            }
+        }
+    } else if (glo_held && !sel_held) {
+        // GLO held + white key: load preset slot 0..15
+        if (pressed) {
+            for (uint8_t k = 0; k < 27; k++) {
+                if (pressed & (1u << k)) {
+                    int8_t slot = white_key_to_slot(k);
+                    if (slot >= 0) {
+                        load_from_preset_slot(hs, presets, active_preset_idx, (uint8_t)slot, ms_now);
+                    }
+                }
+            }
+        }
+    } else if (!sel_held) {
         // Pure Playable Keyboard: both when playing AND when stopped
         if (pressed) {
             for (uint8_t k = 0; k < 27; k++) {
@@ -573,9 +658,25 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     hal_set_btn_led(BTN_REC, (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4) ? 1 : 0);
 
     uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
+    uint8_t save_held = (hal_get_btns_mask() & (1u << BTN_SAVE)) != 0;
+    uint8_t glo_held = hal_get_glo_held();
     uint8_t root_blink = (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4);
 
-    if (hs->is_playing && !sel_held) {
+    if (save_held || (glo_held && !sel_held)) {
+        // Flash the 16 white keys to show preset save/load slots; active slot stays solid bright
+        uint8_t flash_on = (uint8_t)((hal_millis() / 160u) & 1u);
+        uint8_t active_slot = (uint8_t)(active_preset_idx % 16);
+        for (uint8_t k = 0; k < 27; k++) {
+            hal_set_key_led_glow(k, 0);
+            int8_t slot = white_key_to_slot(k);
+            if (slot >= 0) {
+                uint8_t on = ((uint8_t)slot == active_slot) ? 1u : flash_on;
+                hal_set_key_led(k, on);
+            } else {
+                hal_set_key_led(k, 0);
+            }
+        }
+    } else if (hs->is_playing && !sel_held) {
         // Classic blues phrasing LED guide:
         // Current chord root = FULL WHITE, other scale notes = HALF WHITE (glow), non-scale = OFF.
         static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6

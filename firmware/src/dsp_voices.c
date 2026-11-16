@@ -376,14 +376,14 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     }
                     break;
                 case BASS_MUTED_TICTAC:
-                    b_sample = (b_fund >> 2) + (b_harm >> 1) + (b_third >> 2);
+                    b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
                     break;
                 case BASS_MOOG_FUNK: {
                     int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
                     int32_t saw = (b_fund >> 1) + (b_harm >> 2) + (b_third >> 3) + (b_fourth >> 4);
-                    int32_t cutoff = 3000 + ((g_bass.env_q15 * 24000) >> 15);
+                    int32_t cutoff = 3500 + ((g_bass.env_q15 * 24000) >> 15);
                     g_bass_lp += ((saw - g_bass_lp) * cutoff) >> 15;
-                    b_sample = g_bass_lp;
+                    b_sample = (g_bass_lp * 3) >> 1;
                     break;
                 }
                 case BASS_JAZZ_60S: { // 60s Jazz Bass: bridge pickup mid growl
@@ -406,7 +406,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     break;
                 case BASS_LATELY_FM: { // DX7/TX81Z Lately FM Bass: snappy 2:1 FM punch
                     uint32_t fm_mod = (uint32_t)((((int32_t)b_harm * g_bass.env_q15) >> 15) * 18000);
-                    b_sample = hal_sine_q15(g_bass.phase + fm_mod);
+                    b_sample = (hal_sine_q15(g_bass.phase + fm_mod) * 7) >> 3;
                     break;
                 }
                 case BASS_SLAP_POP: { // Karplus/Slap Pop: deep thump + bright snap transient
@@ -421,19 +421,19 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 case BASS_ACID_303: { // Resonant squelchy synth bass
                     int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
                     int32_t saw = (b_fund >> 1) + (b_harm >> 2) + (b_third >> 2) + (b_fourth >> 3);
-                    int32_t cutoff = 2000 + ((g_bass.env_q15 * 28000) >> 15);
+                    int32_t cutoff = 2500 + ((g_bass.env_q15 * 28000) >> 15);
                     g_bass_lp += ((saw - g_bass_lp) * cutoff) >> 15;
-                    b_sample = g_bass_lp + ((saw - g_bass_lp) >> 2);
+                    b_sample = ((g_bass_lp + ((saw - g_bass_lp) >> 2)) * 3) >> 1;
                     break;
                 }
                 case BASS_TUBA: // New Orleans brass tuba
-                    b_sample = (b_fund * 5 / 8) + (b_harm >> 2) + (b_third >> 3);
+                    b_sample = (b_fund * 3 / 4) + (b_harm >> 2) + (b_third >> 3);
                     break;
                 case BASS_PICK_ROCK: { // Aggressive picked rock-blues bass
                     int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
                     int32_t pick = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2) + (b_fourth >> 2);
-                    if (pick > 18000) pick = 18000;
-                    else if (pick < -18000) pick = -18000;
+                    if (pick > 24000) pick = 24000;
+                    else if (pick < -24000) pick = -24000;
                     b_sample = pick;
                     break;
                 }
@@ -810,7 +810,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         int16_t m2 = hal_sine_q15(g_lead[v].phase2);
                         int32_t moog = (m1 >> 1) + (m2 >> 1);
                         g_lead[v].filter_lp += ((moog - g_lead[v].filter_lp) * 18000) >> 15;
-                        lead_sample = g_lead[v].filter_lp;
+                        lead_sample = (g_lead[v].filter_lp * 5) >> 2;
                         break;
                     }
                     case LEAD_WARM_JAZZ: { // 4: Warm Jazz Hollowbody
@@ -818,7 +818,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         int16_t j2 = hal_sine_q15(g_lead[v].phase * 2);
                         int32_t raw_jazz = (j1 * 3 / 4) + (j2 >> 3);
                         g_lead[v].filter_lp += ((raw_jazz - g_lead[v].filter_lp) * 12000) >> 15;
-                        lead_sample = g_lead[v].filter_lp;
+                        lead_sample = (g_lead[v].filter_lp * 5) >> 2;
                         break;
                     }
                     case LEAD_FUZZ_OCTAVE: { // 5: Fuzz Octave Stompbox
@@ -835,9 +835,9 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         int16_t t1 = hal_sine_q15(g_lead[v].phase);
                         int16_t t3 = hal_sine_q15(g_lead[v].phase * 3);
                         int16_t t5 = hal_sine_q15(g_lead[v].phase * 5);
-                        int32_t trpt = (t1 >> 2) + (t3 >> 1) + (t5 >> 2);
-                        if (trpt > 20000) trpt = 20000;
-                        else if (trpt < -20000) trpt = -20000;
+                        int32_t trpt = (t1 >> 1) + (t3 >> 2) + (t5 >> 3);
+                        if (trpt > 22000) trpt = 22000;
+                        else if (trpt < -22000) trpt = -22000;
                         lead_sample = trpt;
                         break;
                     }
@@ -852,7 +852,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         uint32_t fmt = 3u + (uint32_t)((g_lead[v].env_q15 >> 13) & 0x03);
                         int16_t f_osc = hal_sine_q15(g_lead[v].phase * fmt);
                         int16_t win = 16384 + (hal_sine_q15(g_lead[v].phase - 0x40000000u) >> 1);
-                        lead_sample = (hal_sine_q15(g_lead[v].phase) >> 2) + ((f_osc * win) >> 15);
+                        lead_sample = (hal_sine_q15(g_lead[v].phase) >> 1) + (((f_osc * win) >> 15) >> 1);
                         break;
                     }
                     case LEAD_SLIDE_GUITAR: { // 9: Glassy Slide / Lap Steel Guitar
@@ -870,7 +870,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         else if (folded < -16384) folded = -32768 - folded;
                         if (folded > 16384) folded = 32768 - folded;
                         else if (folded < -16384) folded = -32768 - folded;
-                        lead_sample = folded;
+                        lead_sample = (folded * 5) >> 2;
                         break;
                     }
                     case LEAD_HARD_SYNC: { // 11: OberVave-style Hard Sync Analog Lead
@@ -878,12 +878,12 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         g_lead[v].phase2 += cur_inc + (cur_inc >> 1) + (uint32_t)((g_lead[v].env_q15 >> 15) * (cur_inc >> 2));
                         int16_t hs_raw = hal_sine_q15(g_lead[v].phase2);
                         g_lead[v].filter_lp += ((hs_raw - g_lead[v].filter_lp) * 16000) >> 15;
-                        lead_sample = g_lead[v].filter_lp;
+                        lead_sample = (g_lead[v].filter_lp * 5) >> 2;
                         break;
                     }
                     case LEAD_SID_CHIP: { // 12: C64 SID PWM Chiptune Lead
                         uint32_t pw = 0x50000000u + ((uint32_t)hal_sine_q15(g_lead[v].vib_phase) << 12);
-                        int32_t sq = (g_lead[v].phase < pw) ? 14000 : -14000;
+                        int32_t sq = (g_lead[v].phase < pw) ? 18000 : -18000;
                         lead_sample = sq & ~0x07FF; // Gritty 4-bit stepped SID crunch
                         break;
                     }

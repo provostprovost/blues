@@ -93,7 +93,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 - **Adjust shuffle feel:** Hold **`GLO`** and turn **`KNOB1`** (**Swing**), or press **`HOME`** to open the Band Mixer and hold **`GLO`** + turn **`KNOB3`**. 0% is straight 8ths, ~67% is a classic triplet shuffle, and 100% is a hard dotted-8th swing.
 - **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While playing, the key LEDs light **full white** on the current chord's root (e.g. `E` on `I`, `A` on `IV`, `B` on `V` in E Blues), **half white** on the rest of the active blues scale (**Minor Blues** in Minor form or on `IV7`/`V7`, **Major Blues** on `I7` in Major forms), and **off** on non-scale notes.
 - **Arm an ending:** Hold **`SEL`** and tap the rightmost 4 keys (`E`: Hard Stop, `F`: Tag Ending, `F#`: Triple Turnaround, `G`: Chromatic Slide). The **`PLAY`** LED blinks and the status line shows which ending is armed; tapping the same key again disarms it. Every ending resolves onto a unified **Beat-1 Root (`I7`/`i7`) stinger** and rings out cleanly.
-- **Save your setup:** Press **`SAVE`**. Background autosave is intentionally off so temporary jam tweaks don't overwrite your saved setup.
+- **Save & load across 16 preset slots:** Hold **`SAVE`** (the 16 white keys flash, with the active slot solid bright) and tap any white key to save your setup to Slots 1–16 (or just tap `SAVE` quickly to save to the current slot). Hold **`GLO`** and tap any white key to load Slots 1–16. Background autosave is intentionally off so temporary jam tweaks don't overwrite your saved presets.
 
 <details>
 <summary>All <code>SEL</code> + Silicone Key Shortcuts (Keys 0–26)</summary>
