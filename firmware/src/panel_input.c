@@ -485,25 +485,20 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     uint8_t root_blink = (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4);
 
     if (hs->is_playing && !sel_held) {
-        // Chord-following blues LED guide: base scale + missing target notes of the active bar's chord
+        // Classic blues phrasing LED guide: Minor Blues in minor form;
+        // in Major forms, Major Blues on I7 and Minor Blues on IV7 / V7 / turnarounds.
         static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6
         static const uint8_t MIN_BLUES[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7
-        uint8_t is_minor = (hs->form_mode == FORM_MINOR_BLUES);
-        const uint8_t *base = is_minor ? MIN_BLUES : MAJ_BLUES;
-
-        uint8_t scale[12];
-        for (uint8_t i = 0; i < 12; i++) scale[i] = base[i];
-
-        BarSlot slot = harmony_get_current_bar_slot(hs);
-        ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
-        if (!is_minor) {
-            if (deg == DEG_IV7 || deg == DEG_iv7) {
-                scale[4] = 0; scale[5] = 1; // Swap 3 -> 4 (IV7 root) so no 4-in-a-row clump
-            } else if (deg == DEG_V7 || deg == DEG_v7) {
-                scale[3] = 0; scale[5] = 1; // Swap b3 -> 4 (V7 b7)
-                scale[9] = 0; scale[11] = 1; // Swap 6 -> 7 (V7 3rd)
+        uint8_t use_minor_scale = (hs->form_mode == FORM_MINOR_BLUES);
+        if (!use_minor_scale) {
+            BarSlot slot = harmony_get_current_bar_slot(hs);
+            ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
+            if (deg == DEG_IV7 || deg == DEG_iv7 || deg == DEG_V7 || deg == DEG_v7 ||
+                deg == DEG_bVI7 || deg == DEG_bVII7 || deg == DEG_SHARP_IV_DIM7) {
+                use_minor_scale = 1;
             }
         }
+        const uint8_t *scale = use_minor_scale ? MIN_BLUES : MAJ_BLUES;
 
         for (uint8_t k = 0; k < 27; k++) {
             int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;

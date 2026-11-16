@@ -90,7 +90,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 - **Make the chords and bass jazzier:** Turn **`KNOB2`** (**Spice**). Low (0–30%) keeps it straight and simple; middle (31–65%) adds 9ths, 13ths, and chromatic bass walk-ups; high (66–100%) adds passing diminished chords, tritone subs, and turnaround chords in Bars 11–12.
 - **Dial in sparse vs. full-band energy:** Hold **`SEL`** and turn **`KNOB2`** (**Fullness**). Low (<35%) strips the band down to a thin, intimate trio (half-note bass, soft backbeat chords, light rimshot/hat); high (>70%) adds driving bass anticipations, push comping stabs, ghost snares, and punchy Bar 4/8/12 drum fills.
 - **Adjust shuffle feel:** Hold **`GLO`** and turn **`KNOB1`** (**Swing**), or press **`HOME`** to open the Band Mixer and hold **`GLO`** + turn **`KNOB3`**. 0% is straight 8ths, ~67% is a classic triplet shuffle, and 100% is a hard dotted-8th swing.
-- **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While playing, the LEDs always keep a clean **6-note-per-octave** guide: **Minor Blues** (`1, b3, 4, b5, 5, b7`) in Minor Blues (the default startup mode in E Minor), or **Major Blues** (`1, 2, b3, 3, 5, 6`) in Major forms with `3→4` swapped on `IV7` and `b3/6→4/7` swapped on `V7`, plus a quick flash on the root at Beat 1.
+- **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While playing, the LEDs always stay at a clean **6 notes per octave**: **Minor Blues** (`1, b3, 4, b5, 5, b7`) in Minor Blues (the default startup mode in E Minor); in Major forms, **Major Blues** (`1, 2, b3, 3, 5, 6`) on `I7` bars and **Minor Blues** (`1, b3, 4, b5, 5, b7`) on `IV7`/`V7` bars, with a quick Beat-1 flash on the root.
 - **Arm an ending:** Hold **`SEL`** and tap Keys 23–26 (23: Hard Stop, 24: Tag Ending, 25: Triple Turnaround, 26: Chromatic Slide).
 - **Save your setup:** Press **`SAVE`**. Background autosave is intentionally off so temporary jam tweaks don't overwrite your saved setup.
 
@@ -121,7 +121,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 Press **`HOME`** to flip between the two screens:
 
 1. **12-Bar Lead Sheet:** Shows the groove and drum kit at the top, Key + Form (`(MAJ)` or cyan `(MIN)`), BPM, and Spice below it, the 12-bar chord grid with the active bar highlighted in amber, 4 beat pips, live playback status, and the footer (`<Solo Lead> * <Chord Engine>`, aligned left-to-right with `PRESETS` and `ALGORITHM`).
-2. **Band Mixer:** Live level bars for `BASS VOL`, `KEYS VOL`, `DRUMS VOL`, `LEAD VOL`, `REVERB`, `SPICE`, and `SWING` (0%–100%).
+2. **Band Mixer:** Live level bars for `BASS VOL`, `KEYS VOL`, `DRUMS VOL`, `LEAD VOL`, `REVERB`, `SPICE`, `SWING` (0%–100%), and `FULLNESS` (0%–100%).
 
 ---
 

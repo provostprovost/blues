@@ -32,6 +32,7 @@ static uint8_t g_last_m_lead_vol = 0xFF;
 static uint8_t g_last_m_reverb = 0xFF;
 static uint8_t g_last_m_spice = 0xFF;
 static uint8_t g_last_m_swing = 0xFF;
+static uint8_t g_last_m_fullness = 0xFF;
 
 void ui_init(void) {
     g_last_bar = 0xFF;
@@ -58,6 +59,7 @@ void ui_init(void) {
     g_last_m_reverb = 0xFF;
     g_last_m_spice = 0xFF;
     g_last_m_swing = 0xFF;
+    g_last_m_fullness = 0xFF;
 }
 
 static void format_chord_str(char *buf, uint8_t root_key, ScaleDegree deg) {
@@ -243,18 +245,19 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
         hal_fill_rect(0, 0, 240, 240, C_BLACK);
         hal_draw_text_box(0, 6, 240, 0, "TB-1 BAND MIXER", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BAS K2:KEY K3:DRM K4:LD", RGB(0, 220, 255), 1);
-        hal_draw_text_box(0, 198, 240, 0, "[GLO]: REV/SPC/SWG/TUNE", RGB(255, 180, 0), 1);
+        hal_draw_text_box(0, 198, 240, 0, "[GLO]:REV/SPC/SWG [SEL]:FUL", RGB(255, 180, 0), 1);
         hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);
     }
 
     uint8_t l_vol = preset->lead_vol > 0 ? preset->lead_vol : 115;
-    render_meter(26,  "BASS VOL",  preset->bass_vol,  127, RGB(80, 160, 255), full_redraw, &g_last_m_bass_vol);
-    render_meter(48,  "KEYS VOL",  preset->keys_vol,  127, RGB(255, 180, 40), full_redraw, &g_last_m_keys_vol);
-    render_meter(70,  "DRUMS VOL", preset->drums_vol, 127, RGB(255, 80, 80), full_redraw, &g_last_m_drums_vol);
-    render_meter(92,  "LEAD VOL",  l_vol,             127, RGB(240, 120, 255), full_redraw, &g_last_m_lead_vol);
-    render_meter(114, "REVERB",    preset->reverb_mix,127, RGB(180, 100, 255), full_redraw, &g_last_m_reverb);
-    render_meter(136, "SPICE",     hs->spice_level,   100, RGB(255, 220, 50), full_redraw, &g_last_m_spice);
-    render_meter(158, "SWING",     preset->swing,     100, RGB(80, 240, 120), full_redraw, &g_last_m_swing);
+    render_meter(24,  "BASS VOL",  preset->bass_vol,  127, RGB(80, 160, 255), full_redraw, &g_last_m_bass_vol);
+    render_meter(43,  "KEYS VOL",  preset->keys_vol,  127, RGB(255, 180, 40), full_redraw, &g_last_m_keys_vol);
+    render_meter(62,  "DRUMS VOL", preset->drums_vol, 127, RGB(255, 80, 80), full_redraw, &g_last_m_drums_vol);
+    render_meter(81,  "LEAD VOL",  l_vol,             127, RGB(240, 120, 255), full_redraw, &g_last_m_lead_vol);
+    render_meter(100, "REVERB",    preset->reverb_mix,127, RGB(180, 100, 255), full_redraw, &g_last_m_reverb);
+    render_meter(119, "SPICE",     hs->spice_level,   100, RGB(255, 220, 50), full_redraw, &g_last_m_spice);
+    render_meter(138, "SWING",     preset->swing,     100, RGB(80, 240, 120), full_redraw, &g_last_m_swing);
+    render_meter(157, "FULLNESS",  hs->fullness,      100, RGB(0, 220, 255), full_redraw, &g_last_m_fullness);
 }
 
 void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
