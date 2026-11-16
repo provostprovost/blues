@@ -73,14 +73,14 @@ static void save_to_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8_t
     }
     dst->magic = PRESET_MAGIC;
     dst->root_key = hs->root_semitone;
-    dst->spice = hs->spice_level;
+    dst->variation = hs->variation;
     dst->fullness = hs->fullness;
     dst->bass_fullness = hs->bass_fullness;
     dst->keys_fullness = hs->keys_fullness;
     dst->drums_fullness = hs->drums_fullness;
-    dst->bass_spice = hs->bass_spice;
-    dst->keys_spice = hs->keys_spice;
-    dst->drums_spice = hs->drums_spice;
+    dst->bass_variation = hs->bass_variation;
+    dst->keys_variation = hs->keys_variation;
+    dst->drums_variation = hs->drums_variation;
     dst->bass_style = hs->bass_style;
     dst->keys_style = hs->keys_style;
     dst->drum_pattern = hs->drum_pattern;
@@ -104,10 +104,10 @@ static void load_from_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8
     hs->form_mode = (FormMode)(np->form_mode % 5);
     hs->opening_var = (OpeningVar)(np->opening_var % 4);
     hs->outro_type = (OutroType)(np->outro_type % 4);
-    hs->spice_level = np->spice;
-    hs->bass_spice = np->bass_spice;
-    hs->keys_spice = np->keys_spice;
-    hs->drums_spice = np->drums_spice;
+    hs->variation = np->variation;
+    hs->bass_variation = np->bass_variation;
+    hs->keys_variation = np->keys_variation;
+    hs->drums_variation = np->drums_variation;
     hs->fullness = np->fullness;
     hs->bass_fullness = np->bass_fullness;
     hs->keys_fullness = np->keys_fullness;
@@ -128,9 +128,9 @@ static void set_master_fullness(HarmonyState *hs, PresetConfig *p, uint8_t val) 
     p->fullness  = val; p->bass_fullness  = val; p->keys_fullness  = val; p->drums_fullness  = val;
 }
 
-static void set_master_spice(HarmonyState *hs, PresetConfig *p, uint8_t val) {
-    hs->spice_level = val; hs->bass_spice = val; hs->keys_spice = val; hs->drums_spice = val;
-    p->spice        = val; p->bass_spice = val; p->keys_spice = val; p->drums_spice = val;
+static void set_master_variation(HarmonyState *hs, PresetConfig *p, uint8_t val) {
+    hs->variation = val; hs->bass_variation = val; hs->keys_variation = val; hs->drums_variation = val;
+    p->variation  = val; p->bass_variation = val; p->keys_variation = val; p->drums_variation = val;
 }
 
 void panel_init(void) {
@@ -393,7 +393,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // KNOB 1: Lead Sheet (BPM / GLO:Swing) | Mixer (Bass Vol / GLO:Reverb) | Style (Bass Line / GLO:Bass Sound) | Feel (Bass Ful / GLO:Bass Spc)
     if ((delta = hal_get_encoder_delta(ENC_KNOB1)) != 0) {
         if (is_feel) {
-            if (glo_held) { hs->bass_spice = clamp_step_u8(hs->bass_spice, delta * 5, 0, 100); p->bass_spice = hs->bass_spice; }
+            if (glo_held) { hs->bass_variation = clamp_step_u8(hs->bass_variation, delta * 5, 0, 100); p->bass_variation = hs->bass_variation; }
             else          { hs->bass_fullness = clamp_step_u8(hs->bass_fullness, delta * 5, 0, 100); p->bass_fullness = hs->bass_fullness; }
         } else if (is_style) {
             if (glo_held) {
@@ -422,8 +422,8 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     if ((delta = hal_get_encoder_delta(ENC_KNOB2)) != 0) {
         if (is_feel) {
             if (glo_held) {
-                hs->keys_spice = clamp_step_u8(hs->keys_spice, delta * 5, 0, 100);
-                p->keys_spice = hs->keys_spice;
+                hs->keys_variation = clamp_step_u8(hs->keys_variation, delta * 5, 0, 100);
+                p->keys_variation = hs->keys_variation;
             } else {
                 hs->keys_fullness = clamp_step_u8(hs->keys_fullness, delta * 5, 0, 100);
                 p->keys_fullness = hs->keys_fullness;
@@ -446,7 +446,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                 p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
                 set_toast(hs, ms_now, TUNE_LABELS[p->master_tuning]);
             } else {
-                set_master_spice(hs, p, clamp_step_u8(hs->spice_level, delta * 5, 0, 100));
+                set_master_variation(hs, p, clamp_step_u8(hs->variation, delta * 5, 0, 100));
             }
         }
         hs->ui_dirty = 1;
@@ -457,7 +457,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // KNOB 3: Lead Sheet (Bass Vol / GLO:Bass Sound) | Mixer (Drums Vol / GLO:Swing) | Style (Drum Beat / GLO:Drum Kit) | Feel (Drums Ful / GLO:Drums Spc)
     if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
         if (is_feel) {
-            if (glo_held) { hs->drums_spice = clamp_step_u8(hs->drums_spice, delta * 5, 0, 100); p->drums_spice = hs->drums_spice; }
+            if (glo_held) { hs->drums_variation = clamp_step_u8(hs->drums_variation, delta * 5, 0, 100); p->drums_variation = hs->drums_variation; }
             else          { hs->drums_fullness = clamp_step_u8(hs->drums_fullness, delta * 5, 0, 100); p->drums_fullness = hs->drums_fullness; }
         } else if (is_style) {
             if (glo_held) {
@@ -486,7 +486,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // KNOB 4: Lead Sheet (Keys Vol / GLO:Reverb) | Mixer (Lead Vol / GLO:Master Ful) | Style (Form / GLO:Tuning) | Feel (Master Ful / GLO:Master Spc)
     if ((delta = hal_get_encoder_delta(ENC_KNOB4)) != 0) {
         if (is_feel) {
-            if (glo_held) set_master_spice(hs, p, clamp_step_u8(hs->spice_level, delta * 5, 0, 100));
+            if (glo_held) set_master_variation(hs, p, clamp_step_u8(hs->variation, delta * 5, 0, 100));
             else          set_master_fullness(hs, p, clamp_step_u8(hs->fullness, delta * 5, 0, 100));
         } else if (is_style) {
             if (glo_held) {

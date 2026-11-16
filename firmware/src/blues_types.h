@@ -234,7 +234,7 @@ typedef struct {
     uint8_t     current_beat;
     uint8_t     current_subdiv;
     CueAction   queued_cue;
-    uint8_t     spice_level;
+    uint8_t     variation;
     uint8_t     is_vamp_mode;
     uint8_t     vamp_bar_counter;
     uint8_t     stop_time_counter;
@@ -258,9 +258,9 @@ typedef struct {
     uint8_t     bass_fullness;
     uint8_t     keys_fullness;
     uint8_t     drums_fullness;
-    uint8_t     bass_spice;
-    uint8_t     keys_spice;
-    uint8_t     drums_spice;
+    uint8_t     bass_variation;
+    uint8_t     keys_variation;
+    uint8_t     drums_variation;
     uint8_t     bass_style;
     uint8_t     keys_style;
     uint8_t     drum_pattern;
@@ -275,7 +275,7 @@ typedef struct {
     uint8_t  root_key;
     uint8_t  groove_style;
     uint8_t  bpm;
-    uint8_t  spice;
+    uint8_t  variation;
     uint8_t  swing;
     uint8_t  ep_tone_algo;
     uint8_t  bass_vol;
@@ -297,9 +297,9 @@ typedef struct {
     uint8_t  bass_fullness;
     uint8_t  keys_fullness;
     uint8_t  drums_fullness;
-    uint8_t  bass_spice;
-    uint8_t  keys_spice;
-    uint8_t  drums_spice;
+    uint8_t  bass_variation;
+    uint8_t  keys_variation;
+    uint8_t  drums_variation;
     uint8_t  bass_style;
     uint8_t  keys_style;
     uint8_t  drum_pattern;

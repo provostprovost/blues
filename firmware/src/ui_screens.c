@@ -49,7 +49,7 @@ static uint8_t g_last_lead = 0xFF;
 static uint8_t g_last_lead_play = 0xFF;
 static uint8_t g_last_playing = 0xFF;
 static uint8_t g_last_groove = 0xFF;
-static uint8_t g_last_spice = 0xFF;
+static uint8_t g_last_variation = 0xFF;
 static uint8_t g_last_bpm = 0xFF;
 static uint8_t g_last_form = 0xFF;
 static uint8_t g_last_toast_active = 0;
@@ -98,7 +98,7 @@ void ui_init(void) {
     g_last_lead = 0xFF;
     g_last_playing = 0xFF;
     g_last_groove = 0xFF;
-    g_last_spice = 0xFF;
+    g_last_variation = 0xFF;
     g_last_bpm = 0xFF;
     g_last_form = 0xFF;
     g_last_toast_active = 0;
@@ -238,11 +238,11 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
     subheader[slen++] = '0' + ((bpm % 100) / 10);
     subheader[slen++] = '0' + (bpm % 10);
     subheader[slen++] = ' ';
-    subheader[slen++] = 'S'; subheader[slen++] = 'P'; subheader[slen++] = 'C'; subheader[slen++] = ':';
-    uint8_t spc = hs->spice_level;
-    if (spc >= 100) subheader[slen++] = '1';
-    subheader[slen++] = '0' + ((spc % 100) / 10);
-    subheader[slen++] = '0' + (spc % 10);
+    subheader[slen++] = 'V'; subheader[slen++] = 'A'; subheader[slen++] = 'R'; subheader[slen++] = ':';
+    uint8_t var = hs->variation;
+    if (var >= 100) subheader[slen++] = '1';
+    subheader[slen++] = '0' + ((var % 100) / 10);
+    subheader[slen++] = '0' + (var % 10);
     subheader[slen++] = '%';
     subheader[slen] = '\0';
     uint16_t sub_col = (hs->form_mode == FORM_MINOR_BLUES) ? RGB(140, 210, 255) : RGB(180, 180, 180);
@@ -388,7 +388,7 @@ static void render_feel_view(const HarmonyState *hs, uint8_t full_redraw) {
         hal_fill_rect(0, 0, 240, 240, C_BLACK);
         hal_draw_text_box(0, 6, 240, 0, "BLUES BOX FEEL", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:ALL", RGB(0, 220, 255), 1);
-        hal_draw_text_box(0, 198, 240, 0, "[GLO]: TRACK SPICE", RGB(255, 180, 0), 1);
+        hal_draw_text_box(0, 198, 240, 0, "[GLO]: TRACK VARIATION", RGB(255, 180, 0), 1);
         hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);
     }
 
@@ -396,10 +396,10 @@ static void render_feel_view(const HarmonyState *hs, uint8_t full_redraw) {
     render_meter(43,  "KEYS FUL",  hs->keys_fullness,  100, RGB(255, 180, 40),  full_redraw, &g_last_f_kful);
     render_meter(62,  "DRUMS FUL", hs->drums_fullness, 100, RGB(255, 80, 80),   full_redraw, &g_last_f_dful);
     render_meter(81,  "MSTR FUL",  hs->fullness,       100, RGB(0, 220, 255),   full_redraw, &g_last_f_mful);
-    render_meter(100, "[G]BS SPC", hs->bass_spice,     100, RGB(140, 200, 255), full_redraw, &g_last_f_bspc);
-    render_meter(119, "[G]KY SPC", hs->keys_spice,     100, RGB(255, 220, 100), full_redraw, &g_last_f_kspc);
-    render_meter(138, "[G]DR SPC", hs->drums_spice,    100, RGB(255, 140, 140), full_redraw, &g_last_f_dspc);
-    render_meter(157, "[G]MS SPC", hs->spice_level,    100, RGB(200, 140, 255), full_redraw, &g_last_f_mspc);
+    render_meter(100, "[G]BS VAR", hs->bass_variation, 100, RGB(140, 200, 255), full_redraw, &g_last_f_bspc);
+    render_meter(119, "[G]KY VAR", hs->keys_variation, 100, RGB(255, 220, 100), full_redraw, &g_last_f_kspc);
+    render_meter(138, "[G]DR VAR", hs->drums_variation,100, RGB(255, 140, 140), full_redraw, &g_last_f_dspc);
+    render_meter(157, "[G]MS VAR", hs->variation,      100, RGB(200, 140, 255), full_redraw, &g_last_f_mspc);
 }
 
 void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
@@ -408,7 +408,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     uint8_t header_changed = screen_switched || (preset_idx != g_last_preset) ||
                              (preset->groove_style != g_last_groove) || (preset->drum_kit != g_last_drum) ||
                              (hs->root_semitone != g_last_key) || form_changed || (preset->bpm != g_last_bpm) ||
-                             (hs->spice_level != g_last_spice) || force_redraw;
+                             (hs->variation != g_last_variation) || force_redraw;
 
     uint8_t full_grid_needed = screen_switched || (preset_idx != g_last_preset) ||
                               (hs->root_semitone != g_last_key) || form_changed || force_redraw;
@@ -485,7 +485,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     g_last_lead_play = preset->lead_play_style;
     g_last_playing = hs->is_playing;
     g_last_groove = preset->groove_style;
-    g_last_spice = hs->spice_level;
+    g_last_variation = hs->variation;
     g_last_bpm = preset->bpm;
     g_last_form = hs->form_mode;
 }

@@ -23,8 +23,8 @@ typedef struct {
     uint8_t     drum_hat_mask[16];
 } GrooveTemplate;
 
-uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t spice);
-Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root_semitone, uint8_t spice);
+uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t variation);
+Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root_semitone, uint8_t variation);
 void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, GrooveStyle style);
 void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, PerformanceFrame *frame, Voicing *last_voicing);
 

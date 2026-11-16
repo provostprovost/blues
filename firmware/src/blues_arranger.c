@@ -60,14 +60,14 @@ static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
 };
 
 static uint16_t g_hmnz_lfsr = 0x5EEDu;
-static inline int8_t get_hmnz_jitter(uint8_t spice) {
-    if (spice == 0) return 0;
+static inline int8_t get_hmnz_jitter(uint8_t variation) {
+    if (variation == 0) return 0;
     g_hmnz_lfsr = (g_hmnz_lfsr >> 1) ^ (-(g_hmnz_lfsr & 1u) & 0xB400u);
     int8_t raw = (int8_t)(g_hmnz_lfsr & 0x0F) - 8;
-    return (int8_t)((raw * (int)spice) / 100);
+    return (int8_t)((raw * (int)variation) / 100);
 }
 
-uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t spice) {
+uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t variation) {
     uint8_t r = current.root_note % 12;
     uint8_t curr_root = (uint8_t)(40 + ((r + 8) % 12)); // Map to E2..Eb3 (40..51, 82..155 Hz for pocket speaker projection)
     while (curr_root < 40) curr_root += 12;
@@ -80,13 +80,13 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
 
     uint8_t note = curr_root;
 
-    if (sub_idx == 2 && spice > 75) {
+    if (sub_idx == 2 && variation > 75) {
         note = curr_root + 12;
     } else if (sub_idx == 2) {
         note = curr_root + 7;
-    } else if (sub_idx == 1 && spice > 75) {
+    } else if (sub_idx == 1 && variation > 75) {
         note = curr_root + 2;
-    } else if (sub_idx == 3 && spice > 75) {
+    } else if (sub_idx == 3 && variation > 75) {
         note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
     } else {
         switch (beat) {
@@ -103,7 +103,7 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
             case 2:
                 if (current.quality == CHORD_DIM7) {
                     note = curr_root + 6;
-                } else if (spice > 50) {
+                } else if (variation > 50) {
                     note = curr_root + 9;
                 } else {
                     note = curr_root + 7;
@@ -111,7 +111,7 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
                 break;
             case 3:
             default: {
-                if (spice < 30) {
+                if (variation < 30) {
                     note = (next_target >= 47) ? (next_target - 7) : (next_target + 5);
                 } else if (next_target >= curr_root) {
                     note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
@@ -128,7 +128,7 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
     return note;
 }
 
-Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root_semitone, uint8_t spice) {
+Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root_semitone, uint8_t variation) {
     Voicing candidates[4];
     ScaleDegreeInfo info = harmony_get_degree_info(degree);
     uint8_t root = (root_semitone + info.semitone_offset) % 12;
@@ -163,28 +163,28 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
     candidates[0].notes[1] = s_note;
     candidates[0].notes[2] = f_note;
     candidates[0].notes[3] = n_note;
-    candidates[0].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
+    candidates[0].count = (variation <= 30) ? 2 : (variation <= 60) ? 3 : 4;
 
     // Candidate 1: Bill Evans Form A (3rd + 7th + 9th + 13th)
     candidates[1].notes[0] = t_note;
     candidates[1].notes[1] = s_note;
     candidates[1].notes[2] = n_note;
     candidates[1].notes[3] = th_note;
-    candidates[1].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
+    candidates[1].count = (variation <= 30) ? 2 : (variation <= 60) ? 3 : 4;
 
     // Candidate 2: Bill Evans Form B Inversion (7th on bottom + 3rd + 13th + 9th)
     candidates[2].notes[0] = (uint8_t)(s_note > 78 ? s_note - 12 : s_note);
     candidates[2].notes[1] = t_note;
     candidates[2].notes[2] = th_note;
     candidates[2].notes[3] = n_note;
-    candidates[2].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
+    candidates[2].count = (variation <= 30) ? 2 : (variation <= 60) ? 3 : 4;
 
     // Candidate 3: Open 4ths / Organ Comp (3rd + 13th + 7th + 9th)
     candidates[3].notes[0] = t_note;
     candidates[3].notes[1] = th_note;
     candidates[3].notes[2] = s_note;
     candidates[3].notes[3] = n_note;
-    candidates[3].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
+    candidates[3].count = (variation <= 30) ? 2 : (variation <= 60) ? 3 : 4;
 
     // Sort notes ascending within each candidate to guarantee clean register ordering
     for (int i = 0; i < 4; i++) {
@@ -322,7 +322,7 @@ void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, Groo
     hs->keys_style = preset->keys_style;
 }
 
-static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t spice, uint8_t bass_style) {
+static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next, uint8_t beat, uint8_t sub_idx, uint8_t variation, uint8_t bass_style) {
     uint8_t r = current.root_note % 12;
     uint8_t curr_root = (uint8_t)(40 + ((r + 8) % 12));
     while (curr_root < 40) curr_root += 12;
@@ -346,7 +346,7 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
         note = curr_root + (is_min ? BOX_OFFSETS_MIN[step8] : BOX_OFFSETS_MAJ[step8]);
     } else if (bass_style == BASS_STYLE_ROOT_FIFTH) {
         if (beat == 2) note = curr_root + fifth;
-        else if (beat == 3 && spice > 50) note = curr_root + 10; // b7 pickup
+        else if (beat == 3 && variation > 50) note = curr_root + 10; // b7 pickup
         else note = curr_root;
     } else if (bass_style == BASS_STYLE_SYNCOPATED) {
         if (beat == 0) note = curr_root;
@@ -356,7 +356,7 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
     } else if (bass_style == BASS_STYLE_RUMBA) {
         if (beat == 0) note = curr_root;
         else if (beat == 1) note = curr_root + fifth;
-        else note = curr_root + (spice > 55 ? 10 : fifth);
+        else note = curr_root + (variation > 55 ? 10 : fifth);
     } else if (bass_style == BASS_STYLE_GOSPEL_WALK) {
         // Church walk-up: Root -> 2 -> #2/3 -> 5 -> chromatic pickup
         if (beat == 0) note = curr_root;
@@ -371,7 +371,7 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
         else note = (sub_idx >= 2) ? (curr_root + third) : (curr_root + fifth);
     } else if (bass_style == BASS_STYLE_MOTOWN) {
         if (beat == 0) note = (sub_idx >= 2) ? (curr_root + fifth) : curr_root;
-        else if (beat == 1) note = curr_root + (spice > 50 ? 9 : fifth);
+        else if (beat == 1) note = curr_root + (variation > 50 ? 9 : fifth);
         else if (beat == 2) note = (sub_idx >= 2) ? (curr_root + third) : (curr_root + 12);
         else note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
     } else if (bass_style == BASS_STYLE_SECOND_LINE) {
@@ -381,10 +381,10 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
         else note = (sub_idx >= 2) ? (curr_root + 10) : (curr_root + fifth);
     } else if (bass_style == BASS_STYLE_SHUFFLE_REP) {
         // Shuffle repeat: & repeats the current beat's walking note instead of jumping to +7/+12
-        return bass_compute_note(current, next, beat, 0, spice);
+        return bass_compute_note(current, next, beat, 0, variation);
     } else {
         // WALKING 4/4: clean quarter-note walking line
-        return bass_compute_note(current, next, beat, 0, spice);
+        return bass_compute_note(current, next, beat, 0, variation);
     }
 
     while (note < 40) note += 12;
@@ -462,13 +462,13 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         uint8_t step16 = (uint8_t)((hs->current_beat * 4) + sub_slot);
         BarSlot curr_slot = harmony_get_current_bar_slot(hs);
         ScaleDegree active_degree = (hs->current_beat >= 2 && curr_slot.has_split) ? curr_slot.secondary : curr_slot.primary;
-        int8_t j_vel = get_hmnz_jitter(hs->drums_spice);
+        int8_t j_vel = get_hmnz_jitter(hs->drums_variation);
         uint8_t b_full = hs->bass_fullness;
         uint8_t k_full = hs->keys_fullness;
         uint8_t d_full = hs->drums_fullness;
-        uint8_t b_spc  = hs->bass_spice;
-        uint8_t k_spc  = hs->keys_spice;
-        uint8_t d_spc  = hs->drums_spice;
+        uint8_t b_var  = hs->bass_variation;
+        uint8_t k_var  = hs->keys_variation;
+        uint8_t d_var  = hs->drums_variation;
         uint8_t b_style = hs->bass_style % NUM_BASS_STYLES;
         uint8_t k_style = hs->keys_style % NUM_KEYS_STYLES;
 
@@ -498,11 +498,11 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
                 uint8_t fifth_off = (c_curr.quality == CHORD_DIM7) ? 6 : 7;
                 frame->bass_note = bass_compute_styled_note(c_curr, c_next, (hs->current_beat == 0) ? 0 : 2, 0, 0, BASS_STYLE_ROOT_FIFTH);
                 if (hs->current_beat == 2 && fifth_off == 6) frame->bass_note--;
-            } else if (b_spc <= 30) {
-                // Low bass spice: clean root-5th pocket regardless of rhythm
+            } else if (b_var <= 30) {
+                // Low bass variation: clean root-5th pocket regardless of rhythm
                 frame->bass_note = bass_compute_styled_note(c_curr, c_next, hs->current_beat, sub_slot, 0, BASS_STYLE_ROOT_FIFTH);
             } else {
-                frame->bass_note = bass_compute_styled_note(c_curr, c_next, hs->current_beat, sub_slot, b_spc, b_style);
+                frame->bass_note = bass_compute_styled_note(c_curr, c_next, hs->current_beat, sub_slot, b_var, b_style);
             }
         }
 
@@ -519,7 +519,7 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             if (hs->manual_stab_pending) base_cv = 120;
             int cv = base_cv + j_vel + ((k_full > 75) ? 10 : (k_full < 35) ? -18 : 0);
             frame->comp_vel = (uint8_t)((cv < 1) ? 1 : (cv > 127) ? 127 : cv);
-            frame->comp_voicing = voice_lead_select(*last_voicing, active_degree, hs->root_semitone, k_spc);
+            frame->comp_voicing = voice_lead_select(*last_voicing, active_degree, hs->root_semitone, k_var);
             *last_voicing = frame->comp_voicing;
             hs->manual_stab_pending = 0;
         }
@@ -533,13 +533,13 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             }
         }
 
-        // Kick Drum: Beat 1 downbeat (d_full >= 20), Beat 3 (d_full >= 55), plus syncopated pushes (d_spc / d_full > 65)
+        // Kick Drum: Beat 1 downbeat (d_full >= 20), Beat 3 (d_full >= 55), plus syncopated pushes (d_var / d_full > 65)
         if (d_full >= 20 && hs->current_subdiv == 0 && (hs->current_beat == 0 || (d_full >= 55 && hs->current_beat == 2))) {
             frame->drum_mask |= 0x01;
             int dv0 = 112 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -14 : 0);
             frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
         }
-        if (d_full >= 45 && d_spc > 65 && sub_slot == 2 && (hs->current_beat == 3 || (d_full > 75 && hs->current_beat == 1))) {
+        if (d_full >= 45 && d_var > 65 && sub_slot == 2 && (hs->current_beat == 3 || (d_full > 75 && hs->current_beat == 1))) {
             frame->drum_mask |= 0x01;
             int dv0 = 96 + j_vel;
             frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
@@ -558,15 +558,15 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             }
         }
         // Snare ghost notes (controlled by Drums Spice & Fullness)
-        if (d_full >= 40 && d_spc >= 26 && sub_slot == 2 && (hs->current_beat == 2 || (d_spc > 65 && hs->current_beat == 0))) {
+        if (d_full >= 40 && d_var >= 26 && sub_slot == 2 && (hs->current_beat == 2 || (d_var > 65 && hs->current_beat == 0))) {
             frame->drum_mask |= 0x02;
-            int dv1 = 48 + j_vel + ((d_spc > 65) ? 15 : 0);
+            int dv1 = 48 + j_vel + ((d_var > 65) ? 15 : 0);
             frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
         }
 
-        // Automatic phrase-end drum fills: Bar 12 (d_spc > 25), Bar 4 & 8 (d_spc > 65)
-        uint8_t is_phrase_end = (hs->current_bar == 11) || (d_spc > 65 && (hs->current_bar == 3 || hs->current_bar == 7));
-        if ((is_phrase_end && d_full >= 25 && d_spc > 25) || hs->fill_pending) {
+        // Automatic phrase-end drum fills: Bar 12 (d_var > 25), Bar 4 & 8 (d_var > 65)
+        uint8_t is_phrase_end = (hs->current_bar == 11) || (d_var > 65 && (hs->current_bar == 3 || hs->current_bar == 7));
+        if ((is_phrase_end && d_full >= 25 && d_var > 25) || hs->fill_pending) {
             if (hs->current_beat == 3) {
                 uint8_t is_turnaround_bar = (hs->current_bar == 11 || hs->fill_pending);
                 if (sub_slot == 0) {

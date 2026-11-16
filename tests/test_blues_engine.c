@@ -104,7 +104,7 @@ void test_stage1_harmony(void) {
 
     // 5. Test Opening Variations (Chorus 0 only)
     hs.form_mode = FORM_12BAR;
-    hs.spice_level = 0;
+    hs.variation = 0;
 
     // 5a. Pickup Intro: V7 | IV7 | I7 | V7 on chorus 0
     hs.opening_var = VAR_PICKUP_INTRO;
@@ -315,7 +315,7 @@ void test_stage2_arranger(void) {
     PresetConfig preset;
     preset.groove_style = GROOVE_TEXAS_SHUFFLE;
     preset.swing = 67;
-    preset.spice = 65;
+    preset.variation = 65;
     PerformanceFrame frame;
     Voicing last_v = { {0}, 0 };
 
@@ -364,7 +364,7 @@ void test_stage3_dsp(void) {
     preset.bpm = 112;
     preset.groove_style = GROOVE_TEXAS_SHUFFLE;
     preset.swing = 67;
-    preset.spice = 65;
+    preset.variation = 65;
     preset.bass_vol = 127;
     preset.keys_vol = 127;
     preset.drums_vol = 127;
@@ -474,7 +474,7 @@ void test_stage4_panel_ui(void) {
         presets[i].root_key = 4; // E
         presets[i].groove_style = GROOVE_TEXAS_SHUFFLE;
         presets[i].bpm = 112;
-        presets[i].spice = 65;
+        presets[i].variation = 65;
         presets[i].swing = 67;
         presets[i].ep_tone_algo = 0;
         presets[i].bass_vol = 110;
@@ -554,7 +554,7 @@ void test_stage5_integration(void) {
         presets[i].root_key = (uint8_t)((4 + i * 5) % 12);
         presets[i].groove_style = (uint8_t)(i % 5);
         presets[i].bpm = 112;
-        presets[i].spice = 65;
+        presets[i].variation = 65;
         presets[i].swing = 67;
         presets[i].ep_tone_algo = (uint8_t)(i % 4);
         presets[i].bass_vol = 110;
@@ -647,7 +647,7 @@ void test_stage5_integration(void) {
 
     fhs.bass_fullness = 10;  // Ultra-sparse: no beat-1 bass, beat-2 plays 5th (1-5-1-5, never 1-6-1-6)
     fhs.drums_fullness = 10; // Ultra-sparse: rimshot instead of snare
-    fhs.bass_spice = 80;
+    fhs.bass_variation = 80;
     arranger_generate_frame(&fhs, &fp, &pf, &fv);
     assert(pf.bass_trigger == 0);
     assert((pf.drum_mask & 0x08) != 0);
@@ -667,7 +667,7 @@ void test_stage5_integration(void) {
 
     fhs.bass_fullness = 95;
     fhs.drums_fullness = 95; // Full rocking band + Bar 12 beat 3 offbeat fill
-    fhs.drums_spice = 80;
+    fhs.drums_variation = 80;
     fhs.current_bar = 11;
     fhs.current_beat = 3;
     fhs.current_subdiv = 16; // offbeat_subdiv for swing 67 = 12 + (67*6)/100 = 16

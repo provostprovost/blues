@@ -100,7 +100,7 @@ static void app_audio(int32_t *out, uint32_t n) {
             }
 
             if (frame.drum_mask) {
-                uint8_t open_hat = (frame.drum_mask & 0x04) && (g_harmony.spice_level > 75);
+                uint8_t open_hat = (frame.drum_mask & 0x04) && (g_harmony.variation > 75);
                 dsp_trigger_drum(frame.drum_mask, frame.drum_vel, open_hat);
 
                 if (frame.drum_mask & 0x01) midi_tx_push(0x99, 36, frame.drum_vel[0]); // Kick
@@ -146,7 +146,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_TEXAS_SHUFFLE;
                 p->bpm = 112;
-                p->spice = 65;
+                p->variation = 65;
                 p->swing = 67;
                 p->ep_tone_algo = KEYS_RHODES;
                 p->bass_instrument = BASS_P_BASS;
@@ -158,7 +158,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_SLOW_12_8;
                 p->bpm = 68;
-                p->spice = 50;
+                p->variation = 50;
                 p->swing = 67;
                 p->ep_tone_algo = KEYS_B3_DIRTY;
                 p->bass_instrument = BASS_UPRIGHT;
@@ -170,7 +170,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_CHICAGO_SWING;
                 p->bpm = 130;
-                p->spice = 55;
+                p->variation = 55;
                 p->swing = 60;
                 p->ep_tone_algo = KEYS_BRIGHT_EP;
                 p->bass_instrument = BASS_UPRIGHT;
@@ -182,7 +182,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_STRAIGHT_ROCK;
                 p->bpm = 140;
-                p->spice = 40;
+                p->variation = 40;
                 p->swing = 0;
                 p->ep_tone_algo = KEYS_CLAVINET;
                 p->bass_instrument = BASS_MUTED_TICTAC;
@@ -194,7 +194,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_SECOND_LINE;
                 p->bpm = 96;
-                p->spice = 70;
+                p->variation = 70;
                 p->swing = 25;
                 p->ep_tone_algo = KEYS_WURLI;
                 p->bass_instrument = BASS_MOOG_FUNK;
@@ -206,7 +206,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // Em
                 p->groove_style = GROOVE_SLOW_12_8;
                 p->bpm = 84;
-                p->spice = 60;
+                p->variation = 60;
                 p->swing = 67;
                 p->ep_tone_algo = KEYS_B3_CLEAN;
                 p->bass_instrument = BASS_UPRIGHT;
@@ -218,7 +218,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_MEMPHIS_SOUL;
                 p->bpm = 104;
-                p->spice = 55;
+                p->variation = 55;
                 p->swing = 15;
                 p->ep_tone_algo = KEYS_TREMOLO_EP;
                 p->bass_instrument = BASS_P_BASS;
@@ -230,7 +230,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_RHUMBA_BLUES;
                 p->bpm = 118;
-                p->spice = 50;
+                p->variation = 50;
                 p->swing = 0;
                 p->ep_tone_algo = KEYS_RESONATOR;
                 p->bass_instrument = BASS_P_BASS;
@@ -242,7 +242,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = GROOVE_BOOGIE_WOOGIE;
                 p->bpm = 158;
-                p->spice = 60;
+                p->variation = 60;
                 p->swing = 65;
                 p->ep_tone_algo = KEYS_HONKY_TONK;
                 p->bass_instrument = BASS_MUTED_TICTAC;
@@ -254,7 +254,7 @@ static void init_factory_presets(void) {
                 p->root_key = 4; // E
                 p->groove_style = (uint8_t)(i % 8);
                 p->bpm = (uint8_t)(90 + (i * 5));
-                p->spice = 50;
+                p->variation = 50;
                 p->swing = 65;
                 p->ep_tone_algo = (uint8_t)(i % 12);
                 p->bass_instrument = (uint8_t)(i % 8);
@@ -272,9 +272,9 @@ static void init_factory_presets(void) {
         p->bass_fullness = p->fullness;
         p->keys_fullness = p->fullness;
         p->drums_fullness = p->fullness;
-        p->bass_spice = p->spice;
-        p->keys_spice = p->spice;
-        p->drums_spice = p->spice;
+        p->bass_variation = p->variation;
+        p->keys_variation = p->variation;
+        p->drums_variation = p->variation;
     }
 }
 
@@ -299,14 +299,14 @@ static void app_main(void) {
     harmony_init(&g_harmony);
     g_harmony.is_playing = 0; // Stopped on boot: starts when BTN_PLAY or MIDI Start is received
     g_harmony.root_semitone = g_presets[g_active_preset].root_key;
-    g_harmony.spice_level = g_presets[g_active_preset].spice;
+    g_harmony.variation = g_presets[g_active_preset].variation;
     g_harmony.fullness = g_presets[g_active_preset].fullness;
     g_harmony.bass_fullness = g_presets[g_active_preset].bass_fullness;
     g_harmony.keys_fullness = g_presets[g_active_preset].keys_fullness;
     g_harmony.drums_fullness = g_presets[g_active_preset].drums_fullness;
-    g_harmony.bass_spice = g_presets[g_active_preset].bass_spice;
-    g_harmony.keys_spice = g_presets[g_active_preset].keys_spice;
-    g_harmony.drums_spice = g_presets[g_active_preset].drums_spice;
+    g_harmony.bass_variation = g_presets[g_active_preset].bass_variation;
+    g_harmony.keys_variation = g_presets[g_active_preset].keys_variation;
+    g_harmony.drums_variation = g_presets[g_active_preset].drums_variation;
     g_harmony.bass_style = g_presets[g_active_preset].bass_style;
     g_harmony.keys_style = g_presets[g_active_preset].keys_style;
     g_harmony.drum_pattern = g_presets[g_active_preset].drum_pattern;

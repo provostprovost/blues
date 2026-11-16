@@ -46,14 +46,14 @@ void harmony_init(HarmonyState *hs) {
     hs->current_beat = 0;
     hs->current_subdiv = 0;
     hs->queued_cue = CUE_NONE;
-    hs->spice_level = 50;
+    hs->variation = 50;
     hs->fullness = 65;
     hs->bass_fullness = 65;
     hs->keys_fullness = 65;
     hs->drums_fullness = 65;
-    hs->bass_spice = 50;
-    hs->keys_spice = 50;
-    hs->drums_spice = 50;
+    hs->bass_variation = 50;
+    hs->keys_variation = 50;
+    hs->drums_variation = 50;
     hs->bass_style = BASS_STYLE_WALKING;
     hs->keys_style = KEYS_STYLE_CHARLESTON;
     hs->drum_pattern = 0;
@@ -188,25 +188,25 @@ BarSlot harmony_get_current_bar_slot(const HarmonyState *hs) {
         }
     }
 
-    // Standard progression modifications & Spice alterations
+    // Standard progression modifications & Variation alterations
     if (hs->current_bar == 1) {
-        if (hs->form_mode == FORM_QUICK_CHANGE || hs->spice_level > 25) {
+        if (hs->form_mode == FORM_QUICK_CHANGE || hs->variation > 25) {
             slot.primary = DEG_IV7; slot.secondary = DEG_IV7; slot.has_split = 0;
         } else if (hs->form_mode == FORM_145_OPENING) {
             slot.primary = DEG_IV7; slot.secondary = DEG_V7; slot.has_split = 1;
         }
     }
-    if (hs->current_bar == 5 && hs->spice_level > 50) {
+    if (hs->current_bar == 5 && hs->variation > 50) {
         slot.primary = DEG_IV7; slot.secondary = DEG_SHARP_IV_DIM7; slot.has_split = 1;
     }
-    if (hs->current_bar == 9 && hs->spice_level > 75) {
+    if (hs->current_bar == 9 && hs->variation > 75) {
         slot.primary = DEG_I7; slot.secondary = DEG_VI7; slot.has_split = 1;
     }
-    if (hs->current_bar == 10 && hs->spice_level > 75) {
+    if (hs->current_bar == 10 && hs->variation > 75) {
         slot.primary = DEG_bVI7; slot.secondary = DEG_V7; slot.has_split = 1;
     }
-    if (hs->current_bar == 11 && hs->spice_level > 40) {
-        slot.primary = (hs->spice_level > 75) ? DEG_bVI7 : DEG_I7;
+    if (hs->current_bar == 11 && hs->variation > 40) {
+        slot.primary = (hs->variation > 75) ? DEG_bVI7 : DEG_I7;
         slot.secondary = DEG_V7;
         slot.has_split = 1;
     }
