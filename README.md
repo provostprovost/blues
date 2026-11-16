@@ -93,15 +93,15 @@ Everything runs entirely on the internal 240 MHz RISC microcontroller using pure
 The 4 lower knobs dynamically re-map when switching between **Lead Sheet View** and **Band Mixer View** (`HOME` button):
 
 #### On Lead Sheet View (Default)
-| Encoder | Label | Primary Function (Turn) | Secondary Function (Hold `GLO` or `SCALE` + Turn) |
+| Encoder | Label | Primary Function (Turn) | Secondary Function (Hold `GLO` or `SEL` + Turn) |
 |---|---|---|---|
-| **Encoder 0** | `SELECT` | **Groove Style**: Cycles 8 groove styles | **Drum Kit** (Hold `GLO`): Studio, Brush, Retro 808, Stax Tight<br>**Blues Form Mode** (Hold `SCALE`): Major 12-Bar, Minor Blues, Quick Change, 8-Bar, 1-4-5 |
+| **Encoder 0** | `SELECT` | **Groove Style**: Cycles 8 groove styles | **Drum Kit** (Hold `GLO`): Studio, Brush, Retro 808, Stax Tight<br>**Blues Form Mode** (Hold `SEL`): Major 12-Bar, Minor Blues, Quick Change, 8-Bar, 1-4-5 |
 | **Encoder 1** | `ALGORITHM` | **Chord Engine**: 12 electric piano, organ, acoustic piano, guitar & horn engines | — |
 | **Encoder 2** | `KNOB 1` | **Tempo**: Adjusts BPM ($40\text{--}240\text{ BPM}$) | **Swing %** (Hold `GLO`): Adjusts shuffle swing ($0\%\text{--}100\%$) |
 | **Encoder 3** | `KNOB 2` | **Spice Level**: Adjusts harmonic complexity ($0\%\text{--}100\%$) | **Master Tuning** (Hold `GLO`): $440\text{ Hz}$, $432\text{ Hz}$, or $442\text{ Hz}$ |
 | **Encoder 4** | `KNOB 3` | **Bass Volume**: Adjusts walking bass level | **Bass Engine** (Hold `GLO`): P-Bass, Upright, Muted Boogie, Moog Funk |
 | **Encoder 5** | `KNOB 4` | **Keys Volume**: Adjusts comping chord level | **Reverb Mix** (Hold `GLO`): Schroeder room reverb wet level |
-| **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: 8 expressive guitar, harp, horn, moog & organ voices | **Key Select** (Hold `SCALE` or `GLO`): Scrolls keys `C..B` |
+| **Encoder 6** | `PRESETS` | **Lead Solo Instrument**: 8 expressive guitar, harp, horn, moog & organ voices | **Key Select** (Hold `SEL` or `GLO`): Scrolls keys `C..B` |
 
 #### On Band Mixer View (`HOME` Pressed)
 On the Band Mixer view, Knobs 1--4 act as dedicated hardware mixing faders:
@@ -118,22 +118,22 @@ On the Band Mixer view, Knobs 1--4 act as dedicated hardware mixing faders:
 
 All 14 front-panel buttons have dedicated functions:
 
-| Button | Chassis Label | Live Musical Function |
-|---|---|---|
-| **`PLAY`** | `PLAY` | **Start / Stop**: Toggles playback (Green LED illuminates when playing). |
-| **`REC`** | `REC` | **Count-in Toggle**: Enables 1-bar count-in rimshot click. Pulses on Beat 1. |
-| **`OCT-`** | `OCT-` | **Keyboard Octave Down**: Shifts solo keyboard down (-2 to +2 octaves). Hold `SCALE` (`SEL`) + `OCT-` to nudge tempo down (-4 BPM). |
-| **`OCT+`** | `OCT+` | **Keyboard Octave Up**: Shifts solo keyboard up (-2 to +2 octaves). Hold `SCALE` (`SEL`) + `OCT+` to nudge tempo up (+4 BPM). |
-| **`HOME`** | `PATCH` | **Screen Toggle**: Switches between **12-Bar Lead Sheet** and **Band Mixer**. |
-| **`SAVE`** | `BT` | **Commit to Flash**: Saves current preset and parameters immediately to flash. |
-| **`GLO`** | `GLOBE` | **Shift Layer**: Hold down to access secondary functions on Knobs 1--4 (Reverb, Swing, etc.). |
-| **`ARP`** | `ARP` | **Tap Tempo**: Tap repeatedly in rhythm to automatically calculate and set BPM. |
-| **`FX`** | `FX` | **Manual Accent Stab**: Triggers an immediate full-band accent stab and crash. |
-| **`EDIT`** | `PARA` | **Early Turnaround Cue**: Bar-quantized jump straight to Measure 9 (V chord). |
-| **`ENV`** | `CHORD` | **Vamp Toggle**: Freezes the 12-bar form and vamps indefinitely on the current chord. |
-| **`SEQ`** | `SEQ` | **Stop-Time Break**: Triggers a 4-bar stop-time break with beat-1 downbeat stabs. |
-| **`LFO`** | `NOTE REPEAT` | **Minor Blues Toggle**: 1-click toggle between 12-Bar Major (`KEY: E (MAJ)`) and 12-Bar Minor Blues (`KEY: Em (MIN)` in cyan). |
-| **`SEL`** | `SCALE` | **Select Modifier**: Hold `SCALE` and turn `PRESETS` knob for Key, turn `STYLE` knob for Form Mode (`MAJ`, `MIN`, `QC`, `8-BAR`), or press silicone keys. |
+| Button | Live Musical Function |
+|---|---|
+| **`PLAY`** | **Start / Stop**: Toggles playback (LED lit while playing). |
+| **`REC`** | **Count-in Toggle**: Enables 1-bar count-in rimshot click. Pulses on Beat 1. |
+| **`OCT-`** | **Keyboard Octave Down** (-2 to +2 octaves). Hold `SEL` + `OCT-` to nudge tempo down 4 BPM. |
+| **`OCT+`** | **Keyboard Octave Up** (-2 to +2 octaves). Hold `SEL` + `OCT+` to nudge tempo up 4 BPM. |
+| **`HOME`** | **Screen Toggle**: Switches between **12-Bar Lead Sheet** and **Band Mixer**. |
+| **`SAVE`** | **Commit to Flash**: Saves current preset and parameters to flash. |
+| **`GLO`** | **Shift Layer**: Hold to access secondary knob functions (Swing, Reverb, Drum Kit, etc.). |
+| **`ARP`** | **Tap Tempo**: Tap in rhythm to set BPM. |
+| **`FX`** | **Manual Accent Stab**: Immediate full-band accent stab and crash. |
+| **`EDIT`** | **Early Turnaround Cue**: Bar-quantized jump to Measure 9 (V chord). |
+| **`ENV`** | **Vamp Toggle**: Freezes the form and vamps on the current chord. |
+| **`SEQ`** | **Stop-Time Break**: 4-bar stop-time break with beat-1 stabs. |
+| **`LFO`** | **Major / Minor Blues Toggle**: One press flips between 12-Bar Major (`KEY:E (MAJ)`) and 12-Bar Minor (`KEY:Em (MIN)` in cyan). |
+| **`SEL`** | **Select Modifier**: Hold + turn `PRESETS` for Key, hold + turn `SELECT` for Blues Form, hold + press silicone keys for key/cue/form shortcuts. |
 
 ---
 
@@ -175,16 +175,11 @@ The 27 silicone keys serve dual roles: a **live 4-voice polyphonic keyboard** du
 
 ### Switching Between Major & Minor Blues
 
-TexasBlues-1 supports both classic **12-Bar Dominant Major Blues** ($I^7, IV^7, V^7$) and **12-Bar Minor Blues** ($i^7, iv^7, \text{bVI}^7, V^7$, e.g. *"The Thrill Is Gone"*, *"Tin Pan Alley"*). You can seamlessly switch between them using any of these 3 methods:
+TexasBlues-1 supports both **12-Bar Dominant Major Blues** ($I^7, IV^7, V^7$) and **12-Bar Minor Blues** ($i^7, iv^7, \text{bVI}^7, V^7$, e.g. *"The Thrill Is Gone"*). Three ways to switch:
 
-1. **One-Touch Hardware Button (`NOTE REPEAT`)**:
-   - Press the **`NOTE REPEAT`** chassis button (`LFO` code).
-   - Instantly toggles between Major 12-Bar and Minor Blues on the fly.
-2. **Knob Step-Through (Hold `SCALE` + Turn `STYLE`)**:
-   - Hold down the **`SCALE`** button (`SEL` code) and rotate the **`STYLE` knob** (`SELECT` Encoder 0).
-   - Cycles through all 5 form variations: `12-BAR MAJ` $\leftrightarrow$ `12-BAR MIN` $\leftrightarrow$ `QUICK CHG` $\leftrightarrow$ `8-BAR` $\leftrightarrow$ `1-4-5`.
-3. **Dedicated Key Matrix Shortcut**:
-   - Hold **`SCALE`** (`SEL`) and press **Key 22** for Minor Blues, or **Key 18** for Standard Major Blues.
+1. **`LFO` button**: one press toggles Major ↔ Minor.
+2. **Hold `SEL` + turn the `SELECT` knob**: cycles all 5 forms (12-Bar Major → Quick-Change → 1-4-5 → 8-Bar → Minor Blues).
+3. **Hold `SEL` + press a silicone key**: Key 22 = Minor Blues, Key 18 = Standard 12-Bar Major.
 
 #### Real-Time Visual Feedback:
 - **Subheader Color & Quality**: In Minor Blues mode, the subheader immediately switches to **`KEY: Em (MIN)`** rendered in bright **cyan** (`RGB(140, 210, 255)`), while Major Blues displays **`KEY: E (MAJ)`** in warm gray.
@@ -195,7 +190,7 @@ TexasBlues-1 supports both classic **12-Bar Dominant Major Blues** ($I^7, IV^7, 
 
 ## Display Views
 
-Press **`PATCH` (`HOME`)** to toggle between the two non-blocking 240x240 RGB TFT screens:
+Press **`HOME`** to toggle between the two non-blocking 240x240 RGB TFT screens:
 
 ### 1. 12-Bar Lead Sheet View
 - Displays the complete 12-bar chord grid with large, easy-to-read chord symbols (e.g. `E7`, `A7`, `B7` or `Em7`, `Am7`, `C7`).
