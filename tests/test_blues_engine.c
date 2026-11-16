@@ -224,9 +224,112 @@ void test_stage1_harmony(void) {
     printf("[Stage 1] All harmonic state machine tests passed successfully!\n");
 }
 
+#include "../firmware/src/blues_arranger.h"
+
+// Phase 2 Unit Test: Procedural Arranger, Walking Bass & Voice Leading
+void test_stage2_arranger(void) {
+    printf("[Stage 2] Testing Arranger & Voice Leading...\n");
+
+    // 1. Bass Range & Note Calculation Tests
+    for (uint8_t k = 0; k < 12; k++) {
+        for (uint8_t beat = 0; beat < 4; beat++) {
+            for (uint8_t sub = 0; sub < 4; sub++) {
+                uint8_t spices[5] = { 0, 25, 50, 75, 100 };
+                for (int sp = 0; sp < 5; sp++) {
+                    ChordContext c1 = { k, CHORD_DOM7 };
+                    ChordContext c2 = { (uint8_t)((k + 5) % 12), CHORD_DOM7 };
+                    uint8_t b_note = bass_compute_note(c1, c2, beat, sub, spices[sp]);
+                    assert(b_note >= 28 && b_note <= 50);
+                }
+            }
+        }
+    }
+
+    // Directional approach verification on Beat 3
+    ChordContext c_c = { 0, CHORD_DOM7 }; // C
+    ChordContext c_f = { 5, CHORD_DOM7 }; // F
+    uint8_t b_asc = bass_compute_note(c_c, c_f, 3, 0, 50);
+    assert(b_asc >= 28 && b_asc <= 50);
+
+    // 2. Comping Voice Leading Tests
+    Voicing prev = { {0}, 0 };
+    // Spice 20 -> 2-note shell (3rd, 7th)
+    Voicing v_shell = voice_lead_select(prev, DEG_I7, 4, 20);
+    assert(v_shell.count == 2);
+    for (int i = 0; i < v_shell.count; i++) {
+        assert(v_shell.notes[i] >= 48 && v_shell.notes[i] <= 76);
+    }
+
+    // Spice 40 -> 3-note voicing
+    Voicing v_3 = voice_lead_select(prev, DEG_I7, 4, 40);
+    assert(v_3.count == 3);
+
+    // Spice 65 -> 4-note voicing
+    Voicing v_i7 = voice_lead_select(prev, DEG_I7, 4, 65);
+    assert(v_i7.count == 4);
+    for (int i = 0; i < v_i7.count; i++) {
+        assert(v_i7.notes[i] >= 48 && v_i7.notes[i] <= 76);
+    }
+
+    // Voice leading from I7 to IV7: smooth guide-tone motion
+    Voicing v_iv7 = voice_lead_select(v_i7, DEG_IV7, 4, 65);
+    assert(v_iv7.count == 4);
+    int total_movement = 0;
+    for (int i = 0; i < 4; i++) {
+        int diff = (int)v_iv7.notes[i] - (int)v_i7.notes[i];
+        total_movement += (diff < 0) ? -diff : diff;
+    }
+    assert(total_movement <= 6); // Guide tones resolve smoothly!
+
+    // 3. Arranger Performance Frame Generation
+    HarmonyState hs;
+    harmony_init(&hs);
+    hs.is_playing = 1;
+    hs.root_semitone = 4; // E
+    PresetConfig preset;
+    preset.groove_style = GROOVE_TEXAS_SHUFFLE;
+    preset.swing = 67;
+    preset.spice = 65;
+    PerformanceFrame frame;
+    Voicing last_v = { {0}, 0 };
+
+    // Beat 0 downbeat: Kick + Hat + Bass + Comp
+    hs.current_beat = 0;
+    hs.current_subdiv = 0;
+    arranger_generate_frame(&hs, &preset, &frame, &last_v);
+    assert(frame.bass_trigger == 1);
+    assert(frame.bass_vel > 0);
+    assert(frame.comp_trigger == 1);
+    assert(frame.comp_vel > 0);
+    assert(frame.drum_mask & 0x01); // Kick
+    assert(frame.drum_mask & 0x04); // Hat
+
+    // Count-in mode: only rimshot click on beat 0
+    hs.count_in_bars_remaining = 1;
+    hs.current_beat = 0;
+    hs.current_subdiv = 0;
+    arranger_generate_frame(&hs, &preset, &frame, &last_v);
+    assert(frame.bass_trigger == 0);
+    assert(frame.comp_trigger == 0);
+    assert(frame.drum_mask == 0x08); // Rimshot only
+    hs.count_in_bars_remaining = 0;
+
+    // Stop-time break: beats 1..3 muted
+    hs.stop_time_counter = 4;
+    hs.current_beat = 2;
+    hs.current_subdiv = 0;
+    arranger_generate_frame(&hs, &preset, &frame, &last_v);
+    assert(frame.bass_trigger == 0);
+    assert(frame.comp_trigger == 0);
+    assert(frame.drum_mask == 0);
+
+    printf("[Stage 2] Arranger & voice-leading tests passed successfully!\n");
+}
+
 int main(void) {
-    printf("[TB-1 Test Suite] Running Phase 1 Stage Tests...\n");
+    printf("[TB-1 Test Suite] Running Stage Tests...\n");
     test_stage1_harmony();
+    test_stage2_arranger();
     printf("[TB-1 Test Suite] All tests completed with 100%% assertions passing.\n");
     return 0;
 }
