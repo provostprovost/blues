@@ -459,6 +459,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     uint32_t curr_key_mask = hal_get_keys_mask();
     uint32_t pressed = curr_key_mask & ~g_prev_key_mask;
     uint32_t released = ~curr_key_mask & g_prev_key_mask;
+    if (curr_key_mask == 0 && g_prev_key_mask != 0) {
+        dsp_note_off_lead(0xFF); // Guarantee all lead voices release when no keys are held
+    }
     g_prev_key_mask = curr_key_mask;
 
     if (!sel_held) {

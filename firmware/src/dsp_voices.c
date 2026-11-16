@@ -132,9 +132,12 @@ void dsp_all_notes_off(void) {
     g_bass.active = 0;
     for (int k = 0; k < 4; k++) g_keys[k].active = 0;
     for (int d = 0; d < 4; d++) g_drum_env[d] = 0;
+    g_mono_len = 0;
     for (int v = 0; v < MAX_LEAD_VOICES; v++) {
         g_lead[v].active = 0;
         g_lead[v].env_q15 = 0;
+        g_lead[v].gate_samples = 0;
+        g_lead[v].bend_samples = 0;
     }
 }
 
