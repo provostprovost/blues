@@ -140,13 +140,18 @@ static inline int      hal_settings_load(void *data, uint16_t len) { (void)data;
 #else
 
 // Target build running inside Dinghy framework (platform.c already included in translation unit)
-#if !BOARD_SMK37
+#if !BOARD_SMK37 && !defined(DINGHY_HOST)
 #include "fm1_input.h"
 #endif
 
 static inline uint32_t hal_millis(void) { return fm1_ms; }
+#ifdef DINGHY_HOST
+static inline uint32_t hal_ticks(void) { return fm1_ms * 1000u; }
+#define HAL_TICKS_PER_US 1u
+#else
 static inline uint32_t hal_ticks(void) { return fm1_ticks(); }
 #define HAL_TICKS_PER_US FM1_TICKS_PER_US
+#endif
 
 static inline void     hal_poll(void) { platform_poll(); }
 static inline int16_t  hal_sine_q15(uint32_t phase) {
