@@ -93,62 +93,67 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
 }
 
 Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root_semitone, uint8_t spice) {
-    Voicing candidates[8];
+    Voicing candidates[4];
     ScaleDegreeInfo info = harmony_get_degree_info(degree);
     uint8_t root = (root_semitone + info.semitone_offset) % 12;
-    uint8_t base_root = 48 + root; // C3 + root
     uint8_t third = (info.quality == CHORD_MIN7 || info.quality == CHORD_DIM7) ? 3 : 4;
     uint8_t fifth = (info.quality == CHORD_DIM7) ? 6 : 7;
     uint8_t seventh = (info.quality == CHORD_DIM7) ? 9 : 10;
     uint8_t ninth = 14;
 
-    // Type 0: Root Position (1 - 3 - 5 - b7)
-    candidates[0].count = 4;
-    candidates[0].notes[0] = base_root;
-    candidates[0].notes[1] = base_root + third;
-    candidates[0].notes[2] = base_root + fifth;
-    candidates[0].notes[3] = base_root + seventh;
+    // Pitch anchor: ensure guide tones (3rd and 7th) sit in clear upper-mid range (G3..G4)
+    uint8_t t_note = 48 + ((root + third) % 12);
+    while (t_note < 52) t_note += 12; // E3..Eb4
+    while (t_note > 64) t_note -= 12;
 
-    // Type 1: Inversion (5 - b7 - 1 - 3)
-    candidates[1].count = 4;
-    candidates[1].notes[0] = (uint8_t)(base_root + fifth - 12);
-    candidates[1].notes[1] = (uint8_t)(base_root + seventh - 12);
-    candidates[1].notes[2] = base_root;
-    candidates[1].notes[3] = base_root + third;
+    uint8_t s_note = 48 + ((root + seventh) % 12);
+    while (s_note < 52) s_note += 12; // E3..Eb4
+    while (s_note > 64) s_note -= 12;
 
-    // Type 2: 9th Color Voicing (3 - b7 - 9 - 1)
-    candidates[2].count = 4;
-    candidates[2].notes[0] = base_root + third;
-    candidates[2].notes[1] = base_root + seventh;
-    candidates[2].notes[2] = base_root + ninth;
-    candidates[2].notes[3] = base_root + 12;
+    uint8_t n_note = 48 + ((root + ninth) % 12);
+    while (n_note < 57) n_note += 12; // A3..G#4
+    while (n_note > 69) n_note -= 12;
 
-    // Type 3: Lower Inversion with 9th (b7 - 3 - 1 - 9)
-    candidates[3].count = 4;
-    candidates[3].notes[0] = (uint8_t)(base_root + seventh - 12);
-    candidates[3].notes[1] = base_root + third;
-    candidates[3].notes[2] = base_root;
-    candidates[3].notes[3] = base_root + ninth;
+    uint8_t f_note = 48 + ((root + fifth) % 12);
+    while (f_note < 55) f_note += 12; // G3..F#4
+    while (f_note > 67) f_note -= 12;
 
-    // Octave Variations for candidates 0..3 -> 4..7
+    uint8_t r_note = 48 + (root % 12);
+    while (r_note < 60) r_note += 12; // C4..B4
+    while (r_note > 72) r_note -= 12;
+
+    // Candidate 0: Authentic Blues Shell (3rd + 7th + 5th)
+    candidates[0].notes[0] = t_note;
+    candidates[0].notes[1] = s_note;
+    candidates[0].notes[2] = f_note;
+    candidates[0].notes[3] = r_note;
+    candidates[0].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
+
+    // Candidate 1: Evans/Ray Charles 9th Voicing (3rd + 7th + 9th)
+    candidates[1].notes[0] = t_note;
+    candidates[1].notes[1] = s_note;
+    candidates[1].notes[2] = n_note;
+    candidates[1].notes[3] = f_note;
+    candidates[1].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
+
+    // Candidate 2: Inverted Guide Tone Voicing (7th in bass + 3rd + 9th)
+    candidates[2].notes[0] = (uint8_t)(s_note > 55 ? s_note - 12 : s_note);
+    candidates[2].notes[1] = t_note;
+    candidates[2].notes[2] = n_note;
+    candidates[2].notes[3] = r_note;
+    candidates[2].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
+
+    // Candidate 3: Open 13th Blues Voicing (3rd + 7th + 13th + 9th)
+    uint8_t th_note = 48 + ((root + 21) % 12);
+    while (th_note < 57) th_note += 12;
+    candidates[3].notes[0] = t_note;
+    candidates[3].notes[1] = s_note;
+    candidates[3].notes[2] = th_note;
+    candidates[3].notes[3] = n_note;
+    candidates[3].count = (spice <= 30) ? 2 : (spice <= 60) ? 3 : 4;
+
+    // Sort notes ascending within each candidate to guarantee clean register ordering
     for (int i = 0; i < 4; i++) {
-        candidates[i + 4] = candidates[i];
-        for (int n = 0; n < 4; n++) {
-            if (candidates[i].notes[n] <= 64) candidates[i + 4].notes[n] += 12;
-            else candidates[i + 4].notes[n] -= 12;
-        }
-    }
-
-    // Clamp each candidate strictly to C3..E5 (48..76) and sort notes
-    uint8_t target_count = 4;
-    if (spice <= 25) target_count = 2;
-    else if (spice <= 50) target_count = 3;
-
-    for (int i = 0; i < 8; i++) {
-        for (int n = 0; n < 4; n++) {
-            while (candidates[i].notes[n] < 48) candidates[i].notes[n] += 12;
-            while (candidates[i].notes[n] > 76) candidates[i].notes[n] -= 12;
-        }
         for (int a = 0; a < 3; a++) {
             for (int b = a + 1; b < 4; b++) {
                 if (candidates[i].notes[a] > candidates[i].notes[b]) {
@@ -158,14 +163,14 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
                 }
             }
         }
-        candidates[i].count = target_count;
     }
 
     if (prev_voicing.count == 0) return candidates[0];
 
+    // Pick candidate with minimum voice-leading distance from previous chord
     int32_t min_dist = 0x7FFF;
     uint8_t best_idx = 0;
-    for (uint8_t i = 0; i < 8; i++) {
+    for (uint8_t i = 0; i < 4; i++) {
         int32_t dist = 0;
         uint8_t check_count = (candidates[i].count < prev_voicing.count) ? candidates[i].count : prev_voicing.count;
         for (uint8_t n = 0; n < check_count; n++) {

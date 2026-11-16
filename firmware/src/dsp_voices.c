@@ -198,17 +198,19 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         for (int k = 0; k < 4; k++) {
             if (g_keys[k].active) {
                 int16_t car = 0;
-                if (preset->ep_tone_algo == 0) { // Rhodes 2-Op FM
+                int32_t m_env = (g_keys[k].env_q15 * g_keys[k].env_q15) >> 15;
+
+                if (preset->ep_tone_algo == 0) { // Rhodes FM: sweet chime strike decaying into warm sine
                     g_keys[k].phase_c += g_keys[k].inc_c;
-                    g_keys[k].phase_m += g_keys[k].inc_m;
+                    g_keys[k].phase_m += g_keys[k].inc_c; // 1:1 modulator
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((int32_t)mod * 22000);
+                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 6000);
                     car = hal_sine_q15(g_keys[k].phase_c + pmod);
-                } else if (preset->ep_tone_algo == 1) { // Bright FM EP
+                } else if (preset->ep_tone_algo == 1) { // Bright FM EP: crisp 2:1 chime attack
                     g_keys[k].phase_c += g_keys[k].inc_c;
-                    g_keys[k].phase_m += g_keys[k].inc_c * 3;
+                    g_keys[k].phase_m += g_keys[k].inc_c * 2;
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((int32_t)mod * 42000);
+                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 11000);
                     car = hal_sine_q15(g_keys[k].phase_c + pmod);
                 } else if (preset->ep_tone_algo == 2) { // B3 Drawbar Organ (4 Harmonics)
                     g_keys[k].phase_c += g_keys[k].inc_c;
@@ -216,12 +218,12 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     int16_t h2 = hal_sine_q15(g_keys[k].phase_c * 2);
                     int16_t h3 = hal_sine_q15(g_keys[k].phase_c * 3);
                     int16_t h4 = hal_sine_q15(g_keys[k].phase_c * 4);
-                    car = (h1 >> 2) + (h2 >> 2) + (h3 >> 3) + (h4 >> 3);
-                } else { // Clavinet (Phase-Modulated Pluck 1:3)
+                    car = (h1 * 2) / 5 + (h2 >> 2) + (h3 >> 3) + (h4 >> 4);
+                } else { // Clavinet (Funk Pluck)
                     g_keys[k].phase_c += g_keys[k].inc_c;
                     g_keys[k].phase_m += g_keys[k].inc_c * 3;
                     int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                    uint32_t pmod = (uint32_t)((int32_t)mod * 55000);
+                    uint32_t pmod = (uint32_t)((((int32_t)mod * m_env) >> 15) * 16000);
                     car = hal_sine_q15(g_keys[k].phase_c + pmod);
                 }
 
@@ -323,7 +325,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         if (mix_q15 > 32767)  mix_q15 = 32767;
         if (mix_q15 < -32767) mix_q15 = -32767;
 
-        int32_t drive_gain = 1024 + (preset->drive_level * 20);
+        int32_t drive_gain = 1024 + (preset->drive_level * 6);
         int32_t x = (mix_q15 * drive_gain) >> 10;
         if (x > 32767)  x = 32767;
         if (x < -32767) x = -32767;

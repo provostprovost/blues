@@ -263,7 +263,7 @@ static void app_main(void) {
         // Screen Redraw Throttle (~30 Hz)
         if (ms_now - g_last_redraw >= 33) {
             g_last_redraw = ms_now;
-            ui_render(&g_harmony, &g_presets[g_active_preset], g_active_preset, g_ui_screen, g_harmony.ui_dirty);
+            ui_render(&g_harmony, &g_presets[g_active_preset], g_active_preset, g_ui_screen, 0);
             g_harmony.ui_dirty = 0;
         }
     }
