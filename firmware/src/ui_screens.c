@@ -22,6 +22,7 @@ static uint8_t g_last_playing = 0xFF;
 static uint8_t g_last_groove = 0xFF;
 static uint8_t g_last_spice = 0xFF;
 static uint8_t g_last_bpm = 0xFF;
+static uint8_t g_last_form = 0xFF;
 
 static uint8_t g_last_m_bass_vol = 0xFF;
 static uint8_t g_last_m_keys_vol = 0xFF;
@@ -45,6 +46,7 @@ void ui_init(void) {
     g_last_groove = 0xFF;
     g_last_spice = 0xFF;
     g_last_bpm = 0xFF;
+    g_last_form = 0xFF;
 
     g_last_m_bass_vol = 0xFF;
     g_last_m_keys_vol = 0xFF;
@@ -118,12 +120,40 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
     header[hlen] = '\0';
     hal_draw_text_box(0, 6, 240, 0, header, RGB(255, 190, 0), 1);
 
-    // Subheader: Key, BPM, Spice %
+    // Subheader: Key, Form Mode, BPM, Spice %
     char subheader[32];
     const char *kname = NOTE_NAMES[hs->root_semitone % 12];
     int slen = 0;
     subheader[slen++] = 'K'; subheader[slen++] = 'E'; subheader[slen++] = 'Y'; subheader[slen++] = ':';
     while (*kname && slen < 8) subheader[slen++] = *kname++;
+    if (hs->form_mode == FORM_MINOR_BLUES) {
+        subheader[slen++] = 'm';
+        subheader[slen++] = ' ';
+        subheader[slen++] = '(';
+        subheader[slen++] = 'M';
+        subheader[slen++] = 'I';
+        subheader[slen++] = 'N';
+        subheader[slen++] = ')';
+    } else if (hs->form_mode == FORM_8BAR) {
+        subheader[slen++] = ' ';
+        subheader[slen++] = '(';
+        subheader[slen++] = '8';
+        subheader[slen++] = 'B';
+        subheader[slen++] = ')';
+    } else if (hs->form_mode == FORM_QUICK_CHANGE) {
+        subheader[slen++] = ' ';
+        subheader[slen++] = '(';
+        subheader[slen++] = 'Q';
+        subheader[slen++] = 'C';
+        subheader[slen++] = ')';
+    } else {
+        subheader[slen++] = ' ';
+        subheader[slen++] = '(';
+        subheader[slen++] = 'M';
+        subheader[slen++] = 'A';
+        subheader[slen++] = 'J';
+        subheader[slen++] = ')';
+    }
     subheader[slen++] = ' ';
     subheader[slen++] = 'B'; subheader[slen++] = 'P'; subheader[slen++] = 'M'; subheader[slen++] = ':';
     uint8_t bpm = preset->bpm;
@@ -138,11 +168,12 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
     subheader[slen++] = '0' + (spc % 10);
     subheader[slen++] = '%';
     subheader[slen] = '\0';
-    hal_draw_text_box(0, 24, 240, 0, subheader, RGB(180, 180, 180), 1);
+    uint16_t sub_col = (hs->form_mode == FORM_MINOR_BLUES) ? RGB(140, 210, 255) : RGB(180, 180, 180);
+    hal_draw_text_box(0, 24, 240, 0, subheader, sub_col, 1);
 }
 
 static void render_status_and_footer(const HarmonyState *hs, const PresetConfig *preset) {
-    const char *status_str = "STOPPED";
+    const char *status_str = (hs->form_mode == FORM_MINOR_BLUES) ? "STOPPED (MINOR BLUES)" : "STOPPED";
     uint16_t status_col = RGB(160, 160, 160);
     if (hs->is_playing) {
         if (hs->stop_time_counter > 0) {
@@ -158,7 +189,7 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
             status_str = "KEY MOD QUEUED";
             status_col = RGB(255, 220, 80);
         } else {
-            status_str = "PLAYING";
+            status_str = (hs->form_mode == FORM_MINOR_BLUES) ? "PLAYING (MINOR BLUES)" : "PLAYING";
             status_col = RGB(80, 240, 80);
         }
     }
@@ -222,13 +253,14 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
 
 void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
     uint8_t screen_switched = (screen_id != g_last_screen);
+    uint8_t form_changed = (hs->form_mode != g_last_form);
     uint8_t header_changed = screen_switched || (preset_idx != g_last_preset) ||
                              (preset->groove_style != g_last_groove) || (preset->drum_kit != g_last_drum) ||
-                             (hs->root_semitone != g_last_key) || (preset->bpm != g_last_bpm) ||
+                             (hs->root_semitone != g_last_key) || form_changed || (preset->bpm != g_last_bpm) ||
                              (hs->spice_level != g_last_spice) || force_redraw;
 
     uint8_t full_grid_needed = screen_switched || (preset_idx != g_last_preset) ||
-                              (hs->root_semitone != g_last_key) || (hs->form_mode != preset->form_mode) || force_redraw;
+                              (hs->root_semitone != g_last_key) || form_changed || force_redraw;
 
     if (screen_id == 0) {
         if (screen_switched) {
@@ -240,6 +272,9 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
         }
 
         if (full_grid_needed) {
+            if (form_changed || screen_switched) {
+                hal_fill_rect(0, 44, 240, 142, C_BLACK);
+            }
             uint8_t total_bars = (hs->form_mode == FORM_8BAR) ? 8 : 12;
             for (uint8_t b = 0; b < total_bars; b++) {
                 render_single_bar_box(hs, b, (b == hs->current_bar));
@@ -258,6 +293,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
 
         uint8_t footer_changed = screen_switched || (hs->is_playing != g_last_playing) ||
                                  (preset->ep_tone_algo != g_last_algo) || (preset->lead_instrument != g_last_lead) ||
+                                 form_changed ||
                                  (hs->stop_time_counter != 0) || (hs->is_vamp_mode != 0) || (hs->ending_armed != 0);
 
         if (footer_changed || force_redraw) {
@@ -280,4 +316,5 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     g_last_groove = preset->groove_style;
     g_last_spice = hs->spice_level;
     g_last_bpm = preset->bpm;
+    g_last_form = hs->form_mode;
 }

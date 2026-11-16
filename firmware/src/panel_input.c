@@ -229,12 +229,19 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         hs->ui_dirty = 1;
     }
 
-    // ENC_SELECT (Encoder 0): Groove Style (0..7) or Drum Kit with GLO (0..3)
+    // ENC_SELECT (Encoder 0): Groove Style (0..7), Drum Kit with GLO (0..3), or Form/Scale Mode with SEL (0..4)
     if ((delta = hal_get_encoder_delta(ENC_SELECT)) != 0) {
         if (glo_held) {
             int32_t nd = (int32_t)p->drum_kit + delta;
             while (nd < 0) nd += 4;
             p->drum_kit = (uint8_t)(nd % 4);
+        } else if (sel_held) {
+            int32_t nf = (int32_t)hs->form_mode + delta;
+            while (nf < 0) nf += 5;
+            hs->form_mode = (FormMode)(nf % 5);
+            p->form_mode = hs->form_mode;
+            g_save_pending = 1;
+            g_last_param_change_ms = ms_now;
         } else {
             int32_t ng = (int32_t)p->groove_style + delta;
             while (ng < 0) ng += 8;

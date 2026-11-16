@@ -113,22 +113,22 @@ On the Band Mixer view, Knobs 1--4 act as dedicated hardware mixing faders:
 
 All 14 front-panel buttons have dedicated functions:
 
-| Button | Label | Live Musical Function |
+| Button | Chassis Label | Live Musical Function |
 |---|---|---|
-| **`PLAY`** | Transport | **Start / Stop**: Toggles playback (Green LED illuminates when playing). |
-| **`REC`** | Metronome | **Count-in Toggle**: Enables 1-bar count-in rimshot click. Pulses on Beat 1. |
-| **`OCT-`** | Octave Down | **Keyboard Octave Down**: Shifts solo keyboard down (-2 to +2 octaves). Hold `SEL` + `OCT-` to nudge tempo down (-4 BPM). |
-| **`OCT+`** | Octave Up | **Keyboard Octave Up**: Shifts solo keyboard up (-2 to +2 octaves). Hold `SEL` + `OCT+` to nudge tempo up (+4 BPM). |
-| **`HOME`** | Display | **Screen Toggle**: Switches between **12-Bar Lead Sheet** and **Band Mixer**. |
-| **`SAVE`** | Storage | **Commit to Flash**: Saves current preset and parameters immediately to flash. |
-| **`GLO`** | Shift | **Shift Layer**: Hold down to access secondary functions on Knobs 1--4. |
-| **`ARP`** | Tap Tempo | **Tap Tempo**: Tap repeatedly in rhythm to automatically calculate and set BPM. |
-| **`FX`** | Accent Stab | **Manual Accent Stab**: Triggers an immediate full-band accent stab and crash. |
-| **`EDIT`** | Turnaround | **Early Turnaround Cue**: Bar-quantized jump straight to Measure 9 (V chord). |
-| **`ENV`** | Vamp | **Vamp Toggle**: Freezes the 12-bar form and vamps indefinitely on the current chord. |
-| **`SEQ`** | Stop-Time | **Stop-Time Break**: Triggers a 4-bar stop-time break with beat-1 downbeat stabs. |
-| **`LFO`** | Form Mode | **Minor Blues Toggle**: Instantly toggles between 12-Bar Major and Minor Blues. |
-| **`SEL`** | Key Select | **Key Select Modifier**: Hold `SEL` and turn `PRESETS` to scroll through all 12 keys. |
+| **`PLAY`** | `PLAY` | **Start / Stop**: Toggles playback (Green LED illuminates when playing). |
+| **`REC`** | `REC` | **Count-in Toggle**: Enables 1-bar count-in rimshot click. Pulses on Beat 1. |
+| **`OCT-`** | `OCT-` | **Keyboard Octave Down**: Shifts solo keyboard down (-2 to +2 octaves). Hold `SCALE` (`SEL`) + `OCT-` to nudge tempo down (-4 BPM). |
+| **`OCT+`** | `OCT+` | **Keyboard Octave Up**: Shifts solo keyboard up (-2 to +2 octaves). Hold `SCALE` (`SEL`) + `OCT+` to nudge tempo up (+4 BPM). |
+| **`HOME`** | `PATCH` | **Screen Toggle**: Switches between **12-Bar Lead Sheet** and **Band Mixer**. |
+| **`SAVE`** | `BT` | **Commit to Flash**: Saves current preset and parameters immediately to flash. |
+| **`GLO`** | `GLOBE` | **Shift Layer**: Hold down to access secondary functions on Knobs 1--4 (Reverb, Swing, etc.). |
+| **`ARP`** | `ARP` | **Tap Tempo**: Tap repeatedly in rhythm to automatically calculate and set BPM. |
+| **`FX`** | `FX` | **Manual Accent Stab**: Triggers an immediate full-band accent stab and crash. |
+| **`EDIT`** | `PARA` | **Early Turnaround Cue**: Bar-quantized jump straight to Measure 9 (V chord). |
+| **`ENV`** | `CHORD` | **Vamp Toggle**: Freezes the 12-bar form and vamps indefinitely on the current chord. |
+| **`SEQ`** | `SEQ` | **Stop-Time Break**: Triggers a 4-bar stop-time break with beat-1 downbeat stabs. |
+| **`LFO`** | `NOTE REPEAT` | **Minor Blues Toggle**: 1-click toggle between 12-Bar Major (`KEY: E (MAJ)`) and 12-Bar Minor Blues (`KEY: Em (MIN)` in cyan). |
+| **`SEL`** | `SCALE` | **Select Modifier**: Hold `SCALE` and turn `PRESETS` knob for Key, turn `STYLE` knob for Form Mode (`MAJ`, `MIN`, `QC`, `8-BAR`), or press silicone keys. |
 
 ---
 
