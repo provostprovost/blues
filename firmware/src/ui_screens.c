@@ -22,6 +22,8 @@ static uint8_t g_last_groove = 0xFF;
 static uint8_t g_last_spice = 0xFF;
 static uint8_t g_last_bpm = 0xFF;
 static uint8_t g_last_form = 0xFF;
+static uint8_t g_last_toast_active = 0;
+static uint32_t g_last_toast_until = 0;
 
 static uint8_t g_last_m_bass_vol = 0xFF;
 static uint8_t g_last_m_keys_vol = 0xFF;
@@ -46,6 +48,8 @@ void ui_init(void) {
     g_last_spice = 0xFF;
     g_last_bpm = 0xFF;
     g_last_form = 0xFF;
+    g_last_toast_active = 0;
+    g_last_toast_until = 0;
 
     g_last_m_bass_vol = 0xFF;
     g_last_m_keys_vol = 0xFF;
@@ -171,10 +175,13 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
     hal_draw_text_box(0, 24, 240, 0, subheader, sub_col, 1);
 }
 
-static void render_status_and_footer(const HarmonyState *hs, const PresetConfig *preset) {
+static void render_status_and_footer(const HarmonyState *hs, const PresetConfig *preset, uint8_t toast_active) {
     const char *status_str = (hs->form_mode == FORM_MINOR_BLUES) ? "STOPPED (MINOR BLUES)" : "STOPPED";
     uint16_t status_col = RGB(160, 160, 160);
-    if (hs->is_playing) {
+    if (toast_active && hs->toast_msg[0] != '\0') {
+        status_str = hs->toast_msg;
+        status_col = RGB(0, 220, 255);
+    } else if (hs->is_playing) {
         if (hs->stop_time_counter > 0) {
             status_str = "STOP-TIME BREAK";
             status_col = RGB(255, 80, 80);
@@ -290,14 +297,19 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
             render_beat_pips(hs);
         }
 
+        uint32_t now_ms = hal_millis();
+        uint8_t toast_active = (hs->toast_until_ms != 0 && ((int32_t)(hs->toast_until_ms - now_ms) > 0));
         uint8_t footer_changed = screen_switched || (hs->is_playing != g_last_playing) ||
                                  (preset->ep_tone_algo != g_last_algo) || (preset->lead_instrument != g_last_lead) ||
-                                 form_changed ||
+                                 form_changed || (toast_active != g_last_toast_active) ||
+                                 (toast_active && hs->toast_until_ms != g_last_toast_until) ||
                                  (hs->stop_time_counter != 0) || (hs->is_vamp_mode != 0) || (hs->ending_armed != 0);
 
         if (footer_changed || force_redraw) {
-            render_status_and_footer(hs, preset);
+            render_status_and_footer(hs, preset, toast_active);
         }
+        g_last_toast_active = toast_active;
+        g_last_toast_until = hs->toast_until_ms;
     } else {
         render_mixer_view(hs, preset, preset_idx, screen_switched || force_redraw);
     }

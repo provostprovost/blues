@@ -237,12 +237,20 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         BarSlot curr_slot = harmony_get_current_bar_slot(hs);
         ScaleDegree active_degree = (hs->current_beat >= 2 && curr_slot.has_split) ? curr_slot.secondary : curr_slot.primary;
         int8_t j_vel = get_hmnz_jitter(hs->spice_level);
+        uint8_t full = hs->fullness;
 
-        // Bass engine trigger
-        if (gt->bass_mask[step16 % 16] > 0 || (hs->spice_level > 75 && (sub_slot == 1 || sub_slot == 3))) {
+        // Bass engine trigger (shaped by Fullness: sparse half-notes <35, template 35..70, driving >70)
+        uint8_t bass_hit = (gt->bass_mask[step16 % 16] > 0);
+        if (full < 35) {
+            bass_hit = ((hs->current_beat == 0 || hs->current_beat == 2) && sub_slot == 0);
+        } else if (full > 70 && ((sub_slot == 2 && (hs->current_beat == 1 || hs->current_beat == 3)) ||
+                                 (full > 85 && (sub_slot == 1 || sub_slot == 3)))) {
+            bass_hit = 1;
+        }
+        if (bass_hit) {
             frame->bass_trigger = 1;
-            int base_v = (gt->bass_mask[step16 % 16] > 0) ? gt->bass_mask[step16 % 16] : 85;
-            int bv = base_v + j_vel;
+            int base_v = (gt->bass_mask[step16 % 16] > 0) ? gt->bass_mask[step16 % 16] : 88;
+            int bv = base_v + j_vel + ((full > 75) ? 8 : (full < 35) ? -10 : 0);
             frame->bass_vel = (uint8_t)((bv < 1) ? 1 : (bv > 127) ? 127 : bv);
 
             BarSlot next_slot = harmony_get_next_bar_slot(hs);
@@ -253,12 +261,18 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             frame->bass_note = bass_compute_note(c_curr, c_next, hs->current_beat, sub_slot, hs->spice_level);
         }
 
-        // Comping engine trigger
-        if (gt->comp_mask[step16 % 16] > 0 || hs->manual_stab_pending) {
+        // Comping engine trigger (shaped by Fullness: sparse backbeat <35, template 35..70, push stabs >70)
+        uint8_t comp_hit = (gt->comp_mask[step16 % 16] > 0);
+        if (full < 35) {
+            comp_hit = ((hs->current_beat == 1 || hs->current_beat == 3) && sub_slot == 0);
+        } else if (full > 75 && sub_slot == 2 && (hs->current_beat == 1 || hs->current_beat == 3)) {
+            comp_hit = 1;
+        }
+        if (comp_hit || hs->manual_stab_pending) {
             frame->comp_trigger = 1;
-            int base_cv = gt->comp_mask[step16 % 16];
+            int base_cv = (gt->comp_mask[step16 % 16] > 0) ? gt->comp_mask[step16 % 16] : 85;
             if (hs->manual_stab_pending) base_cv = 120;
-            int cv = base_cv + j_vel;
+            int cv = base_cv + j_vel + ((full > 75) ? 12 : (full < 35) ? -18 : 0);
             frame->comp_vel = (uint8_t)((cv < 1) ? 1 : (cv > 127) ? 127 : cv);
             frame->comp_voicing = voice_lead_select(*last_voicing, active_degree, hs->root_semitone, hs->spice_level);
             *last_voicing = frame->comp_voicing;
@@ -268,44 +282,63 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         // Drum channels: Hi-hat / Ride
         if (gt->drum_hat_mask[step16 % 16] > 0) {
             frame->drum_mask |= 0x04;
-            int dv = gt->drum_hat_mask[step16 % 16] + j_vel;
+            int dv = gt->drum_hat_mask[step16 % 16] + j_vel + ((full < 35) ? -20 : (full > 75) ? 8 : 0);
             frame->drum_vel[2] = (uint8_t)((dv < 1) ? 1 : (dv > 127) ? 127 : dv);
         }
 
-        // Kick Drum: Beat 0 downbeat
+        // Kick Drum: Beat 0 downbeat (+ Beat 2 in rocking fullness)
         if (hs->current_beat == 0 && hs->current_subdiv == 0) {
             frame->drum_mask |= 0x01;
-            int dv0 = 110 + j_vel;
+            int dv0 = 110 + j_vel + ((full > 75) ? 10 : (full < 35) ? -15 : 0);
             frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
         }
-        // Syncopated kick on beat 3 offbeat at high Spice
-        if (hs->spice_level > 75 && sub_slot == 2 && hs->current_beat == 3) {
+        if (full > 70 && sub_slot == 2 && hs->current_beat == 3) {
             frame->drum_mask |= 0x01;
             int dv0 = 95 + j_vel;
             frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
         }
 
-        // Snare: Backbeat on Beats 1 and 3
+        // Snare / Rimshot: Backbeat on Beats 1 and 3
         if ((hs->current_beat == 1 || hs->current_beat == 3) && hs->current_subdiv == 0) {
-            frame->drum_mask |= 0x02;
-            int dv1 = 100 + j_vel;
-            frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
+            if (full < 20) {
+                frame->drum_mask |= 0x08; // Ultra-sparse: cross-stick rimshot instead of snare
+                int dv3 = 80 + j_vel;
+                frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
+            } else {
+                frame->drum_mask |= 0x02;
+                int dv1 = 100 + j_vel + ((full > 75) ? 10 : (full < 35) ? -18 : 0);
+                frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
+            }
         }
-        // Snare ghost note on beat 2 offbeat at Spice > 25
-        if (hs->spice_level > 25 && sub_slot == 2 && hs->current_beat == 2) {
+        // Snare ghost note on beat 2 offbeat at Fullness >= 40
+        if (full >= 40 && sub_slot == 2 && hs->current_beat == 2) {
             frame->drum_mask |= 0x02;
-            int dv1 = 45 + j_vel;
+            int dv1 = 45 + j_vel + ((full > 75) ? 12 : 0);
             frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
         }
 
-        // Dynamic fill on Bar 11 beat 3 or manual fill trigger
-        if ((hs->current_bar == 11 && hs->spice_level > 50) || hs->fill_pending) {
+        // Automatic phrase-end drum fills on Bar 4, Bar 8, and Bar 12 (or manual fill)
+        uint8_t is_phrase_end = (hs->current_bar == 3 || hs->current_bar == 7 || hs->current_bar == 11);
+        if ((is_phrase_end && full >= 25) || hs->fill_pending) {
             if (hs->current_beat == 3) {
-                frame->drum_mask |= 0x08; // Rimshot / fill
-                int dv3 = 95 + j_vel;
-                frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
+                uint8_t is_turnaround_bar = (hs->current_bar == 11 || hs->fill_pending);
+                if (sub_slot == 0) {
+                    frame->drum_mask |= 0x02;
+                    int dv1 = (is_turnaround_bar ? 105 : 88) + j_vel;
+                    frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
+                } else if (sub_slot == 2) {
+                    frame->drum_mask |= 0x03; // Kick + Snare pickup into Beat 1
+                    int dv0 = 85 + j_vel;
+                    int dv1 = (is_turnaround_bar ? 112 : 95) + j_vel;
+                    frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
+                    frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
+                    if (is_turnaround_bar) {
+                        frame->drum_mask |= 0x08;
+                        frame->drum_vel[3] = 85;
+                    }
+                    hs->fill_pending = 0;
+                }
             }
-            if (hs->current_beat == 3 && hs->current_subdiv == 12) hs->fill_pending = 0;
         }
     }
 }

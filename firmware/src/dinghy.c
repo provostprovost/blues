@@ -133,6 +133,7 @@ static void init_factory_presets(void) {
         p->bass_cutoff = 85;
         p->drive_level = 20;
         p->count_in_enabled = 0;
+        p->fullness = 65;
         p->opening_var = VAR_FLAT_FOUR;
         p->outro_type = OUTRO_TAG;
         p->bass_instrument = (uint8_t)(i % 4);
@@ -286,6 +287,7 @@ static void app_main(void) {
     g_harmony.is_playing = 0; // Stopped on boot: starts when BTN_PLAY or MIDI Start is received
     g_harmony.root_semitone = g_presets[g_active_preset].root_key;
     g_harmony.spice_level = g_presets[g_active_preset].spice;
+    g_harmony.fullness = g_presets[g_active_preset].fullness;
     g_harmony.form_mode = (FormMode)g_presets[g_active_preset].form_mode;
     g_last_voicing.count = 0;
 

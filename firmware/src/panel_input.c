@@ -13,6 +13,38 @@ static uint32_t g_last_param_change_ms = 0;
 static uint32_t g_last_tap_ms = 0;
 static int8_t   g_lead_octave_shift = 0;
 
+static void set_toast(HarmonyState *hs, uint32_t ms_now, const char *msg) {
+    int i = 0;
+    while (msg[i] && i < 27) {
+        hs->toast_msg[i] = msg[i];
+        i++;
+    }
+    hs->toast_msg[i] = '\0';
+    hs->toast_until_ms = ms_now + 1500u;
+    hs->ui_dirty = 1;
+}
+
+static void set_toast_val(HarmonyState *hs, uint32_t ms_now, const char *prefix, int32_t val, const char *suffix) {
+    char buf[28];
+    int i = 0;
+    while (prefix[i] && i < 18) { buf[i] = prefix[i]; i++; }
+    if (val < 0) { buf[i++] = '-'; val = -val; }
+    if (val >= 100) buf[i++] = (char)('0' + (val / 100) % 10);
+    if (val >= 10)  buf[i++] = (char)('0' + (val / 10) % 10);
+    buf[i++] = (char)('0' + (val % 10));
+    int j = 0;
+    while (suffix[j] && i < 27) { buf[i++] = suffix[j++]; }
+    buf[i] = '\0';
+    set_toast(hs, ms_now, buf);
+}
+
+static uint8_t clamp_step_u8(uint8_t cur, int32_t delta_step, uint8_t min_v, uint8_t max_v) {
+    int32_t nv = (int32_t)cur + delta_step;
+    if (nv < (int32_t)min_v) nv = min_v;
+    if (nv > (int32_t)max_v) nv = max_v;
+    return (uint8_t)nv;
+}
+
 void panel_init(void) {
     g_prev_key_mask = 0;
     for (uint32_t i = 0; i < ZONE1_COUNT; i++) {
@@ -116,7 +148,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     if (btn_edges & (1u << BTN_REC)) {
         hs->count_in_enabled = !hs->count_in_enabled;
         p->count_in_enabled = hs->count_in_enabled;
-        hs->ui_dirty = 1;
+        set_toast(hs, ms_now, hs->count_in_enabled ? "COUNT-IN: ON" : "COUNT-IN: OFF");
         g_save_pending = 1;
         g_last_param_change_ms = ms_now;
     }
@@ -128,30 +160,31 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     }
     if (btn_edges & (1u << BTN_OCT_DOWN)) {
         if (sel_held) {
-            if (p->bpm > 44) p->bpm -= 4;
-            else p->bpm = 40;
+            p->bpm = clamp_step_u8(p->bpm, -4, 40, 240);
+            set_toast_val(hs, ms_now, "BPM: ", p->bpm, "");
         } else {
             if (g_lead_octave_shift > -2) g_lead_octave_shift--;
+            set_toast_val(hs, ms_now, "OCTAVE: ", g_lead_octave_shift, "");
         }
-        hs->ui_dirty = 1;
     }
     if (btn_edges & (1u << BTN_OCT_UP)) {
         if (sel_held) {
-            if (p->bpm < 236) p->bpm += 4;
-            else p->bpm = 240;
+            p->bpm = clamp_step_u8(p->bpm, 4, 40, 240);
+            set_toast_val(hs, ms_now, "BPM: ", p->bpm, "");
         } else {
             if (g_lead_octave_shift < 2) g_lead_octave_shift++;
+            set_toast_val(hs, ms_now, (g_lead_octave_shift > 0) ? "OCTAVE: +" : "OCTAVE: ", g_lead_octave_shift, "");
         }
-        hs->ui_dirty = 1;
     }
     if (btn_edges & (1u << BTN_SAVE)) {
         // Immediate explicit preset save
         p->root_key = hs->root_semitone;
         p->spice = hs->spice_level;
+        p->fullness = hs->fullness;
         p->form_mode = hs->form_mode;
         hal_blob_save(0, presets, sizeof(PresetConfig) * NUM_PRESET_SLOTS);
         g_save_pending = 0;
-        hs->ui_dirty = 1;
+        set_toast(hs, ms_now, "SAVED TO FLASH!");
     }
     if (btn_edges & (1u << BTN_ARP)) {
         // Tap Tempo on ARP button
@@ -252,31 +285,20 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
 
     uint8_t is_mixer = (ui_screen && *ui_screen == 1);
 
+    static const char *TUNE_LABELS[3] = { "TUNE: 440 HZ", "TUNE: 432 HZ", "TUNE: 442 HZ" };
+    static const char *BASS_LABELS[4] = { "BASS: P-BASS", "BASS: UPRIGHT", "BASS: MUTED BOOGIE", "BASS: MOOG FUNK" };
+
     // ENC_KNOB1 (Encoder 2): BPM / Swing (or Bass Vol / Reverb Mix on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB1)) != 0) {
         if (is_mixer) {
-            if (glo_held) {
-                int32_t nr = (int32_t)p->reverb_mix + (delta * 4);
-                if (nr < 0) nr = 0;
-                if (nr > 127) nr = 127;
-                p->reverb_mix = (uint8_t)nr;
-            } else {
-                int32_t nv = (int32_t)p->bass_vol + (delta * 4);
-                if (nv < 0) nv = 0;
-                if (nv > 127) nv = 127;
-                p->bass_vol = (uint8_t)nv;
-            }
+            if (glo_held) p->reverb_mix = clamp_step_u8(p->reverb_mix, delta * 4, 0, 127);
+            else          p->bass_vol   = clamp_step_u8(p->bass_vol,   delta * 4, 0, 127);
         } else {
             if (glo_held) {
-                int32_t nsw = (int32_t)p->swing + (delta * 2);
-                if (nsw < 0) nsw = 0;
-                if (nsw > 100) nsw = 100;
-                p->swing = (uint8_t)nsw;
+                p->swing = clamp_step_u8(p->swing, delta * 2, 0, 100);
+                set_toast_val(hs, ms_now, "SWING: ", p->swing, "%");
             } else {
-                int32_t nb = (int32_t)p->bpm + (delta * 2);
-                if (nb < 40) nb = 40;
-                if (nb > 240) nb = 240;
-                p->bpm = (uint8_t)nb;
+                p->bpm = clamp_step_u8(p->bpm, delta * 2, 40, 240);
             }
         }
         hs->ui_dirty = 1;
@@ -284,31 +306,27 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_param_change_ms = ms_now;
     }
 
-    // ENC_KNOB2 (Encoder 3): Spice / Tuning (or Keys Vol / Spice on Mixer view)
+    // ENC_KNOB2 (Encoder 3): Spice / Tuning / Fullness (SEL) (or Keys Vol / Spice on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB2)) != 0) {
-        if (is_mixer) {
+        if (sel_held) {
+            hs->fullness = clamp_step_u8(hs->fullness, delta * 5, 0, 100);
+            p->fullness = hs->fullness;
+            set_toast_val(hs, ms_now, "FULLNESS: ", hs->fullness, "%");
+        } else if (is_mixer) {
             if (glo_held) {
-                int32_t nsp = (int32_t)hs->spice_level + (delta * 5);
-                if (nsp < 0) nsp = 0;
-                if (nsp > 100) nsp = 100;
-                hs->spice_level = (uint8_t)nsp;
+                hs->spice_level = clamp_step_u8(hs->spice_level, delta * 5, 0, 100);
                 p->spice = hs->spice_level;
             } else {
-                int32_t nv = (int32_t)p->keys_vol + (delta * 4);
-                if (nv < 0) nv = 0;
-                if (nv > 127) nv = 127;
-                p->keys_vol = (uint8_t)nv;
+                p->keys_vol = clamp_step_u8(p->keys_vol, delta * 4, 0, 127);
             }
         } else {
             if (glo_held) {
                 int32_t nt = (int32_t)p->master_tuning + delta;
                 while (nt < 0) nt += 3;
                 p->master_tuning = (uint8_t)(nt % 3);
+                set_toast(hs, ms_now, TUNE_LABELS[p->master_tuning]);
             } else {
-                int32_t nsp = (int32_t)hs->spice_level + (delta * 5);
-                if (nsp < 0) nsp = 0;
-                if (nsp > 100) nsp = 100;
-                hs->spice_level = (uint8_t)nsp;
+                hs->spice_level = clamp_step_u8(hs->spice_level, delta * 5, 0, 100);
                 p->spice = hs->spice_level;
             }
         }
@@ -320,27 +338,17 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // ENC_KNOB3 (Encoder 4): Bass Vol / Bass Engine (or Drums Vol / Swing on Mixer view)
     if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
         if (is_mixer) {
-            if (glo_held) {
-                int32_t nsw = (int32_t)p->swing + (delta * 2);
-                if (nsw < 0) nsw = 0;
-                if (nsw > 100) nsw = 100;
-                p->swing = (uint8_t)nsw;
-            } else {
-                int32_t nv = (int32_t)p->drums_vol + (delta * 4);
-                if (nv < 0) nv = 0;
-                if (nv > 127) nv = 127;
-                p->drums_vol = (uint8_t)nv;
-            }
+            if (glo_held) p->swing     = clamp_step_u8(p->swing,     delta * 2, 0, 100);
+            else          p->drums_vol = clamp_step_u8(p->drums_vol, delta * 4, 0, 127);
         } else {
             if (glo_held) {
                 int32_t nb = (int32_t)p->bass_instrument + delta;
                 while (nb < 0) nb += 4;
                 p->bass_instrument = (uint8_t)(nb % 4);
+                set_toast(hs, ms_now, BASS_LABELS[p->bass_instrument]);
             } else {
-                int32_t nv = (int32_t)p->bass_vol + (delta * 4);
-                if (nv < 0) nv = 0;
-                if (nv > 127) nv = 127;
-                p->bass_vol = (uint8_t)nv;
+                p->bass_vol = clamp_step_u8(p->bass_vol, delta * 4, 0, 127);
+                set_toast_val(hs, ms_now, "BASS VOL: ", (int32_t)p->bass_vol * 100 / 127, "%");
             }
         }
         hs->ui_dirty = 1;
@@ -356,22 +364,15 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                 while (nt < 0) nt += 3;
                 p->master_tuning = (uint8_t)(nt % 3);
             } else {
-                int32_t nv = (int32_t)p->lead_vol + (delta * 4);
-                if (nv < 0) nv = 0;
-                if (nv > 127) nv = 127;
-                p->lead_vol = (uint8_t)nv;
+                p->lead_vol = clamp_step_u8(p->lead_vol, delta * 4, 0, 127);
             }
         } else {
             if (glo_held) {
-                int32_t nr = (int32_t)p->reverb_mix + (delta * 4);
-                if (nr < 0) nr = 0;
-                if (nr > 127) nr = 127;
-                p->reverb_mix = (uint8_t)nr;
+                p->reverb_mix = clamp_step_u8(p->reverb_mix, delta * 4, 0, 127);
+                set_toast_val(hs, ms_now, "REVERB: ", (int32_t)p->reverb_mix * 100 / 127, "%");
             } else {
-                int32_t nv = (int32_t)p->keys_vol + (delta * 4);
-                if (nv < 0) nv = 0;
-                if (nv > 127) nv = 127;
-                p->keys_vol = (uint8_t)nv;
+                p->keys_vol = clamp_step_u8(p->keys_vol, delta * 4, 0, 127);
+                set_toast_val(hs, ms_now, "KEYS VOL: ", (int32_t)p->keys_vol * 100 / 127, "%");
             }
         }
         hs->ui_dirty = 1;
@@ -482,27 +483,34 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
 
     if (hs->is_playing && !sel_held) {
-        // Minor Blues Scale: 1, b3, 4, b5, 5, b7 (offsets 0, 3, 5, 6, 7, 10 relative to root)
+        // Composite Blues LED guide: home scale at full brightness, crossover blues notes dim (~1/24)
+        static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6
+        static const uint8_t MIN_BLUES[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7
+        uint8_t is_minor = (hs->form_mode == FORM_MINOR_BLUES);
+        const uint8_t *primary_scale   = is_minor ? MIN_BLUES : MAJ_BLUES;
+        const uint8_t *secondary_scale = is_minor ? MAJ_BLUES : MIN_BLUES;
+
         for (uint8_t k = 0; k < 27; k++) {
             int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
             uint8_t note = (uint8_t)((note_val < 0) ? 0 : (note_val > 127) ? 127 : note_val);
             uint8_t interval = (uint8_t)((note + 12 - hs->root_semitone) % 12);
-            uint8_t is_blues = (interval == 0 || interval == 3 || interval == 5 ||
-                                interval == 6 || interval == 7 || interval == 10);
-            if (is_blues) {
-                if (interval == 0 && hs->current_beat == 0) {
-                    // Beat 1 pulse on root notes
-                    hal_set_key_led(k, 0);
-                } else {
-                    hal_set_key_led(k, 1);
-                }
+
+            if (primary_scale[interval]) {
+                uint8_t pulse_off = (interval == 0 && hs->current_beat == 0);
+                hal_set_key_led(k, pulse_off ? 0 : 1);
+                hal_set_key_led_glow(k, 0);
+            } else if (secondary_scale[interval]) {
+                hal_set_key_led(k, 0);
+                hal_set_key_led_glow(k, 1);
             } else {
                 hal_set_key_led(k, 0);
+                hal_set_key_led_glow(k, 0);
             }
         }
     } else {
         // Stopped or SEL held: all keys backlit for navigation & section cues
         for (uint8_t k = 0; k < 27; k++) {
+            hal_set_key_led_glow(k, 0);
             if (k < 12) {
                 uint8_t semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
                 if (semitone == hs->root_semitone && hs->is_playing && hs->current_beat == 0) {

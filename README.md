@@ -59,7 +59,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **`PRESETS`** | Solo Lead Voice (8 voices) | Key (`C`–`B`) | Key (`C`–`B`) |
 | **`ALGORITHM`** | Backing Chord Engine (12 engines) | — | — |
 | **`KNOB1`** | Tempo (40–240 BPM)<br>*(Mixer: Bass Volume)* | Swing (0%–100%)<br>*(Mixer: Reverb Mix)* | — |
-| **`KNOB2`** | Spice (0%–100%)<br>*(Mixer: Keys Volume)* | Master Tuning (440 / 432 / 442 Hz)<br>*(Mixer: Spice)* | — |
+| **`KNOB2`** | Spice (0%–100%)<br>*(Mixer: Keys Volume)* | Master Tuning (440 / 432 / 442 Hz)<br>*(Mixer: Spice)* | Fullness (0%–100%, sparse vs. rocking) |
 | **`KNOB3`** | Bass Volume<br>*(Mixer: Drums Volume)* | Bass Engine (4 engines)<br>*(Mixer: Swing)* | — |
 | **`KNOB4`** | Keys Volume<br>*(Mixer: Lead Volume)* | Reverb Mix<br>*(Mixer: Master Tuning)* | — |
 
@@ -87,9 +87,10 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 - **Change the key:** Hold **`SEL`** (or **`GLO`**) and turn **`PRESETS`**. Or hold **`SEL`** and tap one of the first 12 silicone keys (`F` through `E`): a single tap queues the key change for the next chorus, and a quick double tap switches right away.
 - **Switch between Major and Minor Blues:** Press **`LFO`** for a one-tap toggle. You can also hold **`SEL`** and turn **`SELECT`**, or hold **`SEL`** and press Key 22 (Minor) / Key 18 (Major). Minor Blues shows **`KEY:Em (MIN)`** in cyan at the top of the screen and updates all 12 chord boxes (`Em7`, `Am7`, `C7`, `B7`).
-- **Make the chords and bass jazzier:** Turn **`KNOB2`** (**Spice**). Low (0–30%) keeps it straight and simple; middle (31–65%) adds 9ths, 13ths, and chromatic bass walk-ups; high (66–100%) adds passing diminished chords, tritone subs, and syncopated stabs.
+- **Make the chords and bass jazzier:** Turn **`KNOB2`** (**Spice**). Low (0–30%) keeps it straight and simple; middle (31–65%) adds 9ths, 13ths, and chromatic bass walk-ups; high (66–100%) adds passing diminished chords, tritone subs, and turnaround chords in Bars 11–12.
+- **Dial in sparse vs. full-band energy:** Hold **`SEL`** and turn **`KNOB2`** (**Fullness**). Low (<35%) strips the band down to a thin, intimate trio (half-note bass, soft backbeat chords, light rimshot/hat); high (>70%) adds driving bass anticipations, push comping stabs, ghost snares, and punchy Bar 4/8/12 drum fills.
 - **Adjust shuffle feel:** Hold **`GLO`** and turn **`KNOB1`** (**Swing**), or press **`HOME`** to open the Band Mixer and hold **`GLO`** + turn **`KNOB3`**. 0% is straight 8ths, ~67% is a classic triplet shuffle, and 100% is a hard dotted-8th swing.
-- **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While the band is playing, the LEDs light up the **Minor Blues scale** (`1, b3, 4, b5, 5, b7`) for your active key and pulse on Beat 1.
+- **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While playing, the LEDs light up **both blues scales at two brightness levels**: in Major Blues, the **Major Blues scale** (`1, 2, b3, 3, 5, 6`) is **bright** and the extra **Minor Blues** notes (`4, b5, b7`) glow **dim**; in Minor Blues, it flips (Minor Blues **bright**, Major Blues **dim**). The root pulses on Beat 1.
 - **Arm an ending:** Hold **`SEL`** and tap Keys 23–26 (23: Hard Stop, 24: Tag Ending, 25: Triple Turnaround, 26: Chromatic Slide).
 - **Save your setup:** Press **`SAVE`**. Background autosave is intentionally off so temporary jam tweaks don't overwrite your saved setup.
 

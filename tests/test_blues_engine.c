@@ -612,6 +612,30 @@ void test_stage5_integration(void) {
     }
     assert(final_amp <= 2);
 
+    // 4. Verify Fullness (sparse vs full) & Bar 12 phrase-end fill
+    HarmonyState fhs;
+    harmony_init(&fhs);
+    fhs.is_playing = 1;
+    fhs.current_bar = 1;
+    fhs.current_beat = 1;
+    fhs.current_subdiv = 0;
+    PresetConfig fp = presets[0];
+    Voicing fv = { {0}, 0 };
+    PerformanceFrame pf;
+
+    fhs.fullness = 10; // Ultra-sparse: no beat-1 bass, rimshot instead of snare
+    arranger_generate_frame(&fhs, &fp, &pf, &fv);
+    assert(pf.bass_trigger == 0);
+    assert((pf.drum_mask & 0x08) != 0);
+    assert((pf.drum_mask & 0x02) == 0);
+
+    fhs.fullness = 95; // Full rocking band + Bar 12 beat 3 offbeat fill
+    fhs.current_bar = 11;
+    fhs.current_beat = 3;
+    fhs.current_subdiv = 16; // offbeat_subdiv for swing 67 = 12 + (67*6)/100 = 16
+    arranger_generate_frame(&fhs, &fp, &pf, &fv);
+    assert((pf.drum_mask & 0x03) == 0x03);
+
     printf("[Stage 5] Full-system integration & MIDI tests passed!\n");
 }
 

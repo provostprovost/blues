@@ -47,6 +47,9 @@ void harmony_init(HarmonyState *hs) {
     hs->current_subdiv = 0;
     hs->queued_cue = CUE_NONE;
     hs->spice_level = 50;
+    hs->fullness = 65;
+    hs->toast_msg[0] = '\0';
+    hs->toast_until_ms = 0;
     hs->is_vamp_mode = 0;
     hs->vamp_bar_counter = 0;
     hs->stop_time_counter = 0;
@@ -177,6 +180,11 @@ BarSlot harmony_get_current_bar_slot(const HarmonyState *hs) {
     }
     if (hs->current_bar == 10 && hs->spice_level > 75) {
         slot.primary = DEG_bVI7; slot.secondary = DEG_V7; slot.has_split = 1;
+    }
+    if (hs->current_bar == 11 && hs->spice_level > 40) {
+        slot.primary = (hs->spice_level > 75) ? DEG_bVI7 : DEG_I7;
+        slot.secondary = DEG_V7;
+        slot.has_split = 1;
     }
     return slot;
 }

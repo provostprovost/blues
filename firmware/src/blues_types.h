@@ -169,6 +169,9 @@ typedef struct {
     uint16_t    ext_clock_timeout_ms;
     uint8_t     cpu_load_pct;
     uint16_t    chorus_count;
+    uint8_t     fullness;
+    char        toast_msg[28];
+    uint32_t    toast_until_ms;
 } HarmonyState;
 
 typedef struct {
@@ -196,6 +199,7 @@ typedef struct {
     uint8_t  drum_kit;
     uint8_t  lead_instrument;
     uint8_t  lead_vol;
+    uint8_t  fullness;
 } PresetConfig;
 
 typedef struct {

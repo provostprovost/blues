@@ -129,6 +129,7 @@ static inline uint8_t  hal_get_zone1_held(void) { return 0; }
 static inline int8_t   hal_get_encoder_delta(uint8_t enc) { (void)enc; return 0; }
 static inline void     hal_set_btn_led(uint8_t idx, uint8_t level) { (void)idx; (void)level; }
 static inline void     hal_set_key_led(uint8_t idx, uint8_t level) { (void)idx; (void)level; }
+static inline void     hal_set_key_led_glow(uint8_t idx, uint8_t level) { (void)idx; (void)level; }
 static inline int      hal_midi_get(uint8_t *st, uint8_t *d1, uint8_t *d2) { (void)st; (void)d1; (void)d2; return 0; }
 static inline void     hal_midi_send(uint8_t status, uint8_t d1, uint8_t d2) { (void)status; (void)d1; (void)d2; }
 static inline int      hal_blob_save(uint8_t slot, const void *data, uint16_t len) { (void)slot; (void)data; (void)len; return 0; }
@@ -173,6 +174,7 @@ static inline uint8_t  hal_get_zone1_held(void) { return (fm1_in.notes & 0x0FFF)
 static inline int8_t   hal_get_encoder_delta(uint8_t enc) { return fm1_enc_take(enc); }
 static inline void     hal_set_btn_led(uint8_t idx, uint8_t level) { fm1_led_key(idx, level > 0); }
 static inline void     hal_set_key_led(uint8_t idx, uint8_t level) { fm1_led_key(KEY_LED(idx), level > 0); }
+static inline void     hal_set_key_led_glow(uint8_t idx, uint8_t level) { fm1_led_key_glow(KEY_LED(idx), level > 0); }
 static inline int      hal_midi_get(uint8_t *st, uint8_t *d1, uint8_t *d2) { return midi_get(st, d1, d2); }
 static inline void     hal_midi_send(uint8_t status, uint8_t d1, uint8_t d2) { midi_send(status, d1, d2); }
 static inline int      hal_blob_save(uint8_t slot, const void *data, uint16_t len) { return blob_save(slot, data, len); }
