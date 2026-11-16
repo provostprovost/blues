@@ -29,6 +29,10 @@ static uint8_t g_last_bpm = 0xFF;
 static uint8_t g_last_form = 0xFF;
 static uint8_t g_last_toast_active = 0;
 static uint32_t g_last_toast_until = 0;
+static uint8_t g_last_stop_time = 0xFF;
+static uint8_t g_last_vamp = 0xFF;
+static uint8_t g_last_ending = 0xFF;
+static uint8_t g_last_queued_key = 0xFF;
 
 static uint8_t g_last_m_bass_vol = 0xFF;
 static uint8_t g_last_m_keys_vol = 0xFF;
@@ -65,6 +69,10 @@ void ui_init(void) {
     g_last_form = 0xFF;
     g_last_toast_active = 0;
     g_last_toast_until = 0;
+    g_last_stop_time = 0xFF;
+    g_last_vamp = 0xFF;
+    g_last_ending = 0xFF;
+    g_last_queued_key = 0xFF;
 
     g_last_m_bass_vol = 0xFF;
     g_last_m_keys_vol = 0xFF;
@@ -363,17 +371,26 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
 
         uint32_t now_ms = hal_millis();
         uint8_t toast_active = (hs->toast_until_ms != 0 && ((int32_t)(hs->toast_until_ms - now_ms) > 0));
+        uint8_t stop_time_active = (hs->stop_time_counter > 0);
+        uint8_t status_flags_changed = (stop_time_active != g_last_stop_time) ||
+                                       (hs->is_vamp_mode != g_last_vamp) ||
+                                       (hs->ending_armed != g_last_ending) ||
+                                       (hs->has_queued_key != g_last_queued_key);
         uint8_t footer_changed = screen_switched || (hs->is_playing != g_last_playing) ||
                                  (preset->ep_tone_algo != g_last_algo) || (preset->lead_instrument != g_last_lead) ||
                                  form_changed || (toast_active != g_last_toast_active) ||
                                  (toast_active && hs->toast_until_ms != g_last_toast_until) ||
-                                 (hs->stop_time_counter != 0) || (hs->is_vamp_mode != 0) || (hs->ending_armed != 0);
+                                 status_flags_changed;
 
         if (footer_changed || force_redraw) {
             render_status_and_footer(hs, preset, toast_active);
         }
         g_last_toast_active = toast_active;
         g_last_toast_until = hs->toast_until_ms;
+        g_last_stop_time = stop_time_active;
+        g_last_vamp = hs->is_vamp_mode;
+        g_last_ending = hs->ending_armed;
+        g_last_queued_key = hs->has_queued_key;
     } else if (screen_id == 1) {
         render_mixer_view(hs, preset, preset_idx, screen_switched || force_redraw);
     } else {
