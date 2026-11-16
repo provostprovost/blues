@@ -89,41 +89,56 @@ BarSlot harmony_get_current_bar_slot(const HarmonyState *hs) {
         return slot;
     }
 
+    ScaleDegree root_deg = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_i7 : DEG_I7;
+    ScaleDegree four_deg = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_iv7 : DEG_IV7;
+
+    if (hs->ending_armed == 2) {
+        BarSlot slot = { root_deg, root_deg, 0 };
+        return slot;
+    }
+
     uint8_t outro_bar_thresh = (hs->form_mode == FORM_8BAR) ? 6 : 10;
     if (hs->ending_armed && hs->current_bar >= outro_bar_thresh) {
         BarSlot slot;
         uint8_t outro_step = hs->current_bar - outro_bar_thresh;
         if (hs->outro_type == OUTRO_CHROMATIC) {
             if (outro_step == 0) {
+                slot.primary = root_deg;
+                slot.secondary = DEG_bVII7;
+                slot.has_split = 1;
+            } else {
+                // Classic chromatic slide: bVI7 -> V7 -> Beat-1 Root stinger
                 slot.primary = DEG_bVI7;
                 slot.secondary = DEG_V7;
                 slot.has_split = 1;
-            } else {
-                slot.primary = DEG_I7;
-                slot.secondary = DEG_I7;
-                slot.has_split = 0;
             }
         } else if (hs->outro_type == OUTRO_TRIPLE) {
             if (outro_step == 0) {
-                slot.primary = DEG_IV7;
-                slot.secondary = DEG_IV7;
-                slot.has_split = 0;
+                slot.primary = root_deg;
+                slot.secondary = four_deg;
+                slot.has_split = 1;
             } else {
-                slot.primary = DEG_V7;
-                slot.secondary = DEG_I7;
+                slot.primary = DEG_ii7;
+                slot.secondary = DEG_V7;
                 slot.has_split = 1;
             }
         } else if (hs->outro_type == OUTRO_STOP) {
-            slot.primary = DEG_I7;
-            slot.secondary = DEG_I7;
-            slot.has_split = 0;
+            if (outro_step == 0) {
+                slot.primary = root_deg;
+                slot.secondary = root_deg;
+                slot.has_split = 0;
+            } else {
+                slot.primary = DEG_V7;
+                slot.secondary = DEG_V7;
+                slot.has_split = 0;
+            }
         } else { // OUTRO_TAG
             if (outro_step == 0) {
-                slot.primary = DEG_I7;
-                slot.secondary = DEG_IV7;
+                slot.primary = root_deg;
+                slot.secondary = four_deg;
                 slot.has_split = 1;
             } else {
-                slot.primary = DEG_I7;
+                slot.primary = root_deg;
                 slot.secondary = DEG_V7;
                 slot.has_split = 1;
             }
@@ -284,8 +299,10 @@ void seq_advance_bar(HarmonyState *hs) {
     hs->current_bar++;
     uint8_t max_bars = (hs->form_mode == FORM_8BAR) ? 8 : 12;
     if (hs->current_bar >= max_bars) {
-        if (hs->ending_armed) {
-            hs->is_playing = 0; // All outro cadences conclude and stop playback
+        if (hs->ending_armed == 1) {
+            hs->ending_armed = 2; // Enter final Beat-1 Root I7 stinger
+        } else if (hs->ending_armed == 2) {
+            hs->is_playing = 0;
             hs->ending_armed = 0;
         }
         hs->current_bar = 0;

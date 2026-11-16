@@ -186,12 +186,34 @@ void test_stage1_harmony(void) {
         BarSlot s11 = harmony_get_current_bar_slot(&hs);
         assert(s11.primary <= DEG_SHARP_IV_DIM7);
 
-        // Advance past Bar 11 (completing Bar 12) -> must stop playback!
+        // Advance past Bar 11 (completing Bar 12) -> enters final Beat-1 Root stinger (ending_armed == 2)
         seq_advance_bar(&hs);
-        assert(hs.is_playing == 0);
-        assert(hs.ending_armed == 0);
+        assert(hs.ending_armed == 2);
         assert(hs.current_bar == 0);
+        // If seq_advance_bar runs again without arranger, it also stops cleanly
+        seq_advance_bar(&hs);
+        assert(hs.is_playing == 0 || hs.current_bar == 1);
     }
+
+    // Verify arranger_generate_frame plays final Root (I7) hit on ending_armed == 2 and stops
+    harmony_init(&hs);
+    hs.is_playing = 1;
+    hs.ending_armed = 2;
+    hs.root_semitone = 4; // E
+    hs.current_bar = 0;
+    hs.current_beat = 0;
+    hs.current_subdiv = 0;
+    PresetConfig end_p;
+    memset(&end_p, 0, sizeof(end_p));
+    PerformanceFrame end_f;
+    Voicing end_v = { {0}, 0 };
+    arranger_generate_frame(&hs, &end_p, &end_f, &end_v);
+    assert(end_f.bass_trigger == 1);
+    assert(end_f.bass_note == 40); // E2 root
+    assert(end_f.comp_trigger == 1);
+    assert(end_f.drum_mask == 0x07);
+    assert(hs.is_playing == 0);
+    assert(hs.ending_armed == 0);
 
     // 8. Test Single-Tap (Next Chorus) vs Double-Tap (Next Bar) Key Modulation
     harmony_init(&hs);

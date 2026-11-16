@@ -262,7 +262,10 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
             status_str = "VAMP LOOP ACTIVE";
             status_col = RGB(80, 200, 255);
         } else if (hs->ending_armed) {
-            status_str = "ENDING ARMED";
+            static const char *OUTRO_STATUS[4] = {
+                "ENDING: TAG", "ENDING: TRIPLE", "ENDING: CHROM SLIDE", "ENDING: HARD STOP"
+            };
+            status_str = OUTRO_STATUS[(uint8_t)hs->outro_type % 4];
             status_col = RGB(255, 100, 100);
         } else if (hs->has_queued_key) {
             status_str = "KEY MOD QUEUED";

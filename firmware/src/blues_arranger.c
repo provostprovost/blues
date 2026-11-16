@@ -410,6 +410,35 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         return;
     }
 
+    if (hs->ending_armed == 2) {
+        // Final resolution stinger: unified Root (I7) hit on Beat 1, then stop and ring out
+        if (hs->current_beat == 0 && hs->current_subdiv == 0) {
+            uint8_t curr_root = (uint8_t)(40 + (((hs->root_semitone % 12) + 8) % 12));
+            while (curr_root < 40) curr_root += 12;
+            while (curr_root > 51) curr_root -= 12;
+
+            frame->bass_trigger = 1;
+            frame->bass_note = curr_root;
+            frame->bass_vel = 127;
+
+            ScaleDegree root_deg = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_i7 : DEG_I7;
+            frame->comp_trigger = 1;
+            frame->comp_vel = 120;
+            frame->comp_voicing = voice_lead_select(*last_voicing, root_deg, hs->root_semitone, 0);
+            *last_voicing = frame->comp_voicing;
+
+            frame->drum_mask = 0x07; // Kick + Snare + Cymbal crash
+            frame->drum_vel[0] = 127;
+            frame->drum_vel[1] = 115;
+            frame->drum_vel[2] = 110;
+
+            hs->is_playing = 0;
+            hs->ending_armed = 0;
+            hs->ui_dirty = 1;
+        }
+        return;
+    }
+
     if (hs->stop_time_counter > 0) {
         if (hs->current_beat > 0 || hs->current_subdiv > 0) return;
     }

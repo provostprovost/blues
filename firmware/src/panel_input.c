@@ -533,15 +533,24 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                         g_save_pending = 1;
                         g_last_param_change_ms = ms_now;
                     } else if (k >= 23 && k <= 26) {
-                        // Zone 4: Outros & Endings
+                        // Zone 4: Outros & Endings (tap again to disarm)
+                        OutroType chosen = OUTRO_TAG;
+                        const char *toast = "ENDING: TAG";
                         switch (k) {
-                            case 23: hs->outro_type = OUTRO_STOP; break;
-                            case 24: hs->outro_type = OUTRO_TAG; break;
-                            case 25: hs->outro_type = OUTRO_TRIPLE; break;
-                            case 26: hs->outro_type = OUTRO_CHROMATIC; break;
+                            case 23: chosen = OUTRO_STOP;      toast = "ENDING: HARD STOP";   break;
+                            case 24: chosen = OUTRO_TAG;       toast = "ENDING: TAG";         break;
+                            case 25: chosen = OUTRO_TRIPLE;    toast = "ENDING: TRIPLE";      break;
+                            case 26: chosen = OUTRO_CHROMATIC; toast = "ENDING: CHROM SLIDE"; break;
                         }
-                        hs->ending_armed = 1;
-                        p->outro_type = hs->outro_type;
+                        if (hs->ending_armed && hs->outro_type == chosen) {
+                            hs->ending_armed = 0;
+                            set_toast(hs, ms_now, "ENDING: OFF");
+                        } else {
+                            hs->outro_type = chosen;
+                            hs->ending_armed = 1;
+                            p->outro_type = hs->outro_type;
+                            set_toast(hs, ms_now, toast);
+                        }
                         hs->ui_dirty = 1;
                     }
                 }
@@ -552,21 +561,28 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
 
 void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     (void)active_preset_idx;
-    hal_set_btn_led(BTN_PLAY, hs->is_playing ? 1 : 0);
+    uint8_t play_led = hs->is_playing ? 1 : 0;
+    if (hs->is_playing && hs->ending_armed) {
+        play_led = (hs->current_subdiv < 12) ? 1 : 0; // Blink PLAY LED when an ending is queued
+    }
+    hal_set_btn_led(BTN_PLAY, play_led);
     hal_set_btn_led(BTN_REC, (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4) ? 1 : 0);
 
     uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
     uint8_t root_blink = (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4);
 
     if (hs->is_playing && !sel_held) {
-        // Classic blues phrasing LED guide: Minor Blues in minor form;
-        // in Major forms, Major Blues on I7 and Minor Blues on IV7 / V7 / turnarounds.
+        // Classic blues phrasing LED guide:
+        // Current chord root = FULL WHITE, other scale notes = HALF WHITE (glow), non-scale = OFF.
         static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6
         static const uint8_t MIN_BLUES[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7
+        BarSlot slot = harmony_get_current_bar_slot(hs);
+        ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
+        ScaleDegreeInfo dinfo = harmony_get_degree_info(deg);
+        uint8_t chord_root = (uint8_t)((hs->root_semitone + dinfo.semitone_offset) % 12);
+
         uint8_t use_minor_scale = (hs->form_mode == FORM_MINOR_BLUES);
         if (!use_minor_scale) {
-            BarSlot slot = harmony_get_current_bar_slot(hs);
-            ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
             if (deg == DEG_IV7 || deg == DEG_iv7 || deg == DEG_V7 || deg == DEG_v7 ||
                 deg == DEG_bVI7 || deg == DEG_bVII7 || deg == DEG_SHARP_IV_DIM7) {
                 use_minor_scale = 1;
@@ -577,14 +593,18 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
         for (uint8_t k = 0; k < 27; k++) {
             int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
             uint8_t note = (uint8_t)((note_val < 0) ? 0 : (note_val > 127) ? 127 : note_val);
+            uint8_t note_pc = (uint8_t)(note % 12);
             uint8_t interval = (uint8_t)((note + 12 - hs->root_semitone) % 12);
 
-            hal_set_key_led_glow(k, 0);
-            if (scale[interval]) {
-                uint8_t pulse_off = (interval == 0 && root_blink);
-                hal_set_key_led(k, pulse_off ? 0 : 1);
+            if (note_pc == chord_root) {
+                hal_set_key_led(k, root_blink ? 0 : 1);
+                hal_set_key_led_glow(k, 0);
+            } else if (scale[interval]) {
+                hal_set_key_led(k, 0);
+                hal_set_key_led_glow(k, 1);
             } else {
                 hal_set_key_led(k, 0);
+                hal_set_key_led_glow(k, 0);
             }
         }
     } else {
