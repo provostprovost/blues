@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 void ui_init(void);
+void ui_render_splash(void);
 void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw);
 
 #ifdef __cplusplus

@@ -56,7 +56,27 @@ static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
     { GROOVE_DELTA_STOMP, 55, // Heavy 4-on-floor foot stomp + backbeat clap/snare
       {110,0,0,0,  127,0,0,0,  110,0,0,0,  127,0,0,0},
       {127,0,0,0,  120,0,0,0,  127,0,0,0,  120,0,0,0},
-      {90,0,0,0,   100,0,0,0,  90,0,0,0,   100,0,0,0} }
+      {90,0,0,0,   100,0,0,0,  90,0,0,0,   100,0,0,0} },
+    { GROOVE_POCKET_FUNK, 0, // 70s James Brown tight 16th pocket: "The One" + syncopated kick & ghost snares
+      {127,0,0,95, 0,0,108,92, 0,95,115,0, 0,0,102,0},
+      {0,0,58,0,   125,0,0,68, 0,62,0,0,   125,0,0,72},
+      {115,82,105,82, 115,82,105,82, 115,82,105,82, 115,82,105,88} },
+    { GROOVE_NOLA_FUNK, 20, // Meters-style New Orleans syncopated 16th second-line funk
+      {127,0,0,105, 0,95,112,0, 118,0,95,0, 0,102,0,92},
+      {0,0,68,0,   122,0,85,0, 0,78,0,95,  118,0,92,0},
+      {120,85,100,90, 120,85,100,90, 120,85,100,90, 120,85,105,95} },
+    { GROOVE_BLUES_FUNK, 38, // Greasy swung-16th blues-funk pocket
+      {127,0,88,0, 0,0,112,96, 120,0,0,96, 0,90,106,0},
+      {0,0,0,64,   124,0,0,70, 0,64,0,0,   124,0,74,0},
+      {120,78,104,78, 120,78,104,78, 120,78,104,78, 120,78,108,84} },
+    { GROOVE_SLOW_NEO_FUNK, 32, // Laid-back heavy neo-funk / soul pocket
+      {127,0,0,0,  0,0,96,108, 118,0,0,92, 0,0,102,0},
+      {0,0,0,0,    122,0,0,58, 0,55,0,0,   122,0,0,64},
+      {110,70,95,70, 110,70,95,70, 110,70,95,70, 110,70,95,75} },
+    { GROOVE_COUNTRY_TWANG, 45, // Country boom-chick / train snare with alternating root-5th bass
+      {127,0,0,0,  0,0,86,0,   122,0,0,0,  0,0,90,0},
+      {0,58,72,58, 124,58,76,62, 0,58,72,58, 124,62,80,68},
+      {115,0,95,0, 115,0,95,0, 115,0,95,0, 115,0,95,0} }
 };
 
 static uint16_t g_hmnz_lfsr = 0x5EEDu;
@@ -230,10 +250,12 @@ static const uint8_t BASS_STYLE_MASKS[NUM_BASS_STYLES][16] = {
     {127,0,0,0,  108,0,0,0,  118,0,0,0,  112,0,96,0}, // 6: GOSPEL WALK (1 - 2 - #2 - 3 walk-up)
     {127,0,90,0, 106,0,90,0, 116,0,90,0, 108,0,90,0}, // 7: SLOW 12/8 ROLLING (1-3-5-b7-5-3)
     {127,0,95,0, 0,0,108,0,  120,0,96,0, 0,0,106,0},  // 8: MOTOWN 8THS (Jamerson syncopations)
-    {127,0,0,0,  0,0,115,0,  118,0,0,0,  110,0,95,0}  // 9: SECOND LINE (NOLA street-parade tuba)
+    {127,0,0,0,  0,0,115,0,  118,0,0,0,  110,0,95,0}, // 9: SECOND LINE (NOLA street-parade tuba)
+    {127,0,96,106, 0,90,114,0, 120,0,96,106, 0,92,112,96}, // 10: FUNK 16THS (16th octave-pop & b7 pocket)
+    {127,0,0,0,  0,0,0,0,    120,0,0,0,  0,0,96,0}    // 11: COUNTRY 2-BEAT (Root-5th boom-chick + walkup)
 };
 
-// 10 Independent Keys Comping Styles with 2-Bar A/B Phrasing
+// 12 Independent Keys Comping Styles with 2-Bar A/B Phrasing
 static const uint8_t KEYS_STYLE_MASKS[NUM_KEYS_STYLES][2][16] = {
     { // 0: CHARLESTON: Beat 1 + & of Beat 2 (classic open blues pocket)
       {105,0,0,0, 0,0,92,0, 0,0,0,0, 0,0,0,0},
@@ -264,7 +286,13 @@ static const uint8_t KEYS_STYLE_MASKS[NUM_KEYS_STYLES][2][16] = {
       {105,0,0,0, 0,0,96,0, 0,0,90,0, 0,0,0,0} },
     { // 9: SLOW 12/8 ARP: rolling triplet broken comping
       {102,0,80,0, 90,0,0,0, 98,0,80,0, 90,0,82,0},
-      {102,0,80,0, 90,0,0,0, 98,0,80,0, 90,0,82,0} }
+      {102,0,80,0, 90,0,0,0, 98,0,80,0, 90,0,82,0} },
+    { // 10: FUNK CLAV 16TH: tight syncopated 16th clavinet/organ skank
+      {110,0,0,96, 0,92,104,0, 0,94,108,0, 98,0,92,0},
+      {110,0,90,0, 0,96,106,0, 96,0,0,94,  104,0,96,0} },
+    { // 11: COUNTRY CHOP: crisp off-beat & backbeat honky-tonk comping
+      {0,0,96,0,  110,0,92,0, 0,0,96,0,  110,0,94,0},
+      {0,0,96,0,  110,0,92,0, 0,0,96,0,  112,0,98,90} }
 };
 
 void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, GrooveStyle style) {
@@ -311,6 +339,23 @@ void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, Groo
         case GROOVE_GOSPEL_SWING:
             preset->bass_style = BASS_STYLE_GOSPEL_WALK;
             preset->keys_style = KEYS_STYLE_GOSPEL_SWELL;
+            break;
+        case GROOVE_POCKET_FUNK:
+        case GROOVE_BLUES_FUNK:
+            preset->bass_style = BASS_STYLE_FUNK_16;
+            preset->keys_style = KEYS_STYLE_FUNK_CLAV;
+            break;
+        case GROOVE_NOLA_FUNK:
+            preset->bass_style = BASS_STYLE_SECOND_LINE;
+            preset->keys_style = KEYS_STYLE_FUNK_CLAV;
+            break;
+        case GROOVE_SLOW_NEO_FUNK:
+            preset->bass_style = BASS_STYLE_SYNCOPATED;
+            preset->keys_style = KEYS_STYLE_CALL_RESP;
+            break;
+        case GROOVE_COUNTRY_TWANG:
+            preset->bass_style = BASS_STYLE_COUNTRY_2;
+            preset->keys_style = KEYS_STYLE_COUNTRY_CHOP;
             break;
         case GROOVE_BOOGIE_WOOGIE:
         default:
@@ -379,6 +424,36 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
         else if (beat == 1) note = curr_root + fifth;
         else if (beat == 2) note = curr_root + third;
         else note = (sub_idx >= 2) ? (curr_root + 10) : (curr_root + fifth);
+    } else if (bass_style == BASS_STYLE_FUNK_16) {
+        // 16th-note octave-pop & flat-7th funk bassline
+        if (beat == 0) {
+            if (sub_idx == 0) note = curr_root;
+            else if (sub_idx == 2) note = curr_root + 12;
+            else note = curr_root + 10;
+        } else if (beat == 1) {
+            note = (sub_idx == 1) ? (curr_root + third) : (curr_root + fifth);
+        } else if (beat == 2) {
+            if (sub_idx == 0) note = curr_root;
+            else if (sub_idx == 2) note = curr_root + 10;
+            else note = curr_root + 12;
+        } else {
+            if (sub_idx == 1) note = curr_root + fifth;
+            else if (sub_idx == 2) note = curr_root + 10;
+            else note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
+        }
+    } else if (bass_style == BASS_STYLE_COUNTRY_2) {
+        // Country alternating root-fifth two-beat with walk-up into next bar
+        if (beat == 0 || beat == 1) {
+            note = curr_root;
+        } else if (beat == 2) {
+            note = curr_root + fifth;
+        } else {
+            if (sub_idx >= 2) {
+                note = (variation > 45) ? (curr_root + third) : (curr_root + 2);
+            } else {
+                note = curr_root + fifth;
+            }
+        }
     } else if (bass_style == BASS_STYLE_SHUFFLE_REP) {
         // Shuffle repeat: & repeats the current beat's walking note instead of jumping to +7/+12
         return bass_compute_note(current, next, beat, 0, variation);
@@ -452,10 +527,14 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         else if (hs->current_subdiv == 16) sub_slot = 2;
     } else {
         uint8_t offbeat_subdiv = 12 + (uint8_t)((preset->swing * 6) / 100);
+        uint8_t allow_16ths = (preset->swing < 30) || (gt->style >= GROOVE_POCKET_FUNK) ||
+                              (hs->bass_style == BASS_STYLE_FUNK_16) || (hs->keys_style == KEYS_STYLE_FUNK_CLAV);
+        uint8_t sub1_subdiv = 6 + (uint8_t)((preset->swing * 2) / 100);
+        uint8_t sub3_subdiv = 18 + (uint8_t)((preset->swing * 2) / 100);
         if (hs->current_subdiv == 0) sub_slot = 0;
-        else if (hs->current_subdiv == 6 && preset->swing < 30) sub_slot = 1;
+        else if (allow_16ths && hs->current_subdiv == sub1_subdiv) sub_slot = 1;
         else if (hs->current_subdiv == offbeat_subdiv) sub_slot = 2;
-        else if (hs->current_subdiv == 18 && preset->swing < 30) sub_slot = 3;
+        else if (allow_16ths && hs->current_subdiv == sub3_subdiv) sub_slot = 3;
     }
 
     if (sub_slot != 0xFF) {
@@ -533,35 +612,59 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             }
         }
 
-        // Kick Drum: Beat 1 downbeat (d_full >= 20), Beat 3 (d_full >= 55), plus syncopated pushes (d_var / d_full > 65)
-        if (d_full >= 20 && hs->current_subdiv == 0 && (hs->current_beat == 0 || (d_full >= 55 && hs->current_beat == 2))) {
-            frame->drum_mask |= 0x01;
-            int dv0 = 112 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -14 : 0);
-            frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
-        }
-        if (d_full >= 45 && d_var > 65 && sub_slot == 2 && (hs->current_beat == 3 || (d_full > 75 && hs->current_beat == 1))) {
-            frame->drum_mask |= 0x01;
-            int dv0 = 96 + j_vel;
-            frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
-        }
+        if (gt->style >= GROOVE_POCKET_FUNK) {
+            // Custom 16-step Funk & Country drum templates (kick in bass_mask, snare/ghosts in comp_mask)
+            uint8_t k_vel = gt->bass_mask[step16 % 16];
+            if (k_vel > 0 && d_full >= 20) {
+                if (sub_slot == 0 || d_full >= 45) {
+                    frame->drum_mask |= 0x01;
+                    int dv0 = (int)k_vel + j_vel + ((d_full > 75) ? 8 : (d_full < 45) ? -14 : 0);
+                    frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
+                }
+            }
+            uint8_t s_vel = gt->comp_mask[step16 % 16];
+            if (s_vel > 0) {
+                if (d_full < 20 && sub_slot == 0 && (hs->current_beat == 1 || hs->current_beat == 3)) {
+                    frame->drum_mask |= 0x08;
+                    int dv3 = 82 + j_vel;
+                    frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
+                } else if (sub_slot == 0 || (d_full >= 40 && d_var >= 20)) {
+                    frame->drum_mask |= 0x02;
+                    int dv1 = (int)s_vel + j_vel + ((d_full > 75) ? 8 : (d_full < 45) ? -14 : 0);
+                    frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
+                }
+            }
+        } else {
+            // Kick Drum: Beat 1 downbeat (d_full >= 20), Beat 3 (d_full >= 55), plus syncopated pushes (d_var / d_full > 65)
+            if (d_full >= 20 && hs->current_subdiv == 0 && (hs->current_beat == 0 || (d_full >= 55 && hs->current_beat == 2))) {
+                frame->drum_mask |= 0x01;
+                int dv0 = 112 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -14 : 0);
+                frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
+            }
+            if (d_full >= 45 && d_var > 65 && sub_slot == 2 && (hs->current_beat == 3 || (d_full > 75 && hs->current_beat == 1))) {
+                frame->drum_mask |= 0x01;
+                int dv0 = 96 + j_vel;
+                frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
+            }
 
-        // Snare / Rimshot: Backbeat on Beats 2 and 4 (current_beat == 1 || 3)
-        if ((hs->current_beat == 1 || hs->current_beat == 3) && hs->current_subdiv == 0) {
-            if (d_full < 20) {
-                frame->drum_mask |= 0x08; // Ultra-sparse: rimshot only on 2 & 4
-                int dv3 = 82 + j_vel;
-                frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
-            } else {
+            // Snare / Rimshot: Backbeat on Beats 2 and 4 (current_beat == 1 || 3)
+            if ((hs->current_beat == 1 || hs->current_beat == 3) && hs->current_subdiv == 0) {
+                if (d_full < 20) {
+                    frame->drum_mask |= 0x08; // Ultra-sparse: rimshot only on 2 & 4
+                    int dv3 = 82 + j_vel;
+                    frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
+                } else {
+                    frame->drum_mask |= 0x02;
+                    int dv1 = 104 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -16 : 0);
+                    frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
+                }
+            }
+            // Snare ghost notes (controlled by Drums Spice & Fullness)
+            if (d_full >= 40 && d_var >= 26 && sub_slot == 2 && (hs->current_beat == 2 || (d_var > 65 && hs->current_beat == 0))) {
                 frame->drum_mask |= 0x02;
-                int dv1 = 104 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -16 : 0);
+                int dv1 = 48 + j_vel + ((d_var > 65) ? 15 : 0);
                 frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
             }
-        }
-        // Snare ghost notes (controlled by Drums Spice & Fullness)
-        if (d_full >= 40 && d_var >= 26 && sub_slot == 2 && (hs->current_beat == 2 || (d_var > 65 && hs->current_beat == 0))) {
-            frame->drum_mask |= 0x02;
-            int dv1 = 48 + j_vel + ((d_var > 65) ? 15 : 0);
-            frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
         }
 
         // Automatic phrase-end drum fills: Bar 12 (d_var > 25), Bar 4 & 8 (d_var > 65)

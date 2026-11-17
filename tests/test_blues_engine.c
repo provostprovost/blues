@@ -695,6 +695,15 @@ void test_stage5_integration(void) {
         dsp_note_off_lead(69);
     }
 
+    // Verify Easy Lead polyphonic unlit-key bends and splash screen render
+    dsp_set_lead_play_style(LEAD_PLAY_POLY);
+    dsp_note_on_lead_ex(58, 59, 115, 0);
+    dsp_note_on_lead_ex(61, 63, 115, 0);
+    dsp_render_block(test_buf, 64, &fp);
+    dsp_note_off_lead(58);
+    dsp_note_off_lead(61);
+    ui_render_splash();
+
     printf("[Stage 5] Full-system integration & MIDI tests passed!\n");
 }
 

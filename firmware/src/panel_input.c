@@ -64,6 +64,52 @@ static uint8_t wrap_step_u8(uint8_t cur, int32_t delta, uint8_t count) {
     return (uint8_t)(v % count);
 }
 
+static void format_user_preset_name(char *dst, uint8_t slot_1based) {
+    static const char *PFX = "USER SETTINGS ";
+    int i = 0;
+    while (PFX[i]) { dst[i] = PFX[i]; i++; }
+    if (slot_1based >= 10) dst[i++] = (char)('0' + (slot_1based / 10));
+    dst[i++] = (char)('0' + (slot_1based % 10));
+    dst[i] = '\0';
+}
+
+static void compute_scale_context(const HarmonyState *hs, uint8_t *out_chord_root, const uint8_t **out_scale) {
+    static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6
+    static const uint8_t MIN_BLUES[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7
+    uint8_t use_minor_scale = (hs->form_mode == FORM_MINOR_BLUES);
+    uint8_t chord_root = (uint8_t)(hs->root_semitone % 12);
+
+    if (hs->is_playing) {
+        BarSlot slot = harmony_get_current_bar_slot(hs);
+        ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
+        ScaleDegreeInfo dinfo = harmony_get_degree_info(deg);
+        chord_root = (uint8_t)((hs->root_semitone + dinfo.semitone_offset) % 12);
+        if (!use_minor_scale) {
+            if (deg == DEG_IV7 || deg == DEG_iv7 || deg == DEG_V7 || deg == DEG_v7 ||
+                deg == DEG_bVI7 || deg == DEG_bVII7 || deg == DEG_SHARP_IV_DIM7) {
+                use_minor_scale = 1;
+            }
+        }
+    }
+    *out_chord_root = chord_root;
+    *out_scale = use_minor_scale ? MIN_BLUES : MAJ_BLUES;
+}
+
+static uint8_t resolve_easy_lead_note(const HarmonyState *hs, uint8_t note) {
+    uint8_t chord_root = 0;
+    const uint8_t *scale = 0;
+    compute_scale_context(hs, &chord_root, &scale);
+
+    for (uint8_t cand = note; cand <= 127; cand++) {
+        uint8_t pc = (uint8_t)(cand % 12);
+        uint8_t interval = (uint8_t)((cand + 12 - (hs->root_semitone % 12)) % 12);
+        if (pc == chord_root || scale[interval]) {
+            return cand;
+        }
+    }
+    return note;
+}
+
 static void save_to_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8_t *active_preset_idx, uint8_t slot, uint32_t ms_now) {
     PresetConfig *src = &presets[*active_preset_idx];
     PresetConfig *dst = &presets[slot % NUM_PRESET_SLOTS];
@@ -88,12 +134,14 @@ static void save_to_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8_t
     dst->opening_var = (uint8_t)hs->opening_var;
     dst->outro_type = (uint8_t)hs->outro_type;
     dst->count_in_enabled = hs->count_in_enabled;
+    dst->easy_lead = hs->easy_lead;
     *active_preset_idx = slot % NUM_PRESET_SLOTS;
+    format_user_preset_name(dst->name, (uint8_t)((*active_preset_idx) + 1));
     hal_blob_save(0, presets, sizeof(PresetConfig) * NUM_PRESET_SLOTS);
-    GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, dst->master_tuning, dst->count_in_enabled, 0 };
+    GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, dst->master_tuning, dst->count_in_enabled, hs->easy_lead };
     hal_settings_save(&gs, sizeof(gs));
     g_save_pending = 0;
-    set_toast_val(hs, ms_now, "SAVED SLOT ", (int32_t)(*active_preset_idx) + 1, "");
+    set_toast(hs, ms_now, dst->name);
 }
 
 static void load_from_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8_t *active_preset_idx, uint8_t slot, uint32_t ms_now) {
@@ -117,10 +165,14 @@ static void load_from_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8
     hs->drum_pattern = np->drum_pattern;
     hs->count_in_enabled = np->count_in_enabled;
     dsp_set_lead_play_style(np->lead_play_style);
-    GlobalSettings gs = { SETTINGS_MAGIC, slot, np->master_tuning, np->count_in_enabled, 0 };
+    GlobalSettings gs = { SETTINGS_MAGIC, slot, np->master_tuning, np->count_in_enabled, hs->easy_lead };
     hal_settings_save(&gs, sizeof(gs));
     hs->ui_dirty = 1;
-    set_toast_val(hs, ms_now, "LOADED SLOT ", (int32_t)slot + 1, "");
+    if (np->name[0] != '\0') {
+        set_toast(hs, ms_now, np->name);
+    } else {
+        set_toast_val(hs, ms_now, "LOADED SLOT ", (int32_t)slot + 1, "");
+    }
 }
 
 static void set_master_fullness(HarmonyState *hs, PresetConfig *p, uint8_t val) {
@@ -322,13 +374,22 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         }
     }
     if (btn_edges & (1u << BTN_LFO)) {
-        // Toggle Minor Blues Form
-        if (hs->form_mode == FORM_MINOR_BLUES) {
-            hs->form_mode = FORM_12BAR;
+        if (glo_held || sel_held) {
+            // Quick flip anywhere: GLO + LFO (or SEL + LFO) toggles Easy Lead Scale-Lock Mode
+            hs->easy_lead = !hs->easy_lead;
+            p->easy_lead = hs->easy_lead;
+            GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, p->master_tuning, p->count_in_enabled, hs->easy_lead };
+            hal_settings_save(&gs, sizeof(gs));
+            set_toast(hs, ms_now, hs->easy_lead ? "EASY LEAD: ON (BEND)" : "EASY LEAD: OFF");
         } else {
-            hs->form_mode = FORM_MINOR_BLUES;
+            // Toggle Minor Blues Form
+            if (hs->form_mode == FORM_MINOR_BLUES) {
+                hs->form_mode = FORM_12BAR;
+            } else {
+                hs->form_mode = FORM_MINOR_BLUES;
+            }
+            p->form_mode = hs->form_mode;
         }
-        p->form_mode = hs->form_mode;
         hs->ui_dirty = 1;
         g_save_pending = 1;
         g_last_param_change_ms = ms_now;
@@ -496,7 +557,13 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                 p->form_mode = hs->form_mode;
             }
         } else if (is_mixer) {
-            if (glo_held) {
+            if (sel_held) {
+                hs->easy_lead = !hs->easy_lead;
+                p->easy_lead = hs->easy_lead;
+                GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, p->master_tuning, p->count_in_enabled, hs->easy_lead };
+                hal_settings_save(&gs, sizeof(gs));
+                set_toast(hs, ms_now, hs->easy_lead ? "EASY LEAD: ON (BEND)" : "EASY LEAD: OFF");
+            } else if (glo_held) {
                 p->lead_play_style = wrap_step_u8(p->lead_play_style, delta, NUM_LEAD_PLAY_STYLES);
                 dsp_set_lead_play_style(p->lead_play_style);
             } else {
@@ -558,7 +625,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                     int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
                     if (note_val < 0) note_val = 0;
                     if (note_val > 127) note_val = 127;
-                    dsp_note_on_lead((uint8_t)note_val, 115, p->master_tuning);
+                    uint8_t key_note = (uint8_t)note_val;
+                    uint8_t target_note = hs->easy_lead ? resolve_easy_lead_note(hs, key_note) : key_note;
+                    dsp_note_on_lead_ex(key_note, target_note, 115, p->master_tuning);
                 }
             }
         }
@@ -676,30 +745,18 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
                 hal_set_key_led(k, 0);
             }
         }
-    } else if (hs->is_playing && !sel_held) {
-        // Classic blues phrasing LED guide:
+    } else if (!sel_held) {
+        // Classic blues phrasing LED guide (both when playing AND when stopped):
         // Current chord root = FULL WHITE, other scale notes = HALF WHITE (glow), non-scale = OFF.
-        static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6
-        static const uint8_t MIN_BLUES[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7
-        BarSlot slot = harmony_get_current_bar_slot(hs);
-        ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
-        ScaleDegreeInfo dinfo = harmony_get_degree_info(deg);
-        uint8_t chord_root = (uint8_t)((hs->root_semitone + dinfo.semitone_offset) % 12);
-
-        uint8_t use_minor_scale = (hs->form_mode == FORM_MINOR_BLUES);
-        if (!use_minor_scale) {
-            if (deg == DEG_IV7 || deg == DEG_iv7 || deg == DEG_V7 || deg == DEG_v7 ||
-                deg == DEG_bVI7 || deg == DEG_bVII7 || deg == DEG_SHARP_IV_DIM7) {
-                use_minor_scale = 1;
-            }
-        }
-        const uint8_t *scale = use_minor_scale ? MIN_BLUES : MAJ_BLUES;
+        uint8_t chord_root = 0;
+        const uint8_t *scale = 0;
+        compute_scale_context(hs, &chord_root, &scale);
 
         for (uint8_t k = 0; k < 27; k++) {
             int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
             uint8_t note = (uint8_t)((note_val < 0) ? 0 : (note_val > 127) ? 127 : note_val);
             uint8_t note_pc = (uint8_t)(note % 12);
-            uint8_t interval = (uint8_t)((note + 12 - hs->root_semitone) % 12);
+            uint8_t interval = (uint8_t)((note + 12 - (hs->root_semitone % 12)) % 12);
 
             if (note_pc == chord_root) {
                 hal_set_key_led(k, root_blink ? 0 : 1);

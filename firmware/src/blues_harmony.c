@@ -57,6 +57,7 @@ void harmony_init(HarmonyState *hs) {
     hs->bass_style = BASS_STYLE_WALKING;
     hs->keys_style = KEYS_STYLE_CHARLESTON;
     hs->drum_pattern = 0;
+    hs->easy_lead = 0;
     hs->toast_msg[0] = '\0';
     hs->toast_until_ms = 0;
     hs->is_vamp_mode = 0;

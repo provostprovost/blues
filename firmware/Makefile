@@ -21,7 +21,7 @@ check_phase0:
 
 check_phase1:
 	@mkdir -p ../build
-	$(CC) -DSTANDALONE_TEST $(CFLAGS) $(INCLUDES) src/blues_harmony.c src/blues_arranger.c src/dsp_voices.c ../tests/test_blues_engine.c -o ../build/test_blues
+	$(CC) -DSTANDALONE_TEST $(CFLAGS) $(INCLUDES) src/blues_harmony.c src/blues_arranger.c src/dsp_voices.c src/panel_input.c src/ui_screens.c ../tests/test_blues_engine.c -o ../build/test_blues
 	../build/test_blues
 
 test: all

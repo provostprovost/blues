@@ -79,10 +79,15 @@ typedef enum {
     GROOVE_BO_DIDDLEY,
     GROOVE_JAZZ_SHUFFLE,
     GROOVE_GOSPEL_SWING,
-    GROOVE_DELTA_STOMP
+    GROOVE_DELTA_STOMP,
+    GROOVE_POCKET_FUNK,
+    GROOVE_NOLA_FUNK,
+    GROOVE_BLUES_FUNK,
+    GROOVE_SLOW_NEO_FUNK,
+    GROOVE_COUNTRY_TWANG
 } GrooveStyle;
 
-#define NUM_DRUM_PATTERNS 14
+#define NUM_DRUM_PATTERNS 19
 
 typedef enum {
     BASS_P_BASS = 0,
@@ -113,10 +118,12 @@ typedef enum {
     BASS_STYLE_GOSPEL_WALK,
     BASS_STYLE_SLOW_12_8,
     BASS_STYLE_MOTOWN,
-    BASS_STYLE_SECOND_LINE
+    BASS_STYLE_SECOND_LINE,
+    BASS_STYLE_FUNK_16,
+    BASS_STYLE_COUNTRY_2
 } BassStyle;
 
-#define NUM_BASS_STYLES 10
+#define NUM_BASS_STYLES 12
 
 typedef enum {
     KEYS_STYLE_CHARLESTON = 0,
@@ -128,10 +135,12 @@ typedef enum {
     KEYS_STYLE_BOOGIE_8,
     KEYS_STYLE_GOSPEL_SWELL,
     KEYS_STYLE_RUMBA_MONTUNO,
-    KEYS_STYLE_SLOW_12_8
+    KEYS_STYLE_SLOW_12_8,
+    KEYS_STYLE_FUNK_CLAV,
+    KEYS_STYLE_COUNTRY_CHOP
 } KeysStyle;
 
-#define NUM_KEYS_STYLES 10
+#define NUM_KEYS_STYLES 12
 
 typedef enum {
     KEYS_RHODES = 0,
@@ -176,21 +185,32 @@ typedef enum {
 typedef enum {
     LEAD_BLUES_GUITAR = 0,
     LEAD_HARMONICA,
+    LEAD_ALTO_SAX,
     LEAD_TENOR_SAX,
+    LEAD_BARI_SAX,
+    LEAD_MUTED_TRUMPET,
+    LEAD_HORN_SECT,
+    LEAD_JAZZ_FLUTE,
+    LEAD_WHISTLE,
     LEAD_MOOG_LEAD,
     LEAD_WARM_JAZZ,
     LEAD_FUZZ_OCTAVE,
-    LEAD_MUTED_TRUMPET,
     LEAD_PERC_ORGAN,
+    LEAD_ROCK_B3,
     LEAD_TALKBOX,
     LEAD_SLIDE_GUITAR,
+    LEAD_WAH_GUITAR,
+    LEAD_TELE_TWANG,
+    LEAD_FIDDLE,
+    LEAD_BANJO,
     LEAD_WAVEFOLDER,
     LEAD_HARD_SYNC,
     LEAD_SID_CHIP,
-    LEAD_STEELPAN
+    LEAD_STEELPAN,
+    LEAD_THEREMIN
 } LeadInstrument;
 
-#define NUM_LEAD_INSTRUMENTS 14
+#define NUM_LEAD_INSTRUMENTS 25
 
 typedef enum {
     LEAD_PLAY_POLY = 0,
@@ -264,6 +284,7 @@ typedef struct {
     uint8_t     bass_style;
     uint8_t     keys_style;
     uint8_t     drum_pattern;
+    uint8_t     easy_lead;
     char        toast_msg[28];
     uint32_t    toast_until_ms;
 } HarmonyState;
@@ -271,7 +292,7 @@ typedef struct {
 typedef struct {
     uint8_t  magic;
     uint8_t  preset_id;
-    char     name[16];
+    char     name[20];
     uint8_t  root_key;
     uint8_t  groove_style;
     uint8_t  bpm;
@@ -304,6 +325,7 @@ typedef struct {
     uint8_t  keys_style;
     uint8_t  drum_pattern;
     uint8_t  lead_play_style;
+    uint8_t  easy_lead;
 } PresetConfig;
 
 typedef struct {
@@ -311,7 +333,7 @@ typedef struct {
     uint8_t  active_preset;
     uint8_t  master_tuning;
     uint8_t  count_in_enabled;
-    uint8_t  reserved;
+    uint8_t  easy_lead;
 } GlobalSettings;
 
 #endif // BLUES_TYPES_H

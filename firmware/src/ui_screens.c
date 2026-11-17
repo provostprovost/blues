@@ -5,7 +5,8 @@
 static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
 static const char *GROOVE_NAMES[NUM_DRUM_PATTERNS] = {
     "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE", "MEMPHIS SOUL", "RHUMBA BLUES", "BOOGIE WOOGIE",
-    "PURDIE SHUF", "TRAIN BEAT", "BO DIDDLEY", "JAZZ SHUFFLE", "GOSPEL SWING", "DELTA STOMP"
+    "PURDIE SHUF", "TRAIN BEAT", "BO DIDDLEY", "JAZZ SHUFFLE", "GOSPEL SWING", "DELTA STOMP",
+    "POCKET FUNK", "NOLA FUNK", "BLUES FUNK", "SLOW NEOFUNK", "COUNTRY TWANG"
 };
 static const char *ALGO_NAMES[NUM_KEYS_INSTRUMENTS] = {
     "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET",
@@ -17,8 +18,10 @@ static const char *DRUM_NAMES[NUM_DRUM_KITS] = {
     "CR-78 ANLG", "NOLA PERC", "LINN GATE", "LOFI BOX"
 };
 static const char *LEAD_NAMES[NUM_LEAD_INSTRUMENTS] = {
-    "BLUES GTR", "HARP", "TENOR SAX", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "MUTED TRPT", "PERC ORGAN",
-    "TALK-BOX", "SLIDE GTR", "WAVEFOLDER", "HARD SYNC", "SID CHIP", "STEELPAN"
+    "BLUES GTR", "HARP", "ALTO SAX", "TENOR SAX", "BARI SAX", "MUTED TRPT", "HORN SECT", "JAZZ FLUTE",
+    "WHISTLE", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "PERC ORGAN", "ROCK B3", "TALK-BOX",
+    "SLIDE GTR", "WAH GUITAR", "TELE TWANG", "FIDDLE", "BANJO", "WAVEFOLDER", "HARD SYNC",
+    "SID CHIP", "STEELPAN", "THEREMIN"
 };
 static const char *LEAD_PLAY_BADGES[NUM_LEAD_PLAY_STYLES] = { "", " [GLD]", " [BND]", " [OCT]" };
 static const char *LEAD_PLAY_NAMES[NUM_LEAD_PLAY_STYLES] = { "POLY", "LEGATO GLIDE", "BLUES BEND", "OCTAVE STACK" };
@@ -28,11 +31,13 @@ static const char *BASS_NAMES[NUM_BASS_INSTRUMENTS] = {
 };
 static const char *BASS_STYLE_NAMES[NUM_BASS_STYLES] = {
     "WALKING 4/4", "SHUFFLE", "BOOGIE BOX", "ROOT-5TH", "FUNK SYNC",
-    "RUMBA", "GOSPEL WALK", "12/8 ROLL", "MOTOWN 8TH", "2ND LINE"
+    "RUMBA", "GOSPEL WALK", "12/8 ROLL", "MOTOWN 8TH", "2ND LINE",
+    "FUNK 16TH", "COUNTRY 2"
 };
 static const char *KEYS_STYLE_NAMES[NUM_KEYS_STYLES] = {
     "CHARLESTON", "BACKBEAT 2&4", "CALL & RESP", "SPARSE PAD", "CHOP 4/4",
-    "STRIDE", "BOOGIE 8TH", "GOSPEL SWELL", "MONTUNO", "12/8 ARP"
+    "STRIDE", "BOOGIE 8TH", "GOSPEL SWELL", "MONTUNO", "12/8 ARP",
+    "FUNK CLAV", "COUNTRY CHP"
 };
 static const char *FORM_NAMES[5]       = { "12-BAR MAJ", "QUICK CHG", "1-4-5 OPEN", "8-BAR BLUES", "MINOR BLUES" };
 static const char *TUNE_NAMES[3]       = { "440 HZ", "432 HZ", "442 HZ" };
@@ -47,6 +52,7 @@ static uint8_t g_last_bass_inst = 0xFF;
 static uint8_t g_last_drum = 0xFF;
 static uint8_t g_last_lead = 0xFF;
 static uint8_t g_last_lead_play = 0xFF;
+static uint8_t g_last_easy_lead = 0xFF;
 static uint8_t g_last_playing = 0xFF;
 static uint8_t g_last_groove = 0xFF;
 static uint8_t g_last_variation = 0xFF;
@@ -96,6 +102,8 @@ void ui_init(void) {
     g_last_bass_inst = 0xFF;
     g_last_drum = 0xFF;
     g_last_lead = 0xFF;
+    g_last_lead_play = 0xFF;
+    g_last_easy_lead = 0xFF;
     g_last_playing = 0xFF;
     g_last_groove = 0xFF;
     g_last_variation = 0xFF;
@@ -282,17 +290,19 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
     char footer[40];
     const char *lname = LEAD_NAMES[preset->lead_instrument % NUM_LEAD_INSTRUMENTS];
     const char *lbadge = LEAD_PLAY_BADGES[preset->lead_play_style % NUM_LEAD_PLAY_STYLES];
+    const char *ezbadge = hs->easy_lead ? " [EZ]" : "";
     const char *aname = ALGO_NAMES[preset->ep_tone_algo % NUM_KEYS_INSTRUMENTS];
     int flen = 0;
     while (*lname && flen < 16) footer[flen++] = *lname++;
     while (*lbadge && flen < 22) footer[flen++] = *lbadge++;
+    while (*ezbadge && flen < 27) footer[flen++] = *ezbadge++;
     footer[flen++] = ' ';
     footer[flen++] = '*';
     footer[flen++] = ' ';
     while (*aname && flen < 38) footer[flen++] = *aname++;
     footer[flen] = '\0';
     hal_fill_rect(0, 224, 240, 16, C_BLACK);
-    hal_draw_text_box(0, 224, 240, 0, footer, RGB(140, 140, 140), 1);
+    hal_draw_text_box(0, 224, 240, 0, footer, hs->easy_lead ? RGB(100, 235, 180) : RGB(140, 140, 140), 1);
 }
 
 static void render_meter(int y, const char *label, uint8_t val, uint8_t max_val, uint16_t color, uint8_t full_redraw, uint8_t *last_val) {
@@ -317,18 +327,19 @@ static void render_meter(int y, const char *label, uint8_t val, uint8_t max_val,
 }
 
 static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t full_redraw) {
-    (void)hs;
     (void)preset_idx;
     if (full_redraw) {
         hal_fill_rect(0, 0, 240, 240, C_BLACK);
         hal_draw_text_box(0, 6, 240, 0, "BLUES BOX MIXER", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BAS K2:KEY K3:DRM K4:LD", RGB(0, 220, 255), 1);
         hal_draw_text_box(0, 198, 240, 0, "[GLO]: REV/DRV/SWG/PLAY", RGB(255, 180, 0), 1);
-        hal_draw_text_box(0, 216, 240, 0, "HOME: BAND STYLE VIEW", RGB(140, 140, 140), 1);
+        hal_draw_text_box(0, 216, 240, 0, "[SEL+K4/GLO+LFO]: EASY LEAD", RGB(140, 140, 140), 1);
     }
 
     uint8_t l_vol = preset->lead_vol > 0 ? preset->lead_vol : 115;
     uint8_t lp = preset->lead_play_style % NUM_LEAD_PLAY_STYLES;
+    uint8_t ez = hs->easy_lead ? 1 : 0;
+    uint8_t lp_comb = (uint8_t)((ez << 4) | lp);
     render_meter(24,  "BASS VOL",  preset->bass_vol,   127, RGB(80, 160, 255), full_redraw, &g_last_m_bass_vol);
     render_meter(43,  "KEYS VOL",  preset->keys_vol,   127, RGB(255, 180, 40), full_redraw, &g_last_m_keys_vol);
     render_meter(62,  "DRUMS VOL", preset->drums_vol,  127, RGB(255, 80, 80), full_redraw, &g_last_m_drums_vol);
@@ -337,10 +348,14 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
     render_meter(119, "DRIVE",     preset->drive_level,127, RGB(255, 130, 50), full_redraw, &g_last_m_drive);
     render_meter(138, "SWING",     preset->swing,      100, RGB(80, 240, 120), full_redraw, &g_last_m_swing);
     if (full_redraw) hal_draw_text_box(10, 157, 85, 0, "LEAD PLAY", RGB(200, 200, 200), 0);
-    if (full_redraw || lp != g_last_m_lead_play) {
+    if (full_redraw || lp_comb != g_last_m_lead_play) {
+        static const char *LP_EZ_NAMES[NUM_LEAD_PLAY_STYLES] = {
+            "POLY [EASY]", "GLIDE [EASY]", "BEND [EASY]", "OCTAVE [EASY]"
+        };
+        const char *lp_str = ez ? LP_EZ_NAMES[lp] : LEAD_PLAY_NAMES[lp];
         hal_fill_rect(100, 157, 130, 16, RGB(24, 24, 24));
-        hal_draw_text_box(104, 157, 124, 0, LEAD_PLAY_NAMES[lp], RGB(240, 160, 255), 0);
-        g_last_m_lead_play = lp;
+        hal_draw_text_box(104, 157, 124, 0, lp_str, ez ? RGB(100, 255, 180) : RGB(240, 160, 255), 0);
+        g_last_m_lead_play = lp_comb;
     }
 }
 
@@ -451,7 +466,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
                                        (hs->has_queued_key != g_last_queued_key);
         uint8_t footer_changed = screen_switched || (hs->is_playing != g_last_playing) ||
                                  (preset->ep_tone_algo != g_last_algo) || (preset->lead_instrument != g_last_lead) ||
-                                 (preset->lead_play_style != g_last_lead_play) ||
+                                 (preset->lead_play_style != g_last_lead_play) || (hs->easy_lead != g_last_easy_lead) ||
                                  form_changed || (toast_active != g_last_toast_active) ||
                                  (toast_active && hs->toast_until_ms != g_last_toast_until) ||
                                  status_flags_changed;
@@ -483,9 +498,51 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     g_last_drum = preset->drum_kit;
     g_last_lead = preset->lead_instrument;
     g_last_lead_play = preset->lead_play_style;
+    g_last_easy_lead = hs->easy_lead;
     g_last_playing = hs->is_playing;
     g_last_groove = preset->groove_style;
     g_last_variation = hs->variation;
     g_last_bpm = preset->bpm;
     g_last_form = hs->form_mode;
+}
+
+void ui_render_splash(void) {
+    // Option B: Vintage Tweed / Tube Amp Nameplate Splash Screen (240x240)
+    // 1. Warm lacquered tweed cabinet outer frame
+    hal_fill_rect(0, 0, 240, 240, RGB(175, 120, 42));
+    for (int y = 0; y < 240; y += 8) {
+        hal_fill_rect(0, y, 240, 3, RGB(140, 92, 28));
+    }
+    // Chrome corner protectors with brass rivets
+    hal_fill_rect(0, 0, 22, 22, RGB(95, 70, 30));
+    hal_fill_rect(218, 0, 22, 22, RGB(95, 70, 30));
+    hal_fill_rect(0, 218, 22, 22, RGB(95, 70, 30));
+    hal_fill_rect(218, 218, 22, 22, RGB(95, 70, 30));
+    hal_fill_rect(7, 7, 6, 6, RGB(240, 195, 90));
+    hal_fill_rect(227, 7, 6, 6, RGB(240, 195, 90));
+    hal_fill_rect(7, 227, 6, 6, RGB(240, 195, 90));
+    hal_fill_rect(227, 227, 6, 6, RGB(240, 195, 90));
+
+    // 2. Recessed oxblood / dark grill cloth baffle with gold piping
+    hal_fill_rect(14, 14, 212, 212, RGB(220, 175, 75));
+    hal_fill_rect(17, 17, 206, 206, RGB(26, 18, 14));
+    for (int y = 22; y < 218; y += 6) {
+        hal_fill_rect(20, y, 200, 2, RGB(42, 28, 20));
+    }
+
+    // 3. Engraved Tube-Amp Center Nameplate Badge
+    hal_fill_rect(24, 56, 192, 128, RGB(235, 185, 70));  // Outer brass plate
+    hal_fill_rect(27, 59, 186, 122, RGB(16, 14, 12));   // Inner black enamel
+    hal_fill_rect(31, 63, 178, 114, RGB(180, 135, 45)); // Inner gold hairline
+    hal_fill_rect(33, 65, 174, 110, RGB(18, 16, 14));   // Badge face
+
+    // Side mounting rivets on the nameplate
+    hal_fill_rect(39, 117, 6, 6, RGB(225, 180, 80));
+    hal_fill_rect(195, 117, 6, 6, RGB(225, 180, 80));
+
+    // Typography on the nameplate (FONT_L 32px title + FONT_S 16px subtitle & version)
+    hal_draw_text_box(36, 74, 168, 1, "BLUES BOX", RGB(255, 200, 40), 1);
+    hal_fill_rect(52, 114, 136, 2, RGB(220, 165, 45));
+    hal_draw_text_box(36, 124, 168, 0, "BACKING BAND", RGB(235, 230, 215), 1);
+    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V1.3", RGB(180, 145, 75), 1);
 }

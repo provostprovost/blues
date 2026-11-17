@@ -70,6 +70,7 @@ static LeadVoice g_lead[MAX_LEAD_VOICES];
 static uint8_t   g_lead_play_style = LEAD_PLAY_POLY;
 static uint8_t   g_lead_tuning = 0;
 static uint8_t   g_mono_stack[8];
+static uint8_t   g_mono_target[8];
 static uint8_t   g_mono_len = 0;
 static int32_t   g_bass_lp = 0;
 static int32_t   g_drum_env[4];
@@ -186,10 +187,10 @@ void dsp_set_lead_play_style(uint8_t play_style) {
     }
 }
 
-static void lead_trigger_voice(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode, uint8_t scoop_bend) {
+static void lead_trigger_voice(uint8_t key_note, uint8_t target_note, uint8_t velocity, uint8_t tuning_mode, uint8_t scoop_bend) {
     int target_v = -1;
     for (int v = 0; v < MAX_LEAD_VOICES; v++) {
-        if (g_lead[v].active && g_lead[v].midi_note == midi_note) {
+        if (g_lead[v].active && g_lead[v].midi_note == key_note) {
             target_v = v;
             break;
         }
@@ -214,9 +215,12 @@ static void lead_trigger_voice(uint8_t midi_note, uint8_t velocity, uint8_t tuni
     }
 
     LeadVoice *lv = &g_lead[target_v];
-    uint32_t inc = get_scaled_inc(midi_note, tuning_mode);
+    uint32_t inc = get_scaled_inc(target_note, tuning_mode);
+    uint32_t start_inc = (key_note != target_note) ? get_scaled_inc(key_note, tuning_mode)
+                       : (scoop_bend ? (inc - (inc >> 4) - (inc >> 5)) : inc);
+    uint16_t bend_dur = (key_note != target_note) ? 11025u : (scoop_bend ? 2200u : 0u);
     lv->target_inc = inc;
-    lv->midi_note = midi_note;
+    lv->midi_note = key_note;
     lv->target_env = (int32_t)velocity * 256;
     if (!lv->active) {
         lv->phase = 0;
@@ -225,67 +229,83 @@ static void lead_trigger_voice(uint8_t midi_note, uint8_t velocity, uint8_t tuni
         lv->vib_delay = 1800; // ~40 ms delay before expressive blues vibrato onset
         lv->vib_phase = 0;
         lv->filter_lp = 0;
-        lv->phase_inc = scoop_bend ? (inc - (inc >> 4) - (inc >> 5)) : inc;
-        lv->bend_samples = scoop_bend ? 2200u : 0u;
+        lv->phase_inc = start_inc;
+        lv->bend_samples = bend_dur;
     } else {
         lv->env_q15 = (lv->env_q15 * 3 + lv->target_env) / 4;
         lv->vib_delay = 1200;
-        lv->phase_inc = inc;
-        lv->bend_samples = 0;
+        lv->phase_inc = start_inc;
+        lv->bend_samples = bend_dur;
     }
     lv->gate_samples = 44100 * 10;
     lv->active = 1;
 }
 
-void dsp_note_on_lead(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) {
+void dsp_note_on_lead_ex(uint8_t key_note, uint8_t target_note, uint8_t velocity, uint8_t tuning_mode) {
     g_lead_tuning = tuning_mode;
 
     if (g_lead_play_style == LEAD_PLAY_LEGATO_GLIDE) {
         uint8_t was_held = (g_mono_len > 0 && g_lead[0].active);
         uint8_t found = 0;
         for (uint8_t i = 0; i < g_mono_len; i++) {
-            if (g_mono_stack[i] == midi_note) { found = 1; break; }
+            if (g_mono_stack[i] == key_note) {
+                g_mono_target[i] = target_note;
+                found = 1;
+                break;
+            }
         }
         if (!found && g_mono_len < 8) {
-            g_mono_stack[g_mono_len++] = midi_note;
+            g_mono_stack[g_mono_len] = key_note;
+            g_mono_target[g_mono_len] = target_note;
+            g_mono_len++;
         }
         for (int v = 1; v < MAX_LEAD_VOICES; v++) {
             g_lead[v].gate_samples = 0;
         }
         LeadVoice *lv = &g_lead[0];
-        uint32_t inc = get_scaled_inc(midi_note, tuning_mode);
+        uint32_t inc = get_scaled_inc(target_note, tuning_mode);
         lv->target_inc = inc;
-        lv->midi_note = midi_note;
+        lv->midi_note = key_note;
         lv->target_env = (int32_t)velocity * 256;
         lv->gate_samples = 44100 * 10;
         if (!was_held) {
             lv->phase = 0;
             lv->phase2 = 0;
             lv->env_q15 = 0;
-            lv->phase_inc = inc;
+            lv->phase_inc = (key_note != target_note) ? get_scaled_inc(key_note, tuning_mode) : inc;
             lv->vib_delay = 1800;
             lv->vib_phase = 0;
             lv->filter_lp = 0;
-            lv->bend_samples = 0;
+            lv->bend_samples = (key_note != target_note) ? 11025u : 0u;
         } else {
             // Legato glide: preserve envelope and slew phase_inc toward target_inc
             lv->vib_delay = 1200;
-            lv->bend_samples = 2800u;
+            if (key_note != target_note) {
+                lv->phase_inc = get_scaled_inc(key_note, tuning_mode);
+                lv->bend_samples = 11025u;
+            } else {
+                lv->bend_samples = 2800u;
+            }
         }
         lv->active = 1;
         return;
     }
 
     if (g_lead_play_style == LEAD_PLAY_OCTAVE_STACK) {
-        lead_trigger_voice(midi_note, velocity, tuning_mode, 0);
-        uint8_t oct_note = (midi_note <= 115) ? (uint8_t)(midi_note + 12) : midi_note;
-        if (oct_note != midi_note) {
-            lead_trigger_voice(oct_note, (uint8_t)((velocity * 3) >> 2), tuning_mode, 0);
+        lead_trigger_voice(key_note, target_note, velocity, tuning_mode, 0);
+        uint8_t oct_key = (key_note <= 115) ? (uint8_t)(key_note + 12) : key_note;
+        uint8_t oct_tgt = (target_note <= 115) ? (uint8_t)(target_note + 12) : target_note;
+        if (oct_key != key_note) {
+            lead_trigger_voice(oct_key, oct_tgt, (uint8_t)((velocity * 3) >> 2), tuning_mode, 0);
         }
         return;
     }
 
-    lead_trigger_voice(midi_note, velocity, tuning_mode, (g_lead_play_style == LEAD_PLAY_BLUES_BEND));
+    lead_trigger_voice(key_note, target_note, velocity, tuning_mode, (g_lead_play_style == LEAD_PLAY_BLUES_BEND));
+}
+
+void dsp_note_on_lead(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) {
+    dsp_note_on_lead_ex(midi_note, midi_note, velocity, tuning_mode);
 }
 
 void dsp_note_off_lead(uint8_t midi_note) {
@@ -302,15 +322,17 @@ void dsp_note_off_lead(uint8_t midi_note) {
             if (g_mono_stack[i] == midi_note) {
                 for (uint8_t j = i; j + 1 < g_mono_len; j++) {
                     g_mono_stack[j] = g_mono_stack[j + 1];
+                    g_mono_target[j] = g_mono_target[j + 1];
                 }
                 g_mono_len--;
                 break;
             }
         }
         if (g_mono_len > 0 && g_lead[0].active) {
-            uint8_t prev = g_mono_stack[g_mono_len - 1];
-            g_lead[0].midi_note = prev;
-            g_lead[0].target_inc = get_scaled_inc(prev, g_lead_tuning);
+            uint8_t prev_key = g_mono_stack[g_mono_len - 1];
+            uint8_t prev_tgt = g_mono_target[g_mono_len - 1];
+            g_lead[0].midi_note = prev_key;
+            g_lead[0].target_inc = get_scaled_inc(prev_tgt, g_lead_tuning);
             g_lead[0].bend_samples = 2800u;
         } else {
             g_lead[0].gate_samples = 0;
@@ -756,7 +778,8 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 if (g_lead[v].bend_samples > 0) {
                     g_lead[v].bend_samples--;
                     int32_t diff = (int32_t)g_lead[v].target_inc - (int32_t)g_lead[v].phase_inc;
-                    g_lead[v].phase_inc = (uint32_t)((int32_t)g_lead[v].phase_inc + (diff >> 9));
+                    uint8_t shift = (g_lead[v].bend_samples > 3600u) ? 12u : 9u;
+                    g_lead[v].phase_inc = (uint32_t)((int32_t)g_lead[v].phase_inc + (diff >> shift));
                     if (g_lead[v].bend_samples == 0) {
                         g_lead[v].phase_inc = g_lead[v].target_inc;
                     }
@@ -796,7 +819,19 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         lead_sample = reed;
                         break;
                     }
-                    case LEAD_TENOR_SAX: { // 2: Tenor Sax
+                    case LEAD_ALTO_SAX: { // Bright, expressive Alto Sax
+                        int16_t a1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t a2 = hal_sine_q15(g_lead[v].phase * 2);
+                        int16_t a3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int16_t a4 = hal_sine_q15(g_lead[v].phase * 4);
+                        int16_t breath = (int16_t)(g_lfsr & 0x05FF);
+                        int32_t alto = (a1 >> 1) + (a2 * 3 / 8) + (a3 >> 2) + (a4 >> 3) + breath;
+                        if (alto > 23000) alto = 23000;
+                        else if (alto < -23000) alto = -23000;
+                        lead_sample = alto;
+                        break;
+                    }
+                    case LEAD_TENOR_SAX: { // Tenor Sax
                         int16_t s1 = hal_sine_q15(g_lead[v].phase);
                         int16_t s2 = hal_sine_q15(g_lead[v].phase * 2);
                         int16_t s3 = hal_sine_q15(g_lead[v].phase * 3);
@@ -887,12 +922,118 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         lead_sample = sq & ~0x07FF; // Gritty 4-bit stepped SID crunch
                         break;
                     }
-                    case LEAD_STEELPAN: // 13: Bright Percussive Steelpan / Mallet Lead
-                    default: {
+                    case LEAD_STEELPAN: { // 13: Bright Percussive Steelpan / Mallet Lead
                         int16_t p1 = hal_sine_q15(g_lead[v].phase);
                         int16_t p2 = hal_sine_q15(g_lead[v].phase * 2);
                         int16_t p4 = hal_sine_q15(g_lead[v].phase * 4);
                         lead_sample = (p1 * 5 / 8) + (p2 >> 2) + (p4 >> 3);
+                        break;
+                    }
+                    case LEAD_WAH_GUITAR: { // 14: 70s Funk Auto-Wah Envelope Filter Guitar
+                        uint32_t age = (44100u * 10u) - g_lead[v].gate_samples;
+                        int32_t sweep = (age < 2600u) ? (int32_t)(age * 10u)
+                                      : (age < 13000u) ? (int32_t)(26000u - ((age - 2600u) * 2u)) : 5200;
+                        uint32_t wah_mult = 2u + (uint32_t)((sweep >> 12) & 0x07u);
+                        int16_t w1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t wf = hal_sine_q15(g_lead[v].phase * wah_mult);
+                        int16_t wf2 = hal_sine_q15(g_lead[v].phase * (wah_mult + 1u));
+                        int32_t raw_wah = (w1 >> 1) + ((wf * sweep) >> 15) + ((wf2 * sweep) >> 16);
+                        if (raw_wah > 23000) raw_wah = 23000;
+                        else if (raw_wah < -23000) raw_wah = -23000;
+                        lead_sample = raw_wah;
+                        break;
+                    }
+                    case LEAD_JAZZ_FLUTE: { // 15: Breathy 70s Soul-Jazz / Funk Flute with chiff
+                        uint32_t age = (44100u * 10u) - g_lead[v].gate_samples;
+                        int16_t fl1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t fl2 = hal_sine_q15(g_lead[v].phase * 2);
+                        int16_t fl3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int16_t chiff = (age < 1600u) ? (int16_t)(g_lfsr & 0x1FFF) : (int16_t)(g_lfsr & 0x05FF);
+                        lead_sample = (fl1 * 3 / 4) + (fl2 >> 2) + (fl3 >> 4) + chiff;
+                        break;
+                    }
+                    case LEAD_BARI_SAX: { // 16: Deep Gravelly Baritone Sax Honk
+                        g_lead[v].phase2 += (cur_inc >> 1); // Sub-octave growl
+                        int16_t b_sub = hal_sine_q15(g_lead[v].phase2);
+                        int16_t b1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t b2 = hal_sine_q15(g_lead[v].phase * 2);
+                        int16_t b3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int32_t bari = (b_sub * 3 / 8) + (b1 >> 1) + (b2 >> 2) + (b3 >> 2) + (int16_t)(g_lfsr & 0x07FF);
+                        bari = (bari * 5) >> 2;
+                        if (bari > 23000) bari = 23000;
+                        else if (bari < -23000) bari = -23000;
+                        lead_sample = bari;
+                        break;
+                    }
+                    case LEAD_HORN_SECT: { // 17: Memphis / Tower of Power Brass Section
+                        uint32_t age = (44100u * 10u) - g_lead[v].gate_samples;
+                        g_lead[v].phase2 += cur_inc + (cur_inc >> 7); // Section detune
+                        int16_t h1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t h2 = hal_sine_q15(g_lead[v].phase2 * 2);
+                        int16_t h3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int16_t h4 = hal_sine_q15(g_lead[v].phase2 * 4);
+                        int32_t blip = (age < 2400u) ? ((h3 >> 1) + (h4 >> 1)) : ((h3 >> 2) + (h4 >> 3));
+                        lead_sample = (h1 >> 1) + (h2 >> 2) + blip;
+                        break;
+                    }
+                    case LEAD_TELE_TWANG: { // 18: Bridge-Pickup Telecaster Country/Blues Twang
+                        uint32_t age = (44100u * 10u) - g_lead[v].gate_samples;
+                        int16_t t1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t t2 = hal_sine_q15(g_lead[v].phase * 2);
+                        int16_t t3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int16_t t5 = hal_sine_q15(g_lead[v].phase * 5);
+                        int32_t bite = (age < 3200u) ? ((t3 >> 1) + (t5 * 3 / 8)) : ((t3 >> 3) + (t5 >> 4));
+                        int32_t twang = (t1 * 5 / 8) + (t2 >> 2) + bite;
+                        if (twang > 24000) twang = 24000;
+                        else if (twang < -24000) twang = -24000;
+                        lead_sample = twang;
+                        break;
+                    }
+                    case LEAD_FIDDLE: { // 19: Country / Blues Bowed Fiddle
+                        int16_t v1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t v2 = hal_sine_q15(g_lead[v].phase * 2);
+                        int16_t v3 = hal_sine_q15(g_lead[v].phase * 3);
+                        int16_t v4 = hal_sine_q15(g_lead[v].phase * 4);
+                        lead_sample = (v1 >> 1) + (v2 >> 2) + (v3 >> 2) + (v4 >> 3);
+                        break;
+                    }
+                    case LEAD_BANJO: { // 20: Percussive Banjo / Dobro Pluck
+                        g_lead[v].phase2 += cur_inc * 3 + (cur_inc >> 1); // Metallic membrane sideband
+                        int16_t bj1 = hal_sine_q15(g_lead[v].phase);
+                        int16_t bj2 = hal_sine_q15(g_lead[v].phase * 2);
+                        int16_t bjm = hal_sine_q15(g_lead[v].phase2);
+                        lead_sample = (bj1 >> 1) + (bj2 >> 2) + (bjm * 3 / 8);
+                        break;
+                    }
+                    case LEAD_ROCK_B3: { // 21: Screaming Overdriven Rock Leslie B3
+                        uint32_t age = (44100u * 10u) - g_lead[v].gate_samples;
+                        g_lead[v].phase2 += 660000u; // Fast ~6.8 Hz Leslie horn rotor
+                        int16_t rot = hal_sine_q15(g_lead[v].phase2);
+                        uint32_t r_ph = g_lead[v].phase + (uint32_t)(rot << 10);
+                        int16_t r1 = hal_sine_q15(r_ph);
+                        int16_t r2 = hal_sine_q15(r_ph * 2);
+                        int16_t r3 = hal_sine_q15(r_ph * 3);
+                        int16_t r4 = hal_sine_q15(r_ph * 4);
+                        int32_t click = (age < 350u) ? (int16_t)(g_lfsr & 0x2FFF) : 0;
+                        int32_t b3 = (r1 >> 1) + (r2 >> 2) + (r3 >> 2) + (r4 >> 3) + click;
+                        b3 = (b3 * 3) >> 1;
+                        if (b3 > 23000) b3 = 23000;
+                        else if (b3 < -23000) b3 = -23000;
+                        lead_sample = b3;
+                        break;
+                    }
+                    case LEAD_THEREMIN: { // 22: Singing Eerie Theremin with wide vibrato
+                        int16_t th_vib = hal_sine_q15(g_lead[v].vib_phase);
+                        uint32_t th_ph = g_lead[v].phase + (uint32_t)(th_vib << 12);
+                        lead_sample = (hal_sine_q15(th_ph) * 3 / 4) + (hal_sine_q15(th_ph * 2) >> 2);
+                        break;
+                    }
+                    case LEAD_WHISTLE: // 23: Airy Blues Whistle Lead
+                    default: {
+                        int16_t wh1 = hal_sine_q15(g_lead[v].phase * 2); // High whistle register
+                        int16_t wh2 = hal_sine_q15(g_lead[v].phase * 4);
+                        int16_t air = (int16_t)(g_lfsr & 0x06FF);
+                        lead_sample = (wh1 * 3 / 4) + (wh2 >> 3) + air;
                         break;
                     }
                 }
@@ -902,8 +1043,16 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 mix += (lead_sample * l_amp) >> 8;
 
                 if (g_lead[v].gate_samples > 0) {
-                    if (g_lead[v].env_q15 < g_lead[v].target_env) {
-                        g_lead[v].env_q15 += (g_lead[v].target_env - g_lead[v].env_q15 + 15) >> 4;
+                    if (g_lead[v].gate_samples > 1) g_lead[v].gate_samples--;
+                    uint8_t li = preset->lead_instrument % NUM_LEAD_INSTRUMENTS;
+                    uint32_t age = (44100u * 10u) - g_lead[v].gate_samples;
+                    if (li == LEAD_BANJO && age > 600u) {
+                        g_lead[v].env_q15 = (g_lead[v].env_q15 * 32748) >> 15; // Fast percussive banjo decay
+                    } else if ((li == LEAD_TELE_TWANG || li == LEAD_STEELPAN) && age > 1200u) {
+                        g_lead[v].env_q15 = (g_lead[v].env_q15 * 32762) >> 15; // Natural plucked string decay
+                    } else if (g_lead[v].env_q15 < g_lead[v].target_env) {
+                        uint8_t atk_shift = (li == LEAD_FIDDLE || li == LEAD_THEREMIN) ? 8 : 4;
+                        g_lead[v].env_q15 += (g_lead[v].target_env - g_lead[v].env_q15 + ((1 << atk_shift) - 1)) >> atk_shift;
                     }
                 } else {
                     g_lead[v].env_q15 = (g_lead[v].env_q15 * 32400) >> 15;
