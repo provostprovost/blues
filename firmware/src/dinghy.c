@@ -153,8 +153,8 @@ static void init_factory_presets(void) {
         p->preset_id = i;
         copy_preset_name(p->name, FACTORY_NAMES[i]);
         p->master_tuning = 0; // 440 Hz
-        p->bass_vol = 115;
-        p->keys_vol = 70;
+        p->bass_vol = 108;
+        p->keys_vol = 68;
         p->drums_vol = 105;
         p->lead_vol = 115;
         p->reverb_mix = 35;
@@ -200,7 +200,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_CHICAGO_SWING;
                 p->bpm = 130;
                 p->variation = 55;
-                p->swing = 60;
+                p->swing = 67;
                 p->ep_tone_algo = KEYS_BRIGHT_EP;
                 p->bass_instrument = BASS_UPRIGHT;
                 p->drum_kit = DRUM_STUDIO;
@@ -224,7 +224,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_SECOND_LINE;
                 p->bpm = 96;
                 p->variation = 70;
-                p->swing = 25;
+                p->swing = 0;
                 p->ep_tone_algo = KEYS_WURLI;
                 p->bass_instrument = BASS_MOOG_FUNK;
                 p->drum_kit = DRUM_RETRO_808;
@@ -248,7 +248,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_MEMPHIS_SOUL;
                 p->bpm = 104;
                 p->variation = 55;
-                p->swing = 15;
+                p->swing = 0;
                 p->ep_tone_algo = KEYS_TREMOLO_EP;
                 p->bass_instrument = BASS_P_BASS;
                 p->drum_kit = DRUM_STAX_TIGHT;
@@ -272,7 +272,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_BOOGIE_WOOGIE;
                 p->bpm = 158;
                 p->variation = 60;
-                p->swing = 65;
+                p->swing = 67;
                 p->ep_tone_algo = KEYS_HONKY_TONK;
                 p->bass_instrument = BASS_MUTED_TICTAC;
                 p->drum_kit = DRUM_STUDIO;
@@ -296,7 +296,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_NOLA_FUNK;
                 p->bpm = 94;
                 p->variation = 70;
-                p->swing = 20;
+                p->swing = 0;
                 p->ep_tone_algo = KEYS_WURLI;
                 p->bass_instrument = BASS_MOOG_FUNK;
                 p->drum_kit = DRUM_NEW_ORLEANS;
@@ -308,7 +308,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_BLUES_FUNK;
                 p->bpm = 98;
                 p->variation = 65;
-                p->swing = 38;
+                p->swing = 67;
                 p->ep_tone_algo = KEYS_B3_DIRTY;
                 p->bass_instrument = BASS_P_BASS;
                 p->drum_kit = DRUM_DRY_VINTAGE;
@@ -320,7 +320,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_SLOW_NEO_FUNK;
                 p->bpm = 78;
                 p->variation = 65;
-                p->swing = 32;
+                p->swing = 0;
                 p->ep_tone_algo = KEYS_RHODES;
                 p->bass_instrument = BASS_SUB_OCTAVE;
                 p->drum_kit = DRUM_LOFI_BOX;
@@ -332,7 +332,7 @@ static void init_factory_presets(void) {
                 p->groove_style = GROOVE_COUNTRY_TWANG;
                 p->bpm = 128;
                 p->variation = 55;
-                p->swing = 45;
+                p->swing = 67;
                 p->ep_tone_algo = KEYS_HONKY_TONK;
                 p->bass_instrument = BASS_MUTED_TICTAC;
                 p->drum_kit = DRUM_STUDIO;

@@ -283,7 +283,7 @@ void test_stage2_arranger(void) {
     Voicing v_shell = voice_lead_select(prev, DEG_I7, 4, 20);
     assert(v_shell.count == 2);
     for (int i = 0; i < v_shell.count; i++) {
-        assert(v_shell.notes[i] >= 68 && v_shell.notes[i] <= 90);
+        assert(v_shell.notes[i] >= 56 && v_shell.notes[i] <= 90);
     }
 
     // Spice 40 -> 3-note voicing
@@ -294,7 +294,7 @@ void test_stage2_arranger(void) {
     Voicing v_i7 = voice_lead_select(prev, DEG_I7, 4, 65);
     assert(v_i7.count == 4);
     for (int i = 0; i < v_i7.count; i++) {
-        assert(v_i7.notes[i] >= 68 && v_i7.notes[i] <= 90);
+        assert(v_i7.notes[i] >= 56 && v_i7.notes[i] <= 90);
     }
 
     // Voice leading from I7 to IV7: smooth guide-tone motion

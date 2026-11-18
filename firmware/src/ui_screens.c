@@ -544,5 +544,5 @@ void ui_render_splash(void) {
     hal_draw_text_box(36, 74, 168, 1, "BLUES BOX", RGB(255, 200, 40), 1);
     hal_fill_rect(52, 114, 136, 2, RGB(220, 165, 45));
     hal_draw_text_box(36, 124, 168, 0, "BACKING BAND", RGB(235, 230, 215), 1);
-    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V1.3", RGB(180, 145, 75), 1);
+    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V1.4", RGB(180, 145, 75), 1);
 }

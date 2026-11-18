@@ -9,7 +9,7 @@ static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
       {127,0,90,0, 110,0,90,0, 120,0,90,0, 110,0,90,0},
       {100,0,0,0,  90,0,0,0,   100,0,0,0,  90,0,0,0},
       {127,0,100,0, 127,0,100,0, 127,0,100,0, 127,0,100,0} },
-    { GROOVE_CHICAGO_SWING, 55,
+    { GROOVE_CHICAGO_SWING, 67,
       {127,0,0,0,  100,0,0,0,  110,0,0,0,  100,0,0,0},
       {110,0,0,80, 0,0,100,0,  110,0,0,80, 0,0,100,0},
       {127,0,80,0, 127,0,80,0,  127,0,80,0, 127,0,80,0} },
@@ -17,11 +17,11 @@ static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
       {127,0,100,0, 110,0,100,0, 127,0,100,0, 110,0,100,0},
       {127,0,0,0,  0,0,0,0,    127,0,0,0,  0,0,0,0},
       {100,100,100,100, 100,100,100,100, 100,100,100,100, 100,100,100,100} },
-    { GROOVE_SECOND_LINE, 25,
+    { GROOVE_SECOND_LINE, 0,
       {127,0,90,0, 0,90,110,0, 127,0,90,0, 0,90,110,0},
       {100,0,0,90, 0,100,0,0,  100,0,0,90, 0,100,0,0},
       {127,90,100,90, 127,90,100,90, 127,90,100,90, 127,90,100,90} },
-    { GROOVE_MEMPHIS_SOUL, 15,
+    { GROOVE_MEMPHIS_SOUL, 0,
       {127,0,90,0, 0,90,110,0, 127,0,90,0, 0,90,110,0},
       {0,0,100,0,  110,0,0,90, 0,0,100,0,  110,0,0,90},
       {120,80,100,80, 120,80,100,80, 120,80,100,80, 120,80,100,80} },
@@ -29,7 +29,7 @@ static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
       {127,0,0,100, 0,0,110,0, 127,0,0,100, 0,0,110,0},
       {0,0,90,0,   110,0,0,0,  0,0,90,0,   110,0,0,0},
       {110,70,70,100, 70,70,110,70, 110,70,70,100, 70,70,110,70} },
-    { GROOVE_BOOGIE_WOOGIE, 65,
+    { GROOVE_BOOGIE_WOOGIE, 67,
       {127,0,110,0, 120,0,110,0, 127,0,110,0, 120,0,110,0},
       {0,0,0,0,    110,0,0,0,  0,0,0,0,    110,0,0,0},
       {127,0,90,0, 127,0,90,0, 127,0,90,0, 127,0,90,0} },
@@ -37,7 +37,7 @@ static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
       {127,0,65,0, 0,0,95,0,   120,0,60,0, 0,0,85,0},
       {115,0,0,0,  0,0,90,0,   0,0,95,0,   0,0,0,0},
       {127,0,105,0, 115,0,105,0, 127,0,105,0, 115,0,105,0} },
-    { GROOVE_TRAIN_BEAT, 15, // Locomotive chug: steady 4-on-floor kick + accented 16th snare train
+    { GROOVE_TRAIN_BEAT, 0, // Locomotive chug: steady 4-on-floor kick + accented 16th snare train
       {110,60,127,60, 110,60,127,60, 110,60,127,60, 110,60,127,60},
       {110,0,0,0,  100,0,0,0,  110,0,0,0,  100,0,0,0},
       {95,0,80,0,  95,0,80,0,  95,0,80,0,  95,0,80,0} },
@@ -49,34 +49,34 @@ static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
       {95,0,0,0,   110,0,0,0,  95,0,0,0,   110,0,0,0},
       {90,0,0,0,   0,0,0,0,    90,0,0,0,   0,0,0,0},
       {120,0,0,0,  127,0,105,0, 120,0,0,0, 127,0,105,0} },
-    { GROOVE_GOSPEL_SWING, 62, // Big church 1 & 3 kick + 2 & 4 snare + 4& push
+    { GROOVE_GOSPEL_SWING, 67, // Big church 1 & 3 kick + 2 & 4 snare + 4& push
       {127,0,0,0,  120,0,0,0,  127,0,0,0,  120,0,90,0},
       {120,0,0,0,  0,0,85,0,   120,0,0,0,  0,0,95,0},
       {115,0,95,0, 115,0,95,0, 115,0,95,0, 115,0,95,0} },
-    { GROOVE_DELTA_STOMP, 55, // Heavy 4-on-floor foot stomp + backbeat clap/snare
+    { GROOVE_DELTA_STOMP, 67, // Heavy 4-on-floor foot stomp + backbeat clap/snare
       {110,0,0,0,  127,0,0,0,  110,0,0,0,  127,0,0,0},
       {127,0,0,0,  120,0,0,0,  127,0,0,0,  120,0,0,0},
       {90,0,0,0,   100,0,0,0,  90,0,0,0,   100,0,0,0} },
-    { GROOVE_POCKET_FUNK, 0, // 70s James Brown tight 16th pocket: "The One" + syncopated kick & ghost snares
-      {127,0,0,95, 0,0,108,92, 0,95,115,0, 0,0,102,0},
-      {0,0,58,0,   125,0,0,68, 0,62,0,0,   125,0,0,72},
-      {115,82,105,82, 115,82,105,82, 115,82,105,82, 115,82,105,88} },
-    { GROOVE_NOLA_FUNK, 20, // Meters-style New Orleans syncopated 16th second-line funk
-      {127,0,0,105, 0,95,112,0, 118,0,95,0, 0,102,0,92},
-      {0,0,68,0,   122,0,85,0, 0,78,0,95,  118,0,92,0},
-      {120,85,100,90, 120,85,100,90, 120,85,100,90, 120,85,105,95} },
-    { GROOVE_BLUES_FUNK, 38, // Greasy swung-16th blues-funk pocket
-      {127,0,88,0, 0,0,112,96, 120,0,0,96, 0,90,106,0},
-      {0,0,0,64,   124,0,0,70, 0,64,0,0,   124,0,74,0},
-      {120,78,104,78, 120,78,104,78, 120,78,104,78, 120,78,108,84} },
-    { GROOVE_SLOW_NEO_FUNK, 32, // Laid-back heavy neo-funk / soul pocket
-      {127,0,0,0,  0,0,96,108, 118,0,0,92, 0,0,102,0},
-      {0,0,0,0,    122,0,0,58, 0,55,0,0,   122,0,0,64},
-      {110,70,95,70, 110,70,95,70, 110,70,95,70, 110,70,95,75} },
-    { GROOVE_COUNTRY_TWANG, 45, // Country boom-chick / train snare with alternating root-5th bass
-      {127,0,0,0,  0,0,86,0,   122,0,0,0,  0,0,90,0},
-      {0,58,72,58, 124,58,76,62, 0,58,72,58, 124,62,80,68},
-      {115,0,95,0, 115,0,95,0, 115,0,95,0, 115,0,95,0} }
+    { GROOVE_POCKET_FUNK, 0, // 70s Pocket Funk: tight straight 8th/16th hats, kick on 1 & 2& & 3, snare on 2 & 4
+      {127,0,0,0,  0,0,115,0,  120,0,95,0,  0,0,105,0},
+      {110,0,0,0,  0,0,95,0,   0,0,0,0,     100,0,0,0},
+      {115,75,100,75, 115,75,100,75, 115,75,100,75, 115,75,100,75} },
+    { GROOVE_NOLA_FUNK, 0, // Meters-style New Orleans syncopated second-line funk
+      {127,0,90,0, 0,0,115,0,  118,0,0,0,   0,0,110,0},
+      {105,0,0,0,  0,0,95,0,   0,0,90,0,    0,0,0,0},
+      {120,0,100,0, 120,0,100,0, 120,0,100,0, 120,0,100,0} },
+    { GROOVE_BLUES_FUNK, 67, // Greasy triplet-swung blues-funk pocket
+      {127,0,0,0,  0,0,112,0,  120,0,95,0,  0,0,105,0},
+      {0,0,95,0,   110,0,0,0,  0,0,95,0,    110,0,0,0},
+      {122,0,98,0, 122,0,98,0, 122,0,98,0,  122,0,98,0} },
+    { GROOVE_SLOW_NEO_FUNK, 0, // Laid-back straight neo-funk / soul pocket
+      {127,0,0,0,  0,0,105,0,  118,0,0,0,   0,0,98,0},
+      {95,0,0,0,   0,0,90,0,   0,0,0,0,     92,0,0,0},
+      {112,0,90,0, 112,0,90,0, 112,0,90,0,  112,0,90,0} },
+    { GROOVE_COUNTRY_TWANG, 67, // Country shuffle boom-chick with alternating root-5th bass
+      {127,0,0,0,  0,0,0,0,    122,0,0,0,   0,0,95,0},
+      {0,0,0,0,    110,0,0,0,  0,0,0,0,     110,0,0,0},
+      {115,0,95,0, 115,0,95,0, 115,0,95,0,  115,0,95,0} }
 };
 
 static uint16_t g_hmnz_lfsr = 0x5EEDu;
@@ -101,12 +101,12 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
     uint8_t note = curr_root;
 
     if (sub_idx == 2 && variation > 75) {
-        note = curr_root + 12;
+        note = curr_root + 10; // b7
     } else if (sub_idx == 2) {
-        note = curr_root + 7;
+        note = curr_root + 7;  // 5th
     } else if (sub_idx == 1 && variation > 75) {
-        note = curr_root + 2;
-    } else if (sub_idx == 3 && variation > 75) {
+        note = curr_root + ((current.quality == CHORD_MIN7 || current.quality == CHORD_DIM7) ? 3 : 4);
+    } else if (sub_idx == 3 && variation > 75 && next_target != curr_root) {
         note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
     } else {
         switch (beat) {
@@ -123,20 +123,20 @@ uint8_t bass_compute_note(ChordContext current, ChordContext next, uint8_t beat,
             case 2:
                 if (current.quality == CHORD_DIM7) {
                     note = curr_root + 6;
-                } else if (variation > 50) {
-                    note = curr_root + 9;
                 } else {
-                    note = curr_root + 7;
+                    note = curr_root + 7; // Solid 5th on Beat 3
                 }
                 break;
             case 3:
             default: {
-                if (variation < 30) {
-                    note = (next_target >= 47) ? (next_target - 7) : (next_target + 5);
-                } else if (next_target >= curr_root) {
-                    note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
+                if (current.quality == CHORD_DIM7) {
+                    note = curr_root + 9;
+                } else if (current.quality == CHORD_MIN7) {
+                    note = curr_root + 10; // b7 on minor blues
+                } else if (variation > 55) {
+                    note = curr_root + 9;  // Classic 6th in major blues box (1 - 3 - 5 - 6)
                 } else {
-                    note = (next_target < 61) ? (next_target + 1) : (next_target - 1);
+                    note = curr_root + 10; // b7
                 }
                 break;
             }
@@ -157,53 +157,56 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
     uint8_t seventh = (info.quality == CHORD_DIM7) ? 9 : 10;
     uint8_t ninth = 14;
 
-    // Pitch anchor: ensure guide tones sit in sparkling high comping register (C5..E6, 520..1320 Hz)
-    uint8_t t_note = 72 + ((root + third) % 12);
-    while (t_note < 72) t_note += 12; // C5..B5 (72..83)
-    while (t_note > 83) t_note -= 12;
+    // Pitch anchor: MUST add to 60 (C4, multiple of 12!) so pitch classes are never transposed, then wrap to F4..Ab5 (65..80)
+    uint8_t r_note = 60 + (root % 12);
+    while (r_note < 65) r_note += 12; // F4..E5 (65..76)
+    while (r_note > 76) r_note -= 12;
 
-    uint8_t s_note = 72 + ((root + seventh) % 12);
-    while (s_note < 72) s_note += 12; // C5..B5 (72..83)
-    while (s_note > 83) s_note -= 12;
+    uint8_t t_note = 60 + ((root + third) % 12);
+    while (t_note < 65) t_note += 12; // F4..E5 (65..76)
+    while (t_note > 76) t_note -= 12;
 
-    uint8_t n_note = 72 + ((root + ninth) % 12);
-    while (n_note < 74) n_note += 12; // D5..C#6 (74..85)
-    while (n_note > 85) n_note -= 12;
+    uint8_t s_note = 60 + ((root + seventh) % 12);
+    while (s_note < 65) s_note += 12; // F4..E5 (65..76)
+    while (s_note > 76) s_note -= 12;
 
-    uint8_t f_note = 72 + ((root + fifth) % 12);
-    while (f_note < 72) f_note += 12; // C5..B5 (72..83)
-    while (f_note > 83) f_note -= 12;
+    uint8_t f_note = 60 + ((root + fifth) % 12);
+    while (f_note < 65) f_note += 12; // F4..E5 (65..76)
+    while (f_note > 76) f_note -= 12;
 
-    uint8_t th_note = 72 + ((root + 21) % 12); // 13th
-    while (th_note < 76) th_note += 12; // E5..Eb6 (76..87)
-    while (th_note > 87) th_note -= 12;
+    uint8_t n_note = 60 + ((root + ninth) % 12);
+    while (n_note < 67) n_note += 12; // G4..F#5 (67..78)
+    while (n_note > 78) n_note -= 12;
 
-    // Candidate 0: Authentic Rootless Shell / 9th (3rd + 7th + 5th + 9th)
+    // 4th voice: Root by default (pure R-3-5-b7 dominant/minor 7th chord), 9th only at high variation (> 75)
+    uint8_t top_ext = (variation > 75) ? n_note : r_note;
+
+    // Candidate 0: Core 7th/9th Voicing (3rd + 7th + 5th + Root/9th)
     candidates[0].notes[0] = t_note;
     candidates[0].notes[1] = s_note;
     candidates[0].notes[2] = f_note;
-    candidates[0].notes[3] = n_note;
+    candidates[0].notes[3] = top_ext;
     candidates[0].count = (variation <= 30) ? 2 : (variation <= 60) ? 3 : 4;
 
-    // Candidate 1: Bill Evans Form A (3rd + 7th + 9th + 13th)
-    candidates[1].notes[0] = t_note;
-    candidates[1].notes[1] = s_note;
-    candidates[1].notes[2] = n_note;
-    candidates[1].notes[3] = th_note;
+    // Candidate 1: Root-Anchored 7th Voicing (Root + 3rd + 7th + 5th)
+    candidates[1].notes[0] = r_note;
+    candidates[1].notes[1] = t_note;
+    candidates[1].notes[2] = s_note;
+    candidates[1].notes[3] = f_note;
     candidates[1].count = (variation <= 30) ? 2 : (variation <= 60) ? 3 : 4;
 
-    // Candidate 2: Bill Evans Form B Inversion (7th on bottom + 3rd + 13th + 9th)
-    candidates[2].notes[0] = (uint8_t)(s_note > 78 ? s_note - 12 : s_note);
+    // Candidate 2: B Inversion (7th on bottom + 3rd + 5th + Root/9th)
+    candidates[2].notes[0] = (uint8_t)(s_note > 71 ? s_note - 12 : s_note);
     candidates[2].notes[1] = t_note;
-    candidates[2].notes[2] = th_note;
-    candidates[2].notes[3] = n_note;
+    candidates[2].notes[2] = f_note;
+    candidates[2].notes[3] = top_ext;
     candidates[2].count = (variation <= 30) ? 2 : (variation <= 60) ? 3 : 4;
 
-    // Candidate 3: Open 4ths / Organ Comp (3rd + 13th + 7th + 9th)
+    // Candidate 3: Open Organ Voicing (3rd + 5th + 7th + Root/9th)
     candidates[3].notes[0] = t_note;
-    candidates[3].notes[1] = th_note;
+    candidates[3].notes[1] = f_note;
     candidates[3].notes[2] = s_note;
-    candidates[3].notes[3] = n_note;
+    candidates[3].notes[3] = top_ext;
     candidates[3].count = (variation <= 30) ? 2 : (variation <= 60) ? 3 : 4;
 
     // Sort notes ascending within each candidate to guarantee clean register ordering
@@ -251,8 +254,8 @@ static const uint8_t BASS_STYLE_MASKS[NUM_BASS_STYLES][16] = {
     {127,0,90,0, 106,0,90,0, 116,0,90,0, 108,0,90,0}, // 7: SLOW 12/8 ROLLING (1-3-5-b7-5-3)
     {127,0,95,0, 0,0,108,0,  120,0,96,0, 0,0,106,0},  // 8: MOTOWN 8THS (Jamerson syncopations)
     {127,0,0,0,  0,0,115,0,  118,0,0,0,  110,0,95,0}, // 9: SECOND LINE (NOLA street-parade tuba)
-    {127,0,96,106, 0,90,114,0, 120,0,96,106, 0,92,112,96}, // 10: FUNK 16THS (16th octave-pop & b7 pocket)
-    {127,0,0,0,  0,0,0,0,    120,0,0,0,  0,0,96,0}    // 11: COUNTRY 2-BEAT (Root-5th boom-chick + walkup)
+    {127,0,96,0, 0,0,114,0,  122,0,98,0, 0,0,110,0},  // 10: FUNK POCKET (Root on 1, b7/octave pop on 2& & 3, pickup on 4&)
+    {127,0,0,0,  0,0,0,0,    120,0,0,0,  105,0,96,0}  // 11: COUNTRY 2-BEAT (Root on 1, 5th on 3, walk-up on 4 / 4&)
 };
 
 // 12 Independent Keys Comping Styles with 2-Bar A/B Phrasing
@@ -287,12 +290,12 @@ static const uint8_t KEYS_STYLE_MASKS[NUM_KEYS_STYLES][2][16] = {
     { // 9: SLOW 12/8 ARP: rolling triplet broken comping
       {102,0,80,0, 90,0,0,0, 98,0,80,0, 90,0,82,0},
       {102,0,80,0, 90,0,0,0, 98,0,80,0, 90,0,82,0} },
-    { // 10: FUNK CLAV 16TH: tight syncopated 16th clavinet/organ skank
-      {110,0,0,96, 0,92,104,0, 0,94,108,0, 98,0,92,0},
-      {110,0,90,0, 0,96,106,0, 96,0,0,94,  104,0,96,0} },
-    { // 11: COUNTRY CHOP: crisp off-beat & backbeat honky-tonk comping
-      {0,0,96,0,  110,0,92,0, 0,0,96,0,  110,0,94,0},
-      {0,0,96,0,  110,0,92,0, 0,0,96,0,  112,0,98,90} }
+    { // 10: FUNK CLAV: "The One" + syncopated 2& and 4 (clean, open funk pocket)
+      {112,0,0,0, 0,0,98,0,  0,0,0,0,   94,0,0,0},
+      {0,0,96,0,  104,0,0,0, 0,0,96,0,  0,0,92,0} },
+    { // 11: COUNTRY CHOP: crisp backbeat chop on Beats 2 & 4 (+ 3& bounce on Bar B)
+      {0,0,0,0,   104,0,0,0, 0,0,0,0,   100,0,0,0},
+      {0,0,0,0,   104,0,0,0, 0,0,88,0,  104,0,0,0} }
 };
 
 void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, GrooveStyle style) {
@@ -403,11 +406,11 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
         else if (beat == 1) note = curr_root + fifth;
         else note = curr_root + (variation > 55 ? 10 : fifth);
     } else if (bass_style == BASS_STYLE_GOSPEL_WALK) {
-        // Church walk-up: Root -> 2 -> #2/3 -> 5 -> chromatic pickup
+        // Church walk-up: Root -> 3rd -> 5th -> 6th/b7
         if (beat == 0) note = curr_root;
-        else if (beat == 1) note = curr_root + 2;
-        else if (beat == 2) note = curr_root + third;
-        else note = (sub_idx >= 2) ? ((next_target > 40) ? next_target - 1 : next_target + 1) : (curr_root + fifth);
+        else if (beat == 1) note = curr_root + third;
+        else if (beat == 2) note = curr_root + fifth;
+        else note = curr_root + (is_min ? 10 : 9);
     } else if (bass_style == BASS_STYLE_SLOW_12_8) {
         // Rolling 1 - 3 - 5 - b7 - 5 - 3
         if (beat == 0) note = (sub_idx >= 2) ? (curr_root + third) : curr_root;
@@ -416,43 +419,33 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
         else note = (sub_idx >= 2) ? (curr_root + third) : (curr_root + fifth);
     } else if (bass_style == BASS_STYLE_MOTOWN) {
         if (beat == 0) note = (sub_idx >= 2) ? (curr_root + fifth) : curr_root;
-        else if (beat == 1) note = curr_root + (variation > 50 ? 9 : fifth);
-        else if (beat == 2) note = (sub_idx >= 2) ? (curr_root + third) : (curr_root + 12);
-        else note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
+        else if (beat == 1) note = curr_root + fifth;
+        else if (beat == 2) note = (sub_idx >= 2) ? (curr_root + third) : curr_root;
+        else note = curr_root + 10; // Solid b7 pocket
     } else if (bass_style == BASS_STYLE_SECOND_LINE) {
         if (beat == 0) note = curr_root;
         else if (beat == 1) note = curr_root + fifth;
         else if (beat == 2) note = curr_root + third;
         else note = (sub_idx >= 2) ? (curr_root + 10) : (curr_root + fifth);
     } else if (bass_style == BASS_STYLE_FUNK_16) {
-        // 16th-note octave-pop & flat-7th funk bassline
+        // Syncopated Funk Pocket: Root on 1, b7 on 1&, 5th on 2&, Root on 3, b7 on 3&, 5th on 4&
         if (beat == 0) {
-            if (sub_idx == 0) note = curr_root;
-            else if (sub_idx == 2) note = curr_root + 12;
-            else note = curr_root + 10;
+            note = (sub_idx >= 2) ? (curr_root + 10) : curr_root;
         } else if (beat == 1) {
-            note = (sub_idx == 1) ? (curr_root + third) : (curr_root + fifth);
+            note = curr_root + fifth;
         } else if (beat == 2) {
-            if (sub_idx == 0) note = curr_root;
-            else if (sub_idx == 2) note = curr_root + 10;
-            else note = curr_root + 12;
+            note = (sub_idx >= 2) ? (curr_root + 10) : curr_root;
         } else {
-            if (sub_idx == 1) note = curr_root + fifth;
-            else if (sub_idx == 2) note = curr_root + 10;
-            else note = (next_target > 40) ? (next_target - 1) : (next_target + 1);
+            note = curr_root + fifth;
         }
     } else if (bass_style == BASS_STYLE_COUNTRY_2) {
-        // Country alternating root-fifth two-beat with walk-up into next bar
+        // Country alternating root-fifth two-beat with chord-tone walk-up (Root - 3rd - 5th)
         if (beat == 0 || beat == 1) {
             note = curr_root;
         } else if (beat == 2) {
             note = curr_root + fifth;
         } else {
-            if (sub_idx >= 2) {
-                note = (variation > 45) ? (curr_root + third) : (curr_root + 2);
-            } else {
-                note = curr_root + fifth;
-            }
+            note = (sub_idx >= 2) ? (curr_root + fifth) : (curr_root + third);
         }
     } else if (bass_style == BASS_STYLE_SHUFFLE_REP) {
         // Shuffle repeat: & repeats the current beat's walking note instead of jumping to +7/+12
@@ -527,14 +520,10 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         else if (hs->current_subdiv == 16) sub_slot = 2;
     } else {
         uint8_t offbeat_subdiv = 12 + (uint8_t)((preset->swing * 6) / 100);
-        uint8_t allow_16ths = (preset->swing < 30) || (gt->style >= GROOVE_POCKET_FUNK) ||
-                              (hs->bass_style == BASS_STYLE_FUNK_16) || (hs->keys_style == KEYS_STYLE_FUNK_CLAV);
-        uint8_t sub1_subdiv = 6 + (uint8_t)((preset->swing * 2) / 100);
-        uint8_t sub3_subdiv = 18 + (uint8_t)((preset->swing * 2) / 100);
         if (hs->current_subdiv == 0) sub_slot = 0;
-        else if (allow_16ths && hs->current_subdiv == sub1_subdiv) sub_slot = 1;
+        else if (hs->current_subdiv == 6 && preset->swing < 30) sub_slot = 1;
         else if (hs->current_subdiv == offbeat_subdiv) sub_slot = 2;
-        else if (allow_16ths && hs->current_subdiv == sub3_subdiv) sub_slot = 3;
+        else if (hs->current_subdiv == 18 && preset->swing < 30) sub_slot = 3;
     }
 
     if (sub_slot != 0xFF) {
@@ -612,55 +601,42 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             }
         }
 
-        if (gt->style >= GROOVE_POCKET_FUNK) {
-            // Custom 16-step Funk & Country drum templates (kick in bass_mask, snare/ghosts in comp_mask)
-            uint8_t k_vel = gt->bass_mask[step16 % 16];
-            if (k_vel > 0 && d_full >= 20) {
-                if (sub_slot == 0 || d_full >= 45) {
-                    frame->drum_mask |= 0x01;
-                    int dv0 = (int)k_vel + j_vel + ((d_full > 75) ? 8 : (d_full < 45) ? -14 : 0);
-                    frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
-                }
-            }
-            uint8_t s_vel = gt->comp_mask[step16 % 16];
-            if (s_vel > 0) {
-                if (d_full < 20 && sub_slot == 0 && (hs->current_beat == 1 || hs->current_beat == 3)) {
-                    frame->drum_mask |= 0x08;
-                    int dv3 = 82 + j_vel;
-                    frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
-                } else if (sub_slot == 0 || (d_full >= 40 && d_var >= 20)) {
-                    frame->drum_mask |= 0x02;
-                    int dv1 = (int)s_vel + j_vel + ((d_full > 75) ? 8 : (d_full < 45) ? -14 : 0);
-                    frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
-                }
-            }
-        } else {
-            // Kick Drum: Beat 1 downbeat (d_full >= 20), Beat 3 (d_full >= 55), plus syncopated pushes (d_var / d_full > 65)
-            if (d_full >= 20 && hs->current_subdiv == 0 && (hs->current_beat == 0 || (d_full >= 55 && hs->current_beat == 2))) {
+        // Kick Drum: Beat 1 downbeat (d_full >= 20), Beat 3 (d_full >= 55), plus syncopated pushes
+        if (d_full >= 20 && hs->current_subdiv == 0 && (hs->current_beat == 0 || (d_full >= 55 && hs->current_beat == 2))) {
+            frame->drum_mask |= 0x01;
+            int dv0 = 112 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -14 : 0);
+            frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
+        }
+        // Syncopated funk / soul kick pushes on 2& and 4& (or from groove template)
+        if (d_full >= 45 && sub_slot == 2) {
+            uint8_t is_funk = (gt->style >= GROOVE_POCKET_FUNK && gt->style <= GROOVE_SLOW_NEO_FUNK);
+            if ((is_funk && (hs->current_beat == 1 || hs->current_beat == 3)) ||
+                (d_var > 65 && (hs->current_beat == 3 || (d_full > 75 && hs->current_beat == 1)))) {
                 frame->drum_mask |= 0x01;
-                int dv0 = 112 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -14 : 0);
+                int dv0 = (is_funk ? 104 : 96) + j_vel;
                 frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
             }
-            if (d_full >= 45 && d_var > 65 && sub_slot == 2 && (hs->current_beat == 3 || (d_full > 75 && hs->current_beat == 1))) {
-                frame->drum_mask |= 0x01;
-                int dv0 = 96 + j_vel;
-                frame->drum_vel[0] = (uint8_t)((dv0 < 1) ? 1 : (dv0 > 127) ? 127 : dv0);
-            }
+        }
 
-            // Snare / Rimshot: Backbeat on Beats 2 and 4 (current_beat == 1 || 3)
-            if ((hs->current_beat == 1 || hs->current_beat == 3) && hs->current_subdiv == 0) {
-                if (d_full < 20) {
-                    frame->drum_mask |= 0x08; // Ultra-sparse: rimshot only on 2 & 4
-                    int dv3 = 82 + j_vel;
-                    frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
-                } else {
-                    frame->drum_mask |= 0x02;
-                    int dv1 = 104 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -16 : 0);
-                    frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
-                }
+        // Snare / Rimshot: Backbeat on Beats 2 and 4 (current_beat == 1 || 3)
+        if ((hs->current_beat == 1 || hs->current_beat == 3) && hs->current_subdiv == 0) {
+            if (d_full < 20) {
+                frame->drum_mask |= 0x08; // Ultra-sparse: rimshot only on 2 & 4
+                int dv3 = 82 + j_vel;
+                frame->drum_vel[3] = (uint8_t)((dv3 < 1) ? 1 : (dv3 > 127) ? 127 : dv3);
+            } else {
+                frame->drum_mask |= 0x02;
+                int dv1 = 104 + j_vel + ((d_full > 75) ? 10 : (d_full < 45) ? -16 : 0);
+                frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
             }
-            // Snare ghost notes (controlled by Drums Spice & Fullness)
-            if (d_full >= 40 && d_var >= 26 && sub_slot == 2 && (hs->current_beat == 2 || (d_var > 65 && hs->current_beat == 0))) {
+        }
+        // Snare ghost notes (controlled by Drums Spice & Fullness, plus Country train snare)
+        if (d_full >= 40 && sub_slot == 2) {
+            if (gt->style == GROOVE_COUNTRY_TWANG || gt->style == GROOVE_TRAIN_BEAT) {
+                frame->drum_mask |= 0x02;
+                int dv1 = 58 + j_vel;
+                frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);
+            } else if (d_var >= 26 && (hs->current_beat == 2 || (d_var > 65 && hs->current_beat == 0))) {
                 frame->drum_mask |= 0x02;
                 int dv1 = 48 + j_vel + ((d_var > 65) ? 15 : 0);
                 frame->drum_vel[1] = (uint8_t)((dv1 < 1) ? 1 : (dv1 > 127) ? 127 : dv1);

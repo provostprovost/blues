@@ -168,7 +168,7 @@ void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_m
         g_keys[i].inc_c = get_scaled_inc(voicing->notes[i], tuning_mode);
         g_keys[i].inc_m = g_keys[i].inc_c * 2;
         g_keys[i].env_q15 = (int32_t)velocity * 256;
-        g_keys[i].gate_samples = 15000; // ~340 ms gate hold
+        g_keys[i].gate_samples = 11000; // ~250 ms crisp comping gate hold
         if (!g_keys[i].active) {
             g_keys[i].phase_c = 0;
             g_keys[i].phase_m = 0;
@@ -392,85 +392,86 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
 
             switch (preset->bass_instrument % NUM_BASS_INSTRUMENTS) {
                 case BASS_UPRIGHT:
-                    b_sample = (b_fund * 3 / 4) + (b_harm >> 2);
+                    b_sample = (b_fund * 3 / 4) + (b_harm >> 1) + (b_third >> 2);
                     if (g_bass.pluck_samples > 0) {
                         b_sample += (int32_t)g_bass.pluck_samples * 6;
                     }
                     break;
                 case BASS_MUTED_TICTAC:
-                    b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
+                    b_sample = (b_fund * 5 / 8) + (b_harm >> 1) + (b_third * 3 / 8);
                     break;
                 case BASS_MOOG_FUNK: {
                     int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
-                    int32_t saw = (b_fund >> 1) + (b_harm >> 2) + (b_third >> 3) + (b_fourth >> 4);
-                    int32_t cutoff = 3500 + ((g_bass.env_q15 * 24000) >> 15);
+                    int32_t saw = (b_fund * 5 / 8) + (b_harm >> 1) + (b_third * 3 / 8) + (b_fourth >> 2);
+                    int32_t cutoff = 6000 + ((g_bass.env_q15 * 24000) >> 15);
                     g_bass_lp += ((saw - g_bass_lp) * cutoff) >> 15;
-                    b_sample = (g_bass_lp * 3) >> 1;
+                    b_sample = (g_bass_lp * 7) >> 2;
                     break;
                 }
                 case BASS_JAZZ_60S: { // 60s Jazz Bass: bridge pickup mid growl
                     int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
-                    b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2) + (b_fourth >> 3);
+                    b_sample = (b_fund * 5 / 8) + (b_harm >> 1) + (b_third >> 1) + (b_fourth >> 2);
                     break;
                 }
-                case BASS_FLATWOUND: // Flatwound Motown: warm round fundamental
-                    b_sample = (b_fund * 3 / 4) + (b_harm >> 3) + (b_third >> 4);
+                case BASS_FLATWOUND: // Flatwound Motown: warm round fundamental + 2nd harmonic punch
+                    b_sample = (b_fund * 3 / 4) + (b_harm * 3 / 8) + (b_third >> 3);
                     break;
                 case BASS_AMPEG_GROWL: { // Ampeg Tube Growl: warm asymmetric saturation
-                    int32_t raw = (b_fund * 3 / 4) + (b_harm >> 1) + (b_third >> 2);
-                    if (raw > 14000) raw = 14000 + ((raw - 14000) >> 2);
-                    else if (raw < -14000) raw = -14000 + ((raw + 14000) >> 2);
-                    b_sample = raw;
+                    int32_t raw = (b_fund * 3 / 4) + (b_harm * 5 / 8) + (b_third >> 1);
+                    if (raw > 16000) raw = 16000 + ((raw - 16000) >> 2);
+                    else if (raw < -16000) raw = -16000 + ((raw + 16000) >> 2);
+                    b_sample = (raw * 5) >> 2;
                     break;
                 }
-                case BASS_SUB_OCTAVE: // Sub Octave: deep fundamental + clean octave blend
-                    b_sample = (b_fund * 7 / 8) + (b_harm >> 2);
+                case BASS_SUB_OCTAVE: // Sub Octave: deep fundamental + strong octave & 3rd blend
+                    b_sample = (b_fund * 3 / 4) + (b_harm >> 1) + (b_third >> 2);
                     break;
                 case BASS_LATELY_FM: { // DX7/TX81Z Lately FM Bass: snappy 2:1 FM punch
                     uint32_t fm_mod = (uint32_t)((((int32_t)b_harm * g_bass.env_q15) >> 15) * 18000);
-                    b_sample = (hal_sine_q15(g_bass.phase + fm_mod) * 7) >> 3;
+                    b_sample = hal_sine_q15(g_bass.phase + fm_mod) + (b_harm >> 2);
                     break;
                 }
-                case BASS_SLAP_POP: { // Karplus/Slap Pop: deep thump + bright snap transient
+                case BASS_SLAP_POP: { // Karplus/Slap Pop: deep thump + bright snap transient + meaty 2nd harmonic
                     int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
-                    int32_t slap = (g_bass.pluck_samples > 0) ? ((b_third >> 1) + (b_fourth >> 1)) : (b_harm >> 3);
+                    int32_t slap = (g_bass.pluck_samples > 0) ? ((b_third >> 1) + (b_fourth >> 1)) : ((b_harm >> 1) + (b_third >> 2));
                     b_sample = (b_fund * 3 / 4) + slap;
                     break;
                 }
-                case BASS_HOFNER: // Hollow woody short-decay Beatle bass
-                    b_sample = (b_fund * 7 / 8) + (b_harm >> 3);
+                case BASS_HOFNER: // Hollow woody Beatle bass
+                    b_sample = (b_fund * 3 / 4) + (b_harm >> 1) + (b_third >> 3);
                     break;
                 case BASS_ACID_303: { // Resonant squelchy synth bass
                     int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
-                    int32_t saw = (b_fund >> 1) + (b_harm >> 2) + (b_third >> 2) + (b_fourth >> 3);
-                    int32_t cutoff = 2500 + ((g_bass.env_q15 * 28000) >> 15);
+                    int32_t saw = (b_fund * 5 / 8) + (b_harm >> 1) + (b_third >> 1) + (b_fourth >> 2);
+                    int32_t cutoff = 4500 + ((g_bass.env_q15 * 26000) >> 15);
                     g_bass_lp += ((saw - g_bass_lp) * cutoff) >> 15;
-                    b_sample = ((g_bass_lp + ((saw - g_bass_lp) >> 2)) * 3) >> 1;
+                    b_sample = ((g_bass_lp + ((saw - g_bass_lp) >> 2)) * 7) >> 2;
                     break;
                 }
                 case BASS_TUBA: // New Orleans brass tuba
-                    b_sample = (b_fund * 3 / 4) + (b_harm >> 2) + (b_third >> 3);
+                    b_sample = (b_fund * 3 / 4) + (b_harm >> 1) + (b_third * 3 / 8);
                     break;
                 case BASS_PICK_ROCK: { // Aggressive picked rock-blues bass
                     int16_t b_fourth = hal_sine_q15(g_bass.phase * 4);
-                    int32_t pick = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2) + (b_fourth >> 2);
-                    if (pick > 24000) pick = 24000;
-                    else if (pick < -24000) pick = -24000;
+                    int32_t pick = (b_fund * 5 / 8) + (b_harm >> 1) + (b_third >> 1) + (b_fourth * 3 / 8);
                     b_sample = pick;
                     break;
                 }
                 case BASS_P_BASS:
                 default:
                     if (g_bass.pluck_samples > 0) {
-                        b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 2);
+                        b_sample = (b_fund * 3 / 4) + (b_harm * 5 / 8) + (b_third * 3 / 8);
                     } else {
-                        b_sample = (b_fund >> 1) + (b_harm >> 1) + (b_third >> 3);
+                        b_sample = (b_fund * 3 / 4) + (b_harm >> 1) + (b_third >> 2);
                     }
                     break;
             }
 
+            if (b_sample > 22000) b_sample = 22000 + ((b_sample - 22000) >> 2);
+            else if (b_sample < -22000) b_sample = -22000 + ((b_sample + 22000) >> 2);
+
             int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
-            mix += (b_sample * b_amp) >> 7; // Driving, punchy walking bass
+            mix += ((b_sample * b_amp) * 5) >> 9; // Balanced middle ground (1.25x of >>7, never clips master bus so knob responds linearly)
 
             // Attack micro-ramp, then clear target_env so plucked-string decay runs freely
             if (g_bass.target_env > 0) {
@@ -481,20 +482,20 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             } else if (g_bass.gate_samples > 0) {
                 g_bass.gate_samples--;
                 static const int32_t BASS_DECAYS[NUM_BASS_INSTRUMENTS] = {
-                    32766, // P-BASS (~258 ms)
-                    32764, // UPRIGHT (~129 ms)
-                    32761, // MUTED BOOGIE (~73 ms)
-                    32765, // MOOG FUNK (~172 ms)
-                    32766, // 60S JAZZ (~258 ms)
-                    32765, // FLATWOUND (~172 ms)
-                    32766, // AMPEG TUBE (~258 ms)
-                    32766, // SUB OCTAVE (~258 ms)
-                    32764, // LATELY FM (~129 ms)
-                    32763, // SLAP POP (~103 ms)
-                    32762, // HOFNER (~86 ms)
-                    32764, // ACID 303 (~129 ms)
-                    32765, // TUBA (~172 ms)
-                    32766  // PICK ROCK (~258 ms)
+                    32766, // P-BASS
+                    32764, // UPRIGHT
+                    32762, // MUTED BOOGIE
+                    32765, // MOOG FUNK
+                    32766, // 60S JAZZ
+                    32765, // FLATWOUND
+                    32766, // AMPEG TUBE
+                    32766, // SUB OCTAVE
+                    32764, // LATELY FM
+                    32764, // SLAP POP
+                    32763, // HOFNER
+                    32764, // ACID 303
+                    32765, // TUBA
+                    32766  // PICK ROCK
                 };
                 g_bass.env_q15 = (g_bass.env_q15 * BASS_DECAYS[preset->bass_instrument % NUM_BASS_INSTRUMENTS]) >> 15;
             } else {
@@ -557,12 +558,13 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         car = (int16_t)(organ >> 1);
                         break;
                     }
-                    case KEYS_CLAVINET: { // 5: Funk Clavinet D6
+                    case KEYS_CLAVINET: { // 5: Funk Clavinet D6 (crisp decaying FM bite, never harsh sustained clang)
                         g_keys[k].phase_c += g_keys[k].inc_c;
-                        g_keys[k].phase_m += g_keys[k].inc_c * 3;
+                        g_keys[k].phase_m += g_keys[k].inc_c * 2;
                         int16_t mod = hal_sine_q15(g_keys[k].phase_m);
-                        uint32_t pmod = (uint32_t)((((int32_t)mod * g_keys[k].env_q15) >> 15) * 28000);
-                        car = hal_sine_q15(g_keys[k].phase_c + pmod);
+                        int32_t cl_env = (g_keys[k].env_q15 * g_keys[k].env_q15) >> 15;
+                        uint32_t pmod = (uint32_t)((((int32_t)mod * cl_env) >> 15) * 18000);
+                        car = (hal_sine_q15(g_keys[k].phase_c + pmod) * 3 / 4) + (hal_sine_q15(g_keys[k].phase_c * 3) >> 2);
                         break;
                     }
                     case KEYS_ARCHTOP_GUITAR: { // 6: Archtop Rhythm Guitar
@@ -675,14 +677,16 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 }
 
                 int32_t k_amp = (g_keys[k].env_q15 * preset->keys_vol) >> 15;
-                mix += (car * k_amp) >> 8;
+                mix += ((car * k_amp) * 3) >> 9; // Balanced 4-voice chord bus (0.75x of >>8: clear & warm without clipping)
 
                 if (g_keys[k].gate_samples > 0) {
                     g_keys[k].gate_samples--;
                     uint8_t k_algo = preset->ep_tone_algo % NUM_KEYS_INSTRUMENTS;
-                    if (k_algo != KEYS_B3_CLEAN && k_algo != KEYS_B3_DIRTY && k_algo != KEYS_LESLIE_ORGAN &&
-                        k_algo != KEYS_ACCORDION && k_algo != KEYS_FARFISA && k_algo != KEYS_MELLOTRON && k_algo != KEYS_HARMONIUM) {
-                        g_keys[k].env_q15 = (g_keys[k].env_q15 * 32766) >> 15;
+                    if (k_algo == KEYS_CLAVINET || k_algo == KEYS_ARCHTOP_GUITAR || k_algo == KEYS_RESONATOR) {
+                        g_keys[k].env_q15 = (g_keys[k].env_q15 * 32760) >> 15;
+                    } else if (k_algo != KEYS_B3_CLEAN && k_algo != KEYS_B3_DIRTY && k_algo != KEYS_LESLIE_ORGAN &&
+                               k_algo != KEYS_ACCORDION && k_algo != KEYS_FARFISA && k_algo != KEYS_MELLOTRON && k_algo != KEYS_HARMONIUM) {
+                        g_keys[k].env_q15 = (g_keys[k].env_q15 * 32765) >> 15;
                     }
                 } else {
                     g_keys[k].env_q15 = (g_keys[k].env_q15 * 32650) >> 15;
