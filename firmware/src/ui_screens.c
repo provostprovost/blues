@@ -258,8 +258,8 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
 }
 
 static void render_status_and_footer(const HarmonyState *hs, const PresetConfig *preset, uint8_t toast_active) {
-    const char *status_str = (hs->form_mode == FORM_MINOR_BLUES) ? "STOPPED (MINOR BLUES)" : "STOPPED";
-    uint16_t status_col = RGB(160, 160, 160);
+    const char *status_str = (hs->form_mode == FORM_MINOR_BLUES) ? "PRESS PLAY (MINOR BLUES)" : "PRESS PLAY";
+    uint16_t status_col = RGB(255, 200, 60);
     if (toast_active && hs->toast_msg[0] != '\0') {
         status_str = hs->toast_msg;
         status_col = RGB(0, 220, 255);
@@ -544,5 +544,5 @@ void ui_render_splash(void) {
     hal_draw_text_box(36, 74, 168, 1, "BLUES BOX", RGB(255, 200, 40), 1);
     hal_fill_rect(52, 114, 136, 2, RGB(220, 165, 45));
     hal_draw_text_box(36, 124, 168, 0, "BACKING BAND", RGB(235, 230, 215), 1);
-    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V1.5", RGB(180, 145, 75), 1);
+    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V1.5.1", RGB(180, 145, 75), 1);
 }

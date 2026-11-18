@@ -180,7 +180,9 @@ static void init_factory_presets(void) {
                 p->ep_tone_algo = KEYS_RHODES;
                 p->bass_instrument = BASS_P_BASS;
                 p->drum_kit = DRUM_STUDIO;
-                p->lead_instrument = LEAD_BLUES_GUITAR;
+                p->lead_instrument = LEAD_ALTO_SAX;
+                p->lead_play_style = LEAD_PLAY_LEGATO_GLIDE;
+                p->easy_lead = 1;
                 p->form_mode = FORM_MINOR_BLUES;
                 break;
             case 1: // 2: Slow 12/8 Blues
