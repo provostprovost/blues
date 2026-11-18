@@ -58,6 +58,7 @@ void harmony_init(HarmonyState *hs) {
     hs->keys_style = KEYS_STYLE_CHARLESTON;
     hs->drum_pattern = 0;
     hs->easy_lead = 0;
+    hs->heat_level = 3;
     hs->vis_bass_pulse = 0;
     hs->vis_keys_pulse = 0;
     hs->vis_drum_pulse = 0;
@@ -84,6 +85,42 @@ void harmony_init(HarmonyState *hs) {
     hs->ext_clock_timeout_ms = 0;
     hs->cpu_load_pct = 0;
     hs->chorus_count = 0;
+}
+
+void harmony_set_heat_level(HarmonyState *hs, PresetConfig *p, uint8_t level, uint8_t trigger_fill) {
+    static const uint8_t HEAT_FULLNESS[5] = { 25, 45, 65, 80, 100 };
+    static const uint8_t HEAT_VAR[5]      = { 15, 30, 50, 75, 100 };
+    if (level < 1) level = 1;
+    if (level > 5) level = 5;
+
+    uint8_t f = HEAT_FULLNESS[level - 1];
+    uint8_t v = HEAT_VAR[level - 1];
+    hs->heat_level = level;
+    hs->fullness = f;
+    hs->bass_fullness = f;
+    hs->keys_fullness = f;
+    hs->drums_fullness = f;
+    hs->variation = v;
+    hs->bass_variation = v;
+    hs->keys_variation = v;
+    hs->drums_variation = v;
+
+    if (p) {
+        p->heat_level = level;
+        p->fullness = f;
+        p->bass_fullness = f;
+        p->keys_fullness = f;
+        p->drums_fullness = f;
+        p->variation = v;
+        p->bass_variation = v;
+        p->keys_variation = v;
+        p->drums_variation = v;
+    }
+
+    if (trigger_fill && hs->is_playing) {
+        hs->fill_pending = 1;
+    }
+    hs->ui_dirty = 1;
 }
 
 IntroMode harmony_resolve_intro_style(IntroMode mode, GrooveStyle groove) {

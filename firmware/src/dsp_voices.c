@@ -1076,6 +1076,11 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         }
         mix += (lead_mix * preset->lead_vol) >> 7; // Uniform (sig * vol) >> 7 law (and 0 = truly silent!)
 
+        // Band Heat escalation volume curve (85%..115% across Levels 1..5; 0/3 = 100% unity)
+        static const uint8_t HEAT_GAIN_Q7[5] = { 109, 118, 128, 138, 147 };
+        uint8_t hl = (preset->heat_level >= 1 && preset->heat_level <= 5) ? preset->heat_level : 3;
+        mix = (mix * HEAT_GAIN_Q7[hl - 1]) >> 7;
+
         // 4-Comb Schroeder Room Reverb Parallel Summation
         int16_t c0 = g_comb_buf0[g_comb_ptr0];
         int16_t c1 = g_comb_buf1[g_comb_ptr1];

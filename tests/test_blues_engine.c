@@ -513,10 +513,13 @@ void test_stage4_panel_ui(void) {
     assert(hs.ending_armed == ENDING_ARMED_NEXT_BAR);
     hs.ending_armed = ENDING_NONE;
 
-    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Footswitch B while playing -> Drum Fill
+    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Footswitch B while playing -> Escalate Heat 3->4 + Drum Fill
+    assert(hs.heat_level == 4);
     assert(hs.fill_pending == 1);
-    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Second press -> Force Turnaround
-    assert(hs.queued_cue == CUE_FORCE_TURNAROUND);
+    hs.fill_pending = 0;
+    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Second press -> Escalate Heat 4->5 + Drum Fill
+    assert(hs.heat_level == 5);
+    assert(hs.fill_pending == 1);
 
     panel_handle_midi_in(&hs, 0xB0, 82, 127); // Footswitch C while playing -> Stop Time Break
     assert(hs.queued_cue == CUE_STOP_TIME);
@@ -750,14 +753,15 @@ void test_stage6_v2_features(void) {
     assert(hs.is_playing == 0);
     assert(hs.ending_armed == ENDING_NONE);
 
-    // 2. Chocolate Switch B (Note 62 / CC 21) while stopped -> 1-stomp Start WITH Intro even when INTRO_OFF!
+    // 2. Chocolate Switch B (Note 62 / CC 21) while stopped -> Cycle starting Heat 3->4->5->1
     harmony_init(&hs);
-    hs.count_in_enabled = INTRO_OFF;
-    hs.drum_pattern = GROOVE_POCKET_FUNK;
+    assert(hs.heat_level == 3);
     panel_handle_midi_in(&hs, 0x90, 62, 127);
-    assert(hs.is_playing == 1);
-    assert(hs.active_intro_style == INTRO_FUNK_2BAR);
-    assert(hs.count_in_bars_remaining == 2);
+    assert(hs.heat_level == 4 && hs.is_playing == 0);
+    panel_handle_midi_in(&hs, 0xB0, 21, 127);
+    assert(hs.heat_level == 5);
+    panel_handle_midi_in(&hs, 0xC0, 1, 0);
+    assert(hs.heat_level == 1 && hs.fullness == 25 && hs.variation == 15);
 
     // 3. Verify all Intro styles emit Bass + Keys + Drum notes while keeping current_bar == 0
     IntroMode intro_modes[5] = { INTRO_V7_1BAR, INTRO_TURNAROUND_2BAR, INTRO_FUNK_2BAR, INTRO_BAND_4BAR, INTRO_CLICK_1BAR };
@@ -832,6 +836,82 @@ void test_stage6_v2_features(void) {
     printf("[Stage 6] V2 Footswitch, Lead-Ins, Next-Bar Outro & Riffs passed!\n");
 }
 
+void test_stage7_escalation_heat(void) {
+    printf("[Stage 7] Testing 5-Level Jam Escalation (Band Heat) & Stage Visuals...\n");
+    HarmonyState hs;
+    PresetConfig p;
+    memset(&p, 0, sizeof(p));
+    p.bpm = 112;
+    p.bass_vol = 96;
+    p.keys_vol = 88;
+    p.drums_vol = 96;
+    p.lead_vol = 116;
+    p.lead_instrument = LEAD_ALTO_SAX;
+
+    harmony_init(&hs);
+    assert(hs.heat_level == 3);
+
+    static const uint8_t EXP_FUL[5] = { 25, 45, 65, 80, 100 };
+    static const uint8_t EXP_VAR[5] = { 15, 30, 50, 75, 100 };
+    for (uint8_t lvl = 1; lvl <= 5; lvl++) {
+        harmony_set_heat_level(&hs, &p, lvl, 0);
+        assert(hs.heat_level == lvl);
+        assert(p.heat_level == lvl);
+        assert(hs.fullness == EXP_FUL[lvl - 1]);
+        assert(hs.variation == EXP_VAR[lvl - 1]);
+    }
+
+    // Verify 5 -> 1 drop while playing does NOT trigger a drum fill, whereas 1 -> 2 DOES
+    hs.is_playing = 1;
+    hs.fill_pending = 0;
+    harmony_set_heat_level(&hs, &p, 5, 0);
+    panel_handle_midi_in(&hs, 0xC0, 1, 0); // Switch B: 5 -> 1
+    assert(hs.heat_level == 1);
+    assert(hs.fill_pending == 0);
+    panel_handle_midi_in(&hs, 0xC0, 1, 0); // Switch B: 1 -> 2
+    assert(hs.heat_level == 2);
+    assert(hs.fill_pending == 1);
+
+    // Verify DSP volume escalation (Level 1 < Level 3 < Level 5)
+    dsp_init();
+    int32_t buf1[128], buf3[128], buf5[128];
+    memset(buf1, 0, sizeof(buf1));
+    memset(buf3, 0, sizeof(buf3));
+    memset(buf5, 0, sizeof(buf5));
+    uint64_t e1 = 0, e3 = 0, e5 = 0;
+
+    p.heat_level = 1;
+    dsp_note_on_bass(40, 120, 0);
+    dsp_render_block(buf1, 64, &p);
+    for (int i = 0; i < 64; i++) e1 += (uint64_t)(buf1[i] < 0 ? -buf1[i] : buf1[i]);
+
+    dsp_init();
+    p.heat_level = 3;
+    dsp_note_on_bass(40, 120, 0);
+    dsp_render_block(buf3, 64, &p);
+    for (int i = 0; i < 64; i++) e3 += (uint64_t)(buf3[i] < 0 ? -buf3[i] : buf3[i]);
+
+    dsp_init();
+    p.heat_level = 5;
+    dsp_note_on_bass(40, 120, 0);
+    dsp_render_block(buf5, 64, &p);
+    for (int i = 0; i < 64; i++) e5 += (uint64_t)(buf5[i] < 0 ? -buf5[i] : buf5[i]);
+
+    assert(e1 > 0 && e1 < e3 && e3 < e5);
+
+    // Verify UI stage rendering across all 5 Heat levels
+    ui_init();
+    hs.vis_bass_pulse = 2;
+    hs.vis_keys_pulse = 2;
+    hs.vis_drum_pulse = 2;
+    for (uint8_t lvl = 1; lvl <= 5; lvl++) {
+        hs.heat_level = lvl;
+        ui_render(&hs, &p, 0, 0, 1);
+    }
+
+    printf("[Stage 7] 5-Level Jam Escalation & Stage Visuals passed!\n");
+}
+
 int main(void) {
     printf("[TB-1 Test Suite] Running Stage Tests...\n");
     test_stage1_harmony();
@@ -840,6 +920,7 @@ int main(void) {
     test_stage4_panel_ui();
     test_stage5_integration();
     test_stage6_v2_features();
+    test_stage7_escalation_heat();
     printf("[TB-1 Test Suite] All tests completed with 100%% assertions passing.\n");
     return 0;
 }

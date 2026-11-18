@@ -310,6 +310,7 @@ typedef struct {
     uint8_t     keys_style;
     uint8_t     drum_pattern;
     uint8_t     easy_lead;
+    uint8_t     heat_level;
     volatile uint8_t vis_bass_pulse;
     volatile uint8_t vis_keys_pulse;
     volatile uint8_t vis_drum_pulse;
@@ -354,6 +355,7 @@ typedef struct {
     uint8_t  drum_pattern;
     uint8_t  lead_play_style;
     uint8_t  easy_lead;
+    uint8_t  heat_level;
 } PresetConfig;
 
 typedef struct {

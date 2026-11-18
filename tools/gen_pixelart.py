@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "firmware" / "gen" / "pixelart_assets.h"
 
 BRAIN = Path("/Users/brianprovost/.gemini/antigravity/brain/b9f6b7ef-5901-4d94-b1af-6091ac0f0a16")
-SPLASH_SRC = BRAIN / "srv_splash_raw_1795023664115.jpg"
+SPLASH_SRC = BRAIN / "srv_blues_box_fm1_1795035700759.jpg"
 STAGE_SRC = BRAIN / "srv_stage_raw_1795023666975.jpg"
 DRUM_SRC = BRAIN / "drummer_chunky_raw_1795028709248.jpg"
 KEYS_SRC = BRAIN / "keys_girl_raw_final_1795028704953.jpg"
@@ -86,10 +86,9 @@ def make_bounce_frame(px_up: list[int], w: int, h: int, y_start: int, y_end: int
     return px_down
 
 
-def make_drum_hit_frame(px_up: list[int], w: int, h: int, bg_idx: int) -> list[int]:
-    """Swing both drummer arms + sticks (x=1..9 and x=18..25) down 3 sprite rows (6 screen px)."""
+def make_drum_hit_frame(px_up: list[int], w: int, h: int, bg_idx: int, shift: int = 3) -> list[int]:
+    """Swing both drummer arms + sticks (x=1..9 and x=18..25) down `shift` sprite rows."""
     px_down = list(px_up)
-    shift = 3
     for x0, x1 in [(1, 10), (18, 26)]:
         for y in range(15, 0, -1):
             src_y = y - shift
@@ -125,17 +124,23 @@ def main() -> None:
     stage_full = Image.open(STAGE_SRC).convert("RGB").resize((120, 120), Image.NEAREST)
     guy_crop = crop_nonblack(stage_full.crop((24, 27, 75, 93)))
     guy_pal, guy_up = quantize_sprite(guy_crop, 24, 30, 16)
-    guy_down = make_bounce_frame(guy_up, 24, 30, 12, 23, 4, 22, find_black_idx(guy_pal))
+    guy_bg = find_black_idx(guy_pal)
+    guy_soft = make_bounce_frame(guy_up, 24, 30, 14, 21, 8, 19, guy_bg)
+    guy_down = make_bounce_frame(guy_up, 24, 30, 12, 23, 4, 22, guy_bg)
 
     # 3. Drummer: 27x30 (upscales 2x to 54x60)
     drum_crop = crop_nonblack(Image.open(DRUM_SRC).convert("RGB"))
     drum_pal, drum_up = quantize_sprite(drum_crop, 27, 30, 16)
-    drum_down = make_drum_hit_frame(drum_up, 27, 30, find_black_idx(drum_pal))
+    drum_bg = find_black_idx(drum_pal)
+    drum_soft = make_drum_hit_frame(drum_up, 27, 30, drum_bg, shift=1)
+    drum_down = make_drum_hit_frame(drum_up, 27, 30, drum_bg, shift=3)
 
     # 4. Cool Girl Keyboardist: 27x30 (upscales 2x to 54x60)
     keys_crop = crop_nonblack(remove_white_bg(Image.open(KEYS_SRC).convert("RGB")))
     keys_pal, keys_up = quantize_sprite(keys_crop, 27, 30, 16)
-    keys_down = make_bounce_frame(keys_up, 27, 30, 6, 18, 2, 24, find_black_idx(keys_pal))
+    keys_bg = find_black_idx(keys_pal)
+    keys_soft = make_bounce_frame(keys_up, 27, 30, 9, 16, 4, 18, keys_bg)
+    keys_down = make_bounce_frame(keys_up, 27, 30, 6, 18, 2, 24, keys_bg)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     parts = [
@@ -152,18 +157,21 @@ def main() -> None:
         "#define SRV_SPRITE_H 30",
         format_array("SRV_SPRITE_PAL", "uint16_t", guy_pal, "0x{:04X}u"),
         format_array("SRV_SPRITE_UP", "uint8_t", pack_4bit(guy_up)),
+        format_array("SRV_SPRITE_SOFT", "uint8_t", pack_4bit(guy_soft)),
         format_array("SRV_SPRITE_DOWN", "uint8_t", pack_4bit(guy_down)),
         "",
         "#define DRUM_SPRITE_W 27",
         "#define DRUM_SPRITE_H 30",
         format_array("DRUM_SPRITE_PAL", "uint16_t", drum_pal, "0x{:04X}u"),
         format_array("DRUM_SPRITE_UP", "uint8_t", pack_4bit(drum_up)),
+        format_array("DRUM_SPRITE_SOFT", "uint8_t", pack_4bit(drum_soft)),
         format_array("DRUM_SPRITE_DOWN", "uint8_t", pack_4bit(drum_down)),
         "",
         "#define KEYS_SPRITE_W 27",
         "#define KEYS_SPRITE_H 30",
         format_array("KEYS_SPRITE_PAL", "uint16_t", keys_pal, "0x{:04X}u"),
         format_array("KEYS_SPRITE_UP", "uint8_t", pack_4bit(keys_up)),
+        format_array("KEYS_SPRITE_SOFT", "uint8_t", pack_4bit(keys_soft)),
         format_array("KEYS_SPRITE_DOWN", "uint8_t", pack_4bit(keys_down)),
         "",
         "#endif // PIXELART_ASSETS_H",

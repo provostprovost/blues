@@ -173,6 +173,7 @@ static void init_factory_presets(void) {
         p->lead_instrument = (uint8_t)(i % 4);
         p->lead_play_style = LEAD_PLAY_POLY;
         p->easy_lead = 0;
+        p->heat_level = 3;
 
         switch (i) {
             case 0: // 1: Texas Shuffle
@@ -425,6 +426,8 @@ static void app_main(void) {
     g_harmony.count_in_enabled = g_presets[g_active_preset].count_in_enabled;
     g_harmony.form_mode = (FormMode)g_presets[g_active_preset].form_mode;
     g_harmony.easy_lead = saved_easy_lead ? 1 : g_presets[g_active_preset].easy_lead;
+    uint8_t hl = g_presets[g_active_preset].heat_level;
+    g_harmony.heat_level = (hl >= 1 && hl <= 5) ? hl : 3;
     g_last_voicing.count = 0;
 
     // 4. Initialize Hardware Panels, UI & DSP
@@ -434,7 +437,7 @@ static void app_main(void) {
     dsp_set_lead_play_style(g_presets[g_active_preset].lead_play_style);
 
 #ifndef DINGHY_HOST
-    // 5. Skippable Boot Splash Screen (~1500 ms, skipped on any key or button press)
+    // 5. Skippable Boot Splash Screen (~2000 ms, skipped on any key or button press)
     ui_render_splash();
     panel_update_leds(&g_harmony, g_active_preset);
     {
@@ -442,7 +445,7 @@ static void app_main(void) {
         hal_poll();
         (void)hal_get_btn_edges();
         uint32_t init_keys = hal_get_keys_mask();
-        while (hal_millis() - splash_start < 1500u) {
+        while (hal_millis() - splash_start < 2000u) {
             hal_poll();
             if (hal_get_btn_edges() != 0 || (hal_get_keys_mask() & ~init_keys) != 0) {
                 break;
@@ -467,6 +470,7 @@ static void app_main(void) {
 
         // Poll Panel Inputs (Buttons, Encoders, Silicone Keys)
         panel_poll_inputs(&g_harmony, g_presets, &g_active_preset, ms_now, &g_ui_screen);
+        g_presets[g_active_preset].heat_level = g_harmony.heat_level;
 
         // Flush queued MIDI events to USB-MIDI
         midi_tx_flush();

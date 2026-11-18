@@ -135,6 +135,7 @@ static void save_to_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8_t
     dst->outro_type = (uint8_t)hs->outro_type;
     dst->count_in_enabled = hs->count_in_enabled;
     dst->easy_lead = hs->easy_lead;
+    dst->heat_level = hs->heat_level;
     *active_preset_idx = slot % NUM_PRESET_SLOTS;
     format_user_preset_name(dst->name, (uint8_t)((*active_preset_idx) + 1));
     hal_blob_save(0, presets, sizeof(PresetConfig) * NUM_PRESET_SLOTS);
@@ -151,7 +152,8 @@ static void load_from_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8
     hs->root_semitone = np->root_key % 12;
     hs->form_mode = (FormMode)(np->form_mode % 5);
     hs->opening_var = (OpeningVar)(np->opening_var % 4);
-    hs->outro_type = (OutroType)(np->outro_type % 4);
+    hs->outro_type = (OutroType)(np->outro_type % NUM_OUTRO_TYPES);
+    hs->heat_level = (np->heat_level >= 1 && np->heat_level <= 5) ? np->heat_level : 3;
     hs->variation = np->variation;
     hs->bass_variation = np->bass_variation;
     hs->keys_variation = np->keys_variation;
@@ -214,6 +216,23 @@ static const char *INTRO_TOAST_LABELS[NUM_INTRO_MODES] = {
 static const char *OUTRO_TOAST_LABELS[NUM_OUTRO_TYPES] = {
     "OUTRO: CLASSIC SLIDE", "OUTRO: V-bV-IV-I", "OUTRO: IV-I TURN", "OUTRO: 1B QUICK", "OUTRO: STINGER"
 };
+static const char *HEAT_TOAST_LABELS[5] = {
+    "HEAT 1: SIMMER", "HEAT 2: WARMUP", "HEAT 3: GROOVE", "HEAT 4: COOKIN'", "HEAT 5: SMOKIN'"
+};
+
+static uint8_t step_heat_cycle(HarmonyState *hs, PresetConfig *p, int8_t dir, uint32_t ms_now) {
+    uint8_t cur = (hs->heat_level >= 1 && hs->heat_level <= 5) ? hs->heat_level : 3;
+    uint8_t next;
+    if (dir < 0) {
+        next = (cur <= 1) ? 5 : (uint8_t)(cur - 1);
+    } else {
+        next = (cur >= 5) ? 1 : (uint8_t)(cur + 1);
+    }
+    uint8_t do_fill = (next > cur && hs->is_playing) ? 1 : 0;
+    harmony_set_heat_level(hs, p, next, do_fill);
+    set_toast(hs, ms_now, HEAT_TOAST_LABELS[next - 1]);
+    return next;
+}
 
 static void handle_footswitch(HarmonyState *hs, uint8_t sw) {
     uint32_t ms_now = hal_millis();
@@ -235,16 +254,8 @@ static void handle_footswitch(HarmonyState *hs, uint8_t sw) {
                 hs->ui_dirty = 1;
             }
             break;
-        case 1: // Switch B: 1-Stomp Start WITH Style Intro (stopped) / Drum Fill or Turnaround (playing)
-            if (!hs->is_playing) {
-                harmony_start_playback(hs, (GrooveStyle)hs->drum_pattern, 1);
-            } else if (hs->fill_pending) {
-                hs->queued_cue = CUE_FORCE_TURNAROUND;
-                hs->ui_dirty = 1;
-            } else {
-                hs->fill_pending = 1;
-                hs->ui_dirty = 1;
-            }
+        case 1: // Switch B: Escalate Band Heat 1->2->3->4->5 (with Beat-4 drum pickup) -> 1 (direct drop)
+            step_heat_cycle(hs, 0, 1, ms_now);
             break;
         case 2: // Switch C: Cycle Intro Mode (stopped) / Stop-Time Break (playing)
             if (!hs->is_playing) {
@@ -398,9 +409,10 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         g_last_tap_ms = ms_now;
     }
     if (btn_edges & (1u << BTN_FX)) {
-        // Instant Manual Accent Stab
-        hs->manual_stab_pending = 1;
-        hs->ui_dirty = 1;
+        // Escalate Band Heat (1->2->3->4->5->1; hold GLO+FX to step down)
+        step_heat_cycle(hs, p, glo_held ? -1 : 1, ms_now);
+        g_save_pending = 1;
+        g_last_param_change_ms = ms_now;
     }
     if (btn_edges & (1u << BTN_EDIT)) {
         if (!hs->is_playing) {
@@ -574,7 +586,12 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                 p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
                 set_toast(hs, ms_now, TUNE_LABELS[p->master_tuning]);
             } else {
-                set_master_variation(hs, p, clamp_step_u8(hs->variation, delta * 5, 0, 100));
+                uint8_t cur = (hs->heat_level >= 1 && hs->heat_level <= 5) ? hs->heat_level : 3;
+                uint8_t next = clamp_step_u8(cur, (delta > 0) ? 1 : -1, 1, 5);
+                if (next != cur) {
+                    harmony_set_heat_level(hs, p, next, (next > cur && hs->is_playing) ? 1 : 0);
+                }
+                set_toast(hs, ms_now, HEAT_TOAST_LABELS[next - 1]);
             }
         }
         hs->ui_dirty = 1;

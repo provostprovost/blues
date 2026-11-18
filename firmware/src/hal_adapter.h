@@ -106,6 +106,11 @@ static inline void hal_draw_text_box(int x, int y, int w, int font_sz, const cha
     hal_draw_text(x, y, s, fg, 0);
 }
 
+static inline void hal_draw_text_box_bg(int x, int y, int w, int font_sz, const char *s, uint16_t fg, uint16_t bg, int align) {
+    (void)w; (void)font_sz; (void)align;
+    hal_draw_text(x, y, s, fg, bg);
+}
+
 static inline void hal_blit_sprite_2x(int x, int y, int w, int h, const uint16_t *pal16, const uint8_t *packed4) {
     for (int sy = 0; sy < h; sy++) {
         for (int sx = 0; sx < w; sx++) {
@@ -185,6 +190,37 @@ static inline void     hal_fill_rect(int x, int y, int w, int h, uint16_t col) {
 static inline void     hal_draw_text(int x, int y, const char *s, uint16_t fg, uint16_t bg) { (void)bg; draw_text_box(x, y, 240 - x, &FONT_S, s, fg, 0); }
 static inline void     hal_draw_text_box(int x, int y, int w, int font_sz, const char *s, uint16_t fg, int align) {
     draw_text_box(x, y, w, font_sz ? &FONT_L : &FONT_S, s, fg, align);
+}
+static inline void     hal_draw_text_box_bg(int x, int y, int w, int font_sz, const char *s, uint16_t fg, uint16_t bg, int align) {
+    const felucca_font_t *f = font_sz ? &FONT_L : &FONT_S;
+    int32_t tw = text_w(f, s), tx = 0;
+    if (align == 1) tx = (w - tw) / 2;
+    else if (align == 2) tx = w - tw;
+    cv_begin((uint32_t)w, f->h, bg);
+    uint16_t ramp[16];
+    uint32_t fr = fg >> 11, fg_g = (fg >> 5) & 63u, fb = fg & 31u;
+    uint32_t br = bg >> 11, bg_g = (bg >> 5) & 63u, bb = bg & 31u;
+    for (uint32_t a = 0; a < 16u; a++) {
+        uint32_t r = (br * (15u - a) + fr * a + 7u) / 15u;
+        uint32_t g = (bg_g * (15u - a) + fg_g * a + 7u) / 15u;
+        uint32_t b = (bb * (15u - a) + fb * a + 7u) / 15u;
+        ramp[a] = (uint16_t)((r << 11) | (g << 5) | b);
+    }
+    for (; *s; s++) {
+        uint32_t gi = glyph(f, (uint8_t)*s);
+        uint32_t gw = f->bw[gi], bpr = (gw + 1u) / 2u;
+        const uint8_t *gd = f->data + f->off[gi];
+        for (uint32_t gy = 0; gy < f->h; gy++) {
+            for (uint32_t gx = 0; gx < gw; gx++) {
+                uint32_t v = gd[gy * bpr + gx / 2u];
+                v = (gx & 1u) ? (v & 15u) : (v >> 4);
+                if (v) cv_pset(tx - f->pad + (int32_t)gx, (int32_t)gy, ramp[v]);
+            }
+        }
+        tx += f->adv[gi];
+    }
+    cv_blit((uint32_t)x, (uint32_t)y);
+    lcd_sync();
 }
 static inline void     hal_blit_sprite_2x(int x, int y, int w, int h, const uint16_t *pal16, const uint8_t *packed4) {
     uint32_t dw = (uint32_t)w * 2u;

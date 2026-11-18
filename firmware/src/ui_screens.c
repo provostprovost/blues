@@ -76,7 +76,11 @@ static uint8_t g_last_intro_bars = 0xFF;
 static uint8_t g_last_stage_strum = 0xFF;
 static uint8_t g_last_stage_flash = 0xFF;
 static uint8_t g_last_stage_chord = 0xFF;
+static uint8_t g_last_stage_chord_flash = 0xFF;
+static uint32_t g_chord_flash_until = 0;
 static uint8_t g_last_stage_lead  = 0xFF;
+static uint8_t g_last_stage_amp   = 0xFF;
+static uint8_t g_last_heat        = 0xFF;
 
 static uint8_t g_last_m_bass_vol = 0xFF;
 static uint8_t g_last_m_keys_vol = 0xFF;
@@ -134,7 +138,11 @@ void ui_init(void) {
     g_last_stage_strum = 0xFF;
     g_last_stage_flash = 0xFF;
     g_last_stage_chord = 0xFF;
+    g_last_stage_chord_flash = 0xFF;
+    g_chord_flash_until = 0;
     g_last_stage_lead  = 0xFF;
+    g_last_stage_amp   = 0xFF;
+    g_last_heat        = 0xFF;
 
     g_last_m_bass_vol = 0xFF;
     g_last_m_keys_vol = 0xFF;
@@ -192,11 +200,16 @@ static void render_single_bar_box(const HarmonyState *hs, uint8_t b, uint8_t is_
     int bx = 4 + col * 59;
     int by = 46 + row * 24;
 
-    uint16_t border_col = is_current ? RGB(235, 150, 15) : RGB(48, 48, 48);
-    uint16_t fg_col     = is_current ? RGB(255, 200, 60) : RGB(225, 225, 225);
+    uint16_t border_col = is_current ? RGB(255, 190, 30) : RGB(58, 58, 64);
+    uint16_t bg_col     = is_current ? RGB(75, 42, 0)    : RGB(24, 24, 28);
+    uint16_t fg_col     = is_current ? C_WHITE           : RGB(215, 215, 220);
 
     draw_rect_border(bx, by, 55, 21, is_current ? 2 : 1, border_col);
-    hal_fill_rect(bx + 2, by + 2, 51, 17, C_BLACK);
+    if (is_current) {
+        hal_fill_rect(bx + 2, by + 2, 51, 17, bg_col);
+    } else {
+        hal_fill_rect(bx + 1, by + 1, 53, 19, bg_col);
+    }
 
     HarmonyState tmp_hs = *hs;
     tmp_hs.current_bar = b;
@@ -204,130 +217,222 @@ static void render_single_bar_box(const HarmonyState *hs, uint8_t b, uint8_t is_
 
     char cstr[16];
     format_chord_str(cstr, hs->root_semitone, slot.primary);
-    hal_draw_text_box(bx + 2, by + 3, 51, 0, cstr, fg_col, 1);
+    hal_draw_text_box_bg(bx + 2, by + 3, 51, 0, cstr, fg_col, bg_col, 1);
 }
 
-static void draw_beamed_note_burst(int x, int y, uint16_t c1, uint16_t c2, uint8_t alt) {
+static void draw_beamed_note_burst(int x, int y, uint16_t c1, uint16_t c2, uint8_t alt, uint8_t heat) {
     int dy = alt ? -2 : 0;
-    // Beamed eighth-note pair
+    if (heat <= 2) {
+        // Level 1-2: Single quarter-note (plus 1 small spark at Level 2)
+        hal_fill_rect(x + 11, y + 8 + dy, 4, 4, c1);
+        hal_fill_rect(x + 13, y + 1 + dy, 2, 9, c1);
+        hal_fill_rect(x + 13, y + 1 + dy, 5, 2, c1);
+        if (heat == 2) {
+            hal_fill_rect(x + 22, y + 4, 3, 2, c2);
+        }
+        return;
+    }
+    // Level 3-5: Beamed eighth-note pair + scaling sparks
     hal_fill_rect(x + 8,  y + 9 + dy, 4, 4, c1);
     hal_fill_rect(x + 16, y + 7 + dy, 4, 4, c1);
     hal_fill_rect(x + 10, y + 1 + dy, 2, 9, c1);
     hal_fill_rect(x + 18, y + 0 + dy, 2, 8, c1);
     hal_fill_rect(x + 10, y + 0 + dy, 10, 2, c1);
     // Radiating 8-bit sparks
-    hal_fill_rect(x + (alt ? 1 : 0),  y + 3, 3, 2, c2);
-    hal_fill_rect(x + (alt ? 5 : 4),  y + 0, 2, 3, c1);
+    hal_fill_rect(x + (alt ? 1 : 0), y + 3, 3, 2, c2);
     hal_fill_rect(x + 24, y + (alt ? 1 : 2), 4, 2, c2);
-    hal_fill_rect(x + 28, y + (alt ? 4 : 5), 2, 4, c1);
-    hal_fill_rect(x + 24, y + 10, 3, 2, c2);
+    if (heat >= 4) {
+        hal_fill_rect(x + (alt ? 5 : 4), y + 0, 2, 3, c1);
+        hal_fill_rect(x + 28, y + (alt ? 4 : 5), 2, 4, c1);
+        hal_fill_rect(x + 24, y + 10, 3, 2, c2);
+    }
+    if (heat >= 5) {
+        // White-hot peak star cores
+        hal_fill_rect(x + 2, y + 8, 2, 2, C_WHITE);
+        hal_fill_rect(x + 29, y + 1, 2, 2, C_WHITE);
+    }
+}
+
+static uint16_t get_stage_footlight_color(uint8_t heat, uint8_t on) {
+    // Unified 5-Color Thermal Spectrum across all 3 band members:
+    // 1=Blue, 2=Green, 3=Yellow, 4=Orange, 5=Red
+    if (!on) {
+        if (heat == 1) return RGB(18, 38, 85);   // Dim Blue
+        if (heat == 2) return RGB(15, 65, 28);   // Dim Green
+        if (heat == 3) return RGB(75, 62, 12);   // Dim Yellow
+        if (heat == 4) return RGB(80, 36, 6);    // Dim Orange
+        return RGB(85, 14, 14);                  // Dim Red (Heat 5)
+    }
+    if (heat == 1) return RGB(55, 130, 255);     // Bright Blue
+    if (heat == 2) return RGB(45, 225, 95);      // Bright Green
+    if (heat == 3) return RGB(255, 220, 35);     // Bright Yellow
+    if (heat == 4) return RGB(255, 120, 15);     // Bright Orange
+    return RGB(255, 35, 35);                     // Bright Red (Heat 5)
+}
+
+static void draw_tweed_amp_shell(int ax, uint8_t heat) {
+    // 1. Brown leather handle + brass end caps
+    hal_fill_rect(ax + 17, 140, 24, 4, RGB(105, 55, 22));
+    hal_fill_rect(ax + 15, 142, 3, 2, RGB(225, 180, 75));
+    hal_fill_rect(ax + 40, 142, 3, 2, RGB(225, 180, 75));
+    // 2. Lacquered gold tweed cabinet with woven horizontal texture (h=54 -> y=144..197, leaving room for footlight at y=200)
+    hal_fill_rect(ax, 144, 58, 54, RGB(215, 162, 68));
+    for (int ty = 146; ty < 197; ty += 4) {
+        hal_fill_rect(ax, ty, 58, 1, RGB(172, 118, 38));
+    }
+    draw_rect_border(ax, 144, 58, 54, 1, RGB(135, 88, 24));
+    hal_fill_rect(ax, 198, 58, 2, C_BLACK);
+    // Warm vacuum-tube vent glow on Heat >= 3
+    if (heat >= 3) {
+        uint16_t glow = (heat >= 5) ? RGB(255, 60, 30) :
+                        (heat == 4) ? RGB(255, 130, 25) : RGB(255, 190, 50);
+        hal_fill_rect(ax + 6, 145, 46, 2, glow);
+    }
+    // 3. Chrome control plate + knobs + jewel pilot lamp (matches Heat spectrum)
+    hal_fill_rect(ax + 4, 147, 50, 8, RGB(195, 200, 210));
+    hal_fill_rect(ax + 4, 154, 50, 1, RGB(120, 125, 135));
+    hal_fill_rect(ax + 7,  149, 3, 4, RGB(30, 30, 35));
+    hal_fill_rect(ax + 13, 149, 3, 4, RGB(30, 30, 35));
+    hal_fill_rect(ax + 19, 149, 3, 4, RGB(30, 30, 35));
+    hal_fill_rect(ax + 25, 149, 3, 4, RGB(30, 30, 35));
+    hal_fill_rect(ax + 46, 149, 4, 4, get_stage_footlight_color(heat, 1));
+    // 4. Oxblood/brown grill cloth with gold piping
+    draw_rect_border(ax + 4, 158, 50, 36, 1, RGB(235, 185, 75));
+    hal_fill_rect(ax + 5, 159, 48, 34, RGB(110, 42, 24));
+    for (int gy = 161; gy < 192; gy += 3) {
+        hal_fill_rect(ax + 5, gy, 48, 1, RGB(145, 65, 34));
+    }
+    draw_rect_border(ax + 8, 166, 42, 22, 1, RGB(220, 165, 60));
+    hal_fill_rect(ax + 9, 167, 40, 20, RGB(18, 12, 10));
 }
 
 static void render_shred_stage(const HarmonyState *hs, const PresetConfig *preset, uint8_t full_redraw) {
     (void)preset;
-    if (full_redraw) {
-        hal_fill_rect(0, 120, 240, 86, C_BLACK);
-        // Fender Blues Junior Lacquered Tweed Mini-Amp (x=178..236, y=140..200)
-        // 1. Brown leather handle + brass end caps
-        hal_fill_rect(195, 140, 24, 4, RGB(105, 55, 22));
-        hal_fill_rect(193, 142, 3, 2, RGB(225, 180, 75));
-        hal_fill_rect(218, 142, 3, 2, RGB(225, 180, 75));
-        // 2. Lacquered gold tweed cabinet with woven horizontal texture
-        hal_fill_rect(178, 144, 58, 56, RGB(215, 162, 68));
-        for (int ty = 146; ty < 199; ty += 4) {
-            hal_fill_rect(178, ty, 58, 1, RGB(172, 118, 38));
-        }
-        draw_rect_border(178, 144, 58, 56, 1, RGB(135, 88, 24));
-        // 3. Chrome control plate + knobs + red jewel lamp
-        hal_fill_rect(182, 147, 50, 8, RGB(195, 200, 210));
-        hal_fill_rect(182, 154, 50, 1, RGB(120, 125, 135));
-        hal_fill_rect(185, 149, 3, 4, RGB(30, 30, 35));
-        hal_fill_rect(191, 149, 3, 4, RGB(30, 30, 35));
-        hal_fill_rect(197, 149, 3, 4, RGB(30, 30, 35));
-        hal_fill_rect(203, 149, 3, 4, RGB(30, 30, 35));
-        hal_fill_rect(224, 149, 4, 4, RGB(255, 50, 35)); // Red Fender jewel light
-        // 4. Oxblood/brown grill cloth with gold piping & inner chord window
-        draw_rect_border(182, 158, 50, 38, 1, RGB(235, 185, 75));
-        hal_fill_rect(183, 159, 48, 36, RGB(110, 42, 24));
-        for (int gy = 161; gy < 194; gy += 3) {
-            hal_fill_rect(183, gy, 48, 1, RGB(145, 65, 34));
-        }
-        draw_rect_border(186, 166, 42, 22, 1, RGB(220, 165, 60));
-        hal_fill_rect(187, 167, 40, 20, RGB(18, 12, 10));
-    }
-
+    uint8_t heat = (hs->heat_level >= 1 && hs->heat_level <= 5) ? hs->heat_level : 3;
     uint8_t d_on = (hs->is_playing && hs->vis_drum_pulse > 0) ? 1 : 0;
     uint8_t b_on = (hs->is_playing && hs->vis_bass_pulse > 0) ? 1 : 0;
     uint8_t k_on = (hs->is_playing && hs->vis_keys_pulse > 0) ? 1 : 0;
     uint8_t alt = (hs->current_beat & 1u);
 
-    // 1. Drummer (x=4, y=138, 54x60) + Footlight + Impact Rays
-    uint8_t d_sig = (uint8_t)((d_on << 1) | alt);
+    if (full_redraw) {
+        hal_fill_rect(0, 119, 240, 87, C_BLACK);
+    }
+
+    // 1. Drummer (x=4, y=138) + Unified Heat Footlight + Impact Rays
+    uint8_t d_sig = (uint8_t)((heat << 4) | (d_on << 1) | alt);
     if (full_redraw || d_sig != g_last_stage_flash) {
-        hal_blit_sprite_2x(4, 138, DRUM_SPRITE_W, DRUM_SPRITE_H, DRUM_SPRITE_PAL, d_on ? DRUM_SPRITE_DOWN : DRUM_SPRITE_UP);
-        hal_fill_rect(6, 200, 50, 3, d_on ? RGB(255, 95, 75) : RGB(45, 22, 22));
-        hal_fill_rect(0, 128, 60, 10, C_BLACK);
+        const uint8_t *dspr = !d_on ? DRUM_SPRITE_UP : (heat <= 2) ? DRUM_SPRITE_SOFT : DRUM_SPRITE_DOWN;
+        hal_blit_sprite_2x(4, 138, DRUM_SPRITE_W, DRUM_SPRITE_H, DRUM_SPRITE_PAL, dspr);
+        hal_fill_rect(6, 200, 50, 3, get_stage_footlight_color(heat, d_on));
+        hal_fill_rect(0, 126, 60, 10, C_BLACK);
         if (d_on) {
-            uint16_t r_hi = RGB(255, 110, 80), r_lo = RGB(255, 210, 120);
-            hal_fill_rect(12, 132, 4, 2, r_hi); hal_fill_rect(18, 129, 2, 3, r_lo); hal_fill_rect(8,  135, 3, 2, r_lo);
-            hal_fill_rect(42, 132, 4, 2, r_hi); hal_fill_rect(38, 129, 2, 3, r_lo); hal_fill_rect(47, 135, 3, 2, r_lo);
+            uint16_t r_hi = get_stage_footlight_color(heat, 1);
+            uint16_t r_lo = (heat >= 5) ? C_WHITE : RGB(255, 210, 120);
+            hal_fill_rect(12, 132, 4, 2, r_hi); hal_fill_rect(42, 132, 4, 2, r_hi);
+            if (heat >= 2) {
+                hal_fill_rect(18, 129, 2, 3, r_lo); hal_fill_rect(38, 129, 2, 3, r_lo);
+            }
+            if (heat >= 4) {
+                hal_fill_rect(8,  134, 3, 2, r_lo); hal_fill_rect(47, 134, 3, 2, r_lo);
+            }
         }
         g_last_stage_flash = d_sig;
     }
 
-    // 2. Guitarist/Bassist (x=64, y=138, 48x60) + Footlight + Gold Notes & Sparks
-    uint8_t b_sig = (uint8_t)((b_on << 1) | alt);
+    // 2. Guitarist/Bassist (x=64, y=138) + Unified Heat Footlight + Notes & Sparks
+    uint8_t b_sig = (uint8_t)((heat << 4) | (b_on << 1) | alt);
     if (full_redraw || b_sig != g_last_stage_strum) {
-        hal_blit_sprite_2x(64, 138, SRV_SPRITE_W, SRV_SPRITE_H, SRV_SPRITE_PAL, b_on ? SRV_SPRITE_DOWN : SRV_SPRITE_UP);
-        hal_fill_rect(66, 200, 44, 3, b_on ? RGB(255, 200, 50) : RGB(45, 36, 15));
+        const uint8_t *bspr = !b_on ? SRV_SPRITE_UP : (heat <= 2) ? SRV_SPRITE_SOFT : SRV_SPRITE_DOWN;
+        hal_blit_sprite_2x(64, 138, SRV_SPRITE_W, SRV_SPRITE_H, SRV_SPRITE_PAL, bspr);
+        hal_fill_rect(66, 200, 44, 3, get_stage_footlight_color(heat, b_on));
         hal_fill_rect(64, 119, 52, 17, C_BLACK);
         if (b_on) {
-            draw_beamed_note_burst(74, 122, RGB(255, 215, 60), RGB(255, 150, 40), alt);
+            draw_beamed_note_burst(74, 122, RGB(255, 215, 60), RGB(255, 150, 40), alt, heat);
         }
         g_last_stage_strum = b_sig;
     }
 
-    // 3. Cool Girl Keyboardist (x=118, y=138, 54x60) + Footlight + Cyan Notes & Sparks
-    uint8_t k_sig = (uint8_t)((k_on << 1) | alt);
+    // 3. Cool Girl Keyboardist (x=118, y=138) + Unified Heat Footlight + Notes & Sparks
+    uint8_t k_sig = (uint8_t)((heat << 4) | (k_on << 1) | alt);
     if (full_redraw || k_sig != g_last_beat) {
-        hal_blit_sprite_2x(118, 138, KEYS_SPRITE_W, KEYS_SPRITE_H, KEYS_SPRITE_PAL, k_on ? KEYS_SPRITE_DOWN : KEYS_SPRITE_UP);
-        hal_fill_rect(120, 200, 50, 3, k_on ? RGB(60, 225, 255) : RGB(18, 42, 48));
+        const uint8_t *kspr = !k_on ? KEYS_SPRITE_UP : (heat <= 2) ? KEYS_SPRITE_SOFT : KEYS_SPRITE_DOWN;
+        hal_blit_sprite_2x(118, 138, KEYS_SPRITE_W, KEYS_SPRITE_H, KEYS_SPRITE_PAL, kspr);
+        hal_fill_rect(120, 200, 50, 3, get_stage_footlight_color(heat, k_on));
         hal_fill_rect(120, 119, 54, 17, C_BLACK);
         if (k_on) {
-            draw_beamed_note_burst(130, 122, RGB(60, 225, 255), RGB(180, 250, 255), alt ^ 1u);
+            draw_beamed_note_burst(130, 122, RGB(60, 225, 255), RGB(180, 250, 255), alt ^ 1u, heat);
         }
         g_last_beat = k_sig;
     }
 
-    // 4. Live Chord inside Mini-Amp speaker grille
+    // 4. Fender Blues Junior Mini-Amp (Redrawn only when Heat changes — zero flicker) + Live Chord
+    uint8_t amp_redrawn = 0;
+    if (full_redraw || heat != g_last_stage_amp) {
+        draw_tweed_amp_shell(178, heat);
+        g_last_stage_amp = heat;
+        amp_redrawn = 1;
+    }
+
     BarSlot slot = harmony_get_current_bar_slot(hs);
     ScaleDegree active_deg = (hs->is_playing && hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
     uint8_t chord_sig = (uint8_t)(((hs->root_semitone & 0x0Fu) << 4) | ((uint8_t)active_deg & 0x0Fu));
-    if (full_redraw || chord_sig != g_last_stage_chord) {
+    uint32_t now_ms = hal_millis();
+    if (hs->is_playing && g_last_stage_chord != 0xFF && chord_sig != g_last_stage_chord) {
+        g_chord_flash_until = now_ms + 240u;
+    }
+    uint8_t flashing = (hs->is_playing && g_chord_flash_until != 0 && ((int32_t)(g_chord_flash_until - now_ms) > 0)) ? 1 : 0;
+    if (full_redraw || amp_redrawn || chord_sig != g_last_stage_chord || flashing != g_last_stage_chord_flash) {
         char cstr[16];
         format_chord_str(cstr, hs->root_semitone, active_deg);
-        hal_fill_rect(187, 167, 40, 20, RGB(18, 12, 10));
-        hal_draw_text_box(187, 169, 40, 0, cstr, RGB(255, 215, 70), 1);
+        uint16_t border_col = RGB(220, 165, 60);
+        uint16_t bg_col     = RGB(18, 12, 10);
+        uint16_t fg_col     = RGB(255, 215, 70);
+        if (flashing) {
+            static const uint16_t HEAT_FLASH_BG[5] = {
+                RGB(30, 95, 225),   // 1: Blue
+                RGB(20, 155, 55),   // 2: Green
+                RGB(190, 145, 0),   // 3: Yellow
+                RGB(215, 85, 0),    // 4: Orange
+                RGB(215, 25, 25)    // 5: Red
+            };
+            border_col = get_stage_footlight_color(heat, 1);
+            bg_col     = HEAT_FLASH_BG[heat - 1];
+            fg_col     = C_WHITE;
+        }
+        draw_rect_border(186, 166, 42, 22, 1, border_col);
+        hal_fill_rect(187, 167, 40, 20, bg_col);
+        hal_draw_text_box_bg(187, 169, 40, 0, cstr, fg_col, bg_col, 1);
         g_last_stage_chord = chord_sig;
+        g_last_stage_chord_flash = flashing;
     }
 
-    // 5. Sound waves radiating from the Mini-Amp whenever lead keys are held
+    // 5. Sound waves (when lead keys held) + Amp Lead Footlight + Heat/Smoke Wisps (at Heat 5)
     uint8_t lead_on = (hal_get_keys_mask() != 0 && !(hal_get_btns_mask() & ((1u << BTN_SEL) | (1u << BTN_SAVE)))) ? 1 : 0;
     uint8_t wave_phase = (uint8_t)((hal_millis() / 90u) & 1u);
-    uint8_t l_sig = lead_on ? (uint8_t)(2u + wave_phase) : 0u;
+    uint8_t l_sig = (lead_on || (heat >= 5 && hs->is_playing)) ? (uint8_t)((heat << 3) | (lead_on << 1) | wave_phase) : 0u;
+    if (full_redraw || amp_redrawn || l_sig != g_last_stage_lead) {
+        hal_fill_rect(180, 200, 54, 3, get_stage_footlight_color(heat, lead_on));
+    }
     if (full_redraw || l_sig != g_last_stage_lead) {
         hal_fill_rect(176, 120, 62, 19, C_BLACK);
+        if (heat >= 5 && hs->is_playing) {
+            uint16_t smk = RGB(140, 140, 155);
+            int sy = wave_phase ? 0 : -2;
+            hal_fill_rect(192, 134 + sy, 3, 3, smk);
+            hal_fill_rect(206, 130 + sy, 3, 4, smk);
+            hal_fill_rect(220, 133 + sy, 3, 3, smk);
+            hal_fill_rect(196, 125 + sy, 2, 3, RGB(95, 95, 110));
+            hal_fill_rect(212, 123 + sy, 2, 3, RGB(95, 95, 110));
+        }
         if (lead_on) {
             uint16_t w1 = wave_phase ? RGB(255, 245, 160) : RGB(255, 195, 50);
             uint16_t w2 = wave_phase ? RGB(255, 165, 35)  : RGB(255, 245, 160);
-            // Radiating 8-bit soundwave arcs above the Tweed amp
             hal_fill_rect(198, 134, 18, 2, w1);
             hal_fill_rect(195, 132, 3, 2, w1);  hal_fill_rect(216, 132, 3, 2, w1);
             hal_fill_rect(192, 129, 20, 2, w2);
             hal_fill_rect(189, 127, 3, 2, w2);  hal_fill_rect(212, 127, 3, 2, w2);
             hal_fill_rect(186, 123, 30, 2, w1);
             hal_fill_rect(183, 121, 3, 2, w1);  hal_fill_rect(216, 121, 3, 2, w1);
-            // Side speaker pulse ticks
             hal_fill_rect(176, 129, 4, 2, w2);  hal_fill_rect(232, 129, 4, 2, w2);
         }
         g_last_stage_lead = l_sig;
@@ -392,12 +497,11 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
     subheader[slen++] = '0' + ((bpm % 100) / 10);
     subheader[slen++] = '0' + (bpm % 10);
     subheader[slen++] = ' ';
-    subheader[slen++] = 'V'; subheader[slen++] = 'A'; subheader[slen++] = 'R'; subheader[slen++] = ':';
-    uint8_t var = hs->variation;
-    if (var >= 100) subheader[slen++] = '1';
-    subheader[slen++] = '0' + ((var % 100) / 10);
-    subheader[slen++] = '0' + (var % 10);
-    subheader[slen++] = '%';
+    subheader[slen++] = 'H'; subheader[slen++] = 'E'; subheader[slen++] = 'A'; subheader[slen++] = 'T'; subheader[slen++] = ':';
+    uint8_t hl = (hs->heat_level >= 1 && hs->heat_level <= 5) ? hs->heat_level : 3;
+    subheader[slen++] = '0' + hl;
+    subheader[slen++] = '/';
+    subheader[slen++] = '5';
     subheader[slen] = '\0';
     uint16_t sub_col = (hs->form_mode == FORM_MINOR_BLUES) ? RGB(140, 210, 255) : RGB(180, 180, 180);
     hal_draw_text_box(0, 24, 240, 0, subheader, sub_col, 1);
@@ -600,13 +704,15 @@ static void render_feel_view(const HarmonyState *hs, uint8_t full_redraw) {
     render_meter(157, "[G]MS VAR", hs->variation,      100, RGB(200, 140, 255), full_redraw, &g_last_f_mspc);
 }
 
-void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
+void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
+    HarmonyState snap = *hs_live;
+    const HarmonyState *hs = &snap;
     uint8_t screen_switched = (screen_id != g_last_screen);
     uint8_t form_changed = (hs->form_mode != g_last_form);
     uint8_t header_changed = screen_switched || (preset_idx != g_last_preset) ||
                              (preset->groove_style != g_last_groove) || (preset->drum_kit != g_last_drum) ||
                              (hs->root_semitone != g_last_key) || form_changed || (preset->bpm != g_last_bpm) ||
-                             (hs->variation != g_last_variation) || force_redraw;
+                             (hs->variation != g_last_variation) || (hs->heat_level != g_last_heat) || force_redraw;
 
     uint8_t full_grid_needed = screen_switched || (preset_idx != g_last_preset) ||
                               (hs->root_semitone != g_last_key) || form_changed || force_redraw;
@@ -688,6 +794,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     g_last_playing = hs->is_playing;
     g_last_groove = preset->groove_style;
     g_last_variation = hs->variation;
+    g_last_heat = hs->heat_level;
     g_last_bpm = preset->bpm;
     g_last_form = hs->form_mode;
 }
@@ -695,5 +802,5 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
 void ui_render_splash(void) {
     hal_blit_sprite_2x(0, 0, SPLASH_ART_W, SPLASH_ART_H, SPLASH_ART_PAL, SPLASH_ART_DATA);
     hal_fill_rect(0, 220, 240, 20, RGB(12, 12, 18));
-    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.1", RGB(240, 195, 90), 1);
+    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.2", RGB(240, 195, 90), 1);
 }
