@@ -89,6 +89,7 @@ static void app_audio(int32_t *out, uint32_t n) {
             if (frame.bass_trigger) {
                 dsp_note_on_bass(frame.bass_note, frame.bass_vel, preset->master_tuning);
                 midi_tx_push(0x91, frame.bass_note, frame.bass_vel); // Ch 2 Bass
+                g_harmony.vis_bass_pulse = 3;
             }
 
             if (frame.comp_trigger) {
@@ -97,6 +98,7 @@ static void app_audio(int32_t *out, uint32_t n) {
                 for (uint8_t v = 0; v < frame.comp_voicing.count; v++) {
                     midi_tx_push(0x92, frame.comp_voicing.notes[v], frame.comp_vel); // Ch 3 Keys
                 }
+                g_harmony.vis_keys_pulse = 3;
             }
 
             if (frame.drum_mask) {
@@ -107,6 +109,8 @@ static void app_audio(int32_t *out, uint32_t n) {
                 if (frame.drum_mask & 0x02) midi_tx_push(0x99, 38, frame.drum_vel[1]); // Snare
                 if (frame.drum_mask & 0x04) midi_tx_push(0x99, open_hat ? 46 : 42, frame.drum_vel[2]); // Hat
                 if (frame.drum_mask & 0x08) midi_tx_push(0x99, 37, frame.drum_vel[3]); // Rimshot
+                if (frame.drum_mask & 0x0B) g_harmony.vis_drum_pulse = 3;
+                else if (g_harmony.vis_drum_pulse == 0) g_harmony.vis_drum_pulse = 2;
             }
 
             // MIDI Clock 0xF8
@@ -160,7 +164,7 @@ static void init_factory_presets(void) {
         p->reverb_mix = 35;
         p->bass_cutoff = 85;
         p->drive_level = 20;
-        p->count_in_enabled = INTRO_OFF;
+        p->count_in_enabled = INTRO_AUTO;
         p->fullness = 65;
         p->opening_var = VAR_FLAT_FOUR;
         p->outro_type = OUTRO_CLASSIC_SLIDE;
@@ -430,7 +434,7 @@ static void app_main(void) {
     dsp_set_lead_play_style(g_presets[g_active_preset].lead_play_style);
 
 #ifndef DINGHY_HOST
-    // 5. Short Skippable Boot Splash Screen (~900 ms, skipped on any key or button press)
+    // 5. Skippable Boot Splash Screen (~1500 ms, skipped on any key or button press)
     ui_render_splash();
     panel_update_leds(&g_harmony, g_active_preset);
     {
@@ -438,7 +442,7 @@ static void app_main(void) {
         hal_poll();
         (void)hal_get_btn_edges();
         uint32_t init_keys = hal_get_keys_mask();
-        while (hal_millis() - splash_start < 900u) {
+        while (hal_millis() - splash_start < 1500u) {
             hal_poll();
             if (hal_get_btn_edges() != 0 || (hal_get_keys_mask() & ~init_keys) != 0) {
                 break;
@@ -480,6 +484,9 @@ static void app_main(void) {
         if (ms_now - g_last_redraw >= 33) {
             g_last_redraw = ms_now;
             ui_render(&g_harmony, &g_presets[g_active_preset], g_active_preset, g_ui_screen, 0);
+            if (g_harmony.vis_bass_pulse > 0) g_harmony.vis_bass_pulse--;
+            if (g_harmony.vis_keys_pulse > 0) g_harmony.vis_keys_pulse--;
+            if (g_harmony.vis_drum_pulse > 0) g_harmony.vis_drum_pulse--;
             g_harmony.ui_dirty = 0;
         }
     }

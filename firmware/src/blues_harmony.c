@@ -58,6 +58,9 @@ void harmony_init(HarmonyState *hs) {
     hs->keys_style = KEYS_STYLE_CHARLESTON;
     hs->drum_pattern = 0;
     hs->easy_lead = 0;
+    hs->vis_bass_pulse = 0;
+    hs->vis_keys_pulse = 0;
+    hs->vis_drum_pulse = 0;
     hs->toast_msg[0] = '\0';
     hs->toast_until_ms = 0;
     hs->is_vamp_mode = 0;
@@ -69,7 +72,7 @@ void harmony_init(HarmonyState *hs) {
     hs->mod_next_bar = 0;
     hs->manual_stab_pending = 0;
     hs->fill_pending = 0;
-    hs->count_in_enabled = INTRO_OFF;
+    hs->count_in_enabled = INTRO_AUTO;
     hs->count_in_bars_remaining = 0;
     hs->intro_total_bars = 0;
     hs->active_intro_style = INTRO_OFF;

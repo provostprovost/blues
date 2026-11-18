@@ -310,6 +310,9 @@ typedef struct {
     uint8_t     keys_style;
     uint8_t     drum_pattern;
     uint8_t     easy_lead;
+    volatile uint8_t vis_bass_pulse;
+    volatile uint8_t vis_keys_pulse;
+    volatile uint8_t vis_drum_pulse;
     char        toast_msg[28];
     uint32_t    toast_until_ms;
 } HarmonyState;

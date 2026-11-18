@@ -727,12 +727,14 @@ void test_stage6_v2_features(void) {
 
     // 1. M-VAVE Chocolate Program Change (PC 0..3) while stopped -> Start, Intro Start, Cycle Intro, Cycle Outro
     harmony_init(&hs);
-    assert(hs.count_in_enabled == INTRO_OFF);
+    assert(hs.count_in_enabled == INTRO_AUTO);
     assert(hs.outro_type == OUTRO_CLASSIC_SLIDE);
 
-    // PC 2 while stopped cycles Intro mode
+    // PC 2 while stopped cycles Intro mode (INTRO_AUTO -> INTRO_V7_1BAR)
     panel_handle_midi_in(&hs, 0xC0, 2, 0);
-    assert(hs.count_in_enabled == INTRO_AUTO);
+    assert(hs.count_in_enabled == INTRO_V7_1BAR);
+    // Cycle back to INTRO_AUTO
+    hs.count_in_enabled = INTRO_AUTO;
     // PC 3 while stopped cycles Outro style
     panel_handle_midi_in(&hs, 0xC0, 3, 0);
     assert(hs.outro_type == OUTRO_V_bV_IV_I);

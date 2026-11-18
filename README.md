@@ -9,13 +9,13 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 - **Real blues & funk accompaniment:** 19 groove/drum beat patterns (including 70s Pocket Funk, NOLA Meters Funk, Blues-Funk, Slow Neo-Funk, and Country Twang), 14 bass engines, 12 bass line styles, 18 keyboard tones, 12 keys rhythm styles, and 12 drum kits—with independent Bass, Keys, and Drums **Fullness** and **Variation** controls.
 - **Playable lead synth + Easy Mode:** 25 solo voices + 4 Lead Play Styles (`Poly`, `Legato Glide`, `Blues Bend`, `Octave Stack`) across 27 backlit keys, with the current chord's root lit full white and the active blues scale glowing under your fingers (both playing and stopped). Startup Preset 1 defaults to **Alto Sax + Legato Glide + Easy Lead** (`GLO` + `LFO` to toggle) so any unlit out-of-scale key smoothly bends up into the next scale note.
-- **Musical Intros & Next-Measure Outros:** Opt-in style-matched 1, 2, or 4-bar **Lead-In Riffs** (`REC` when stopped) and 5 scripted **Outro Riffs** (`EDIT` when stopped)—including the classic `#I9 -> I9` half-step slide and an instant Beat-1 `STINGER`. Press `REC` or `EDIT` (or stomp your MIDI footswitch) mid-song to trigger the outro on the **very next measure**.
+- **Musical Intros & Next-Measure Outros:** Style-matched 1, 2, or 4-bar **Lead-In Riffs** (`AUTO` by default; press `REC` when stopped to cycle or turn `OFF`) and 5 scripted **Outro Riffs** (`EDIT` when stopped)—including the classic `#I9 -> I9` half-step slide and an instant Beat-1 `STINGER`. Press `REC` or `EDIT` (or stomp your MIDI footswitch) mid-song to trigger the outro on the **very next measure**.
 - **M-VAVE Chocolate & MIDI ready:** Plug-and-play support for the M-VAVE Chocolate 4-switch pedal (`PC 0..3`, `CC 80..83`, `CC 20..23`, `Note 60/62/64/65`) over USB-MIDI or 3.5mm TRS MIDI IN, plus external MIDI Clock sync and MIDI Out (`Ch 2` Bass, `Ch 3` Keys, `Ch 10` Drums).
 - **16 named preset slots:** Hold **`SAVE`** or **`GLO`** and tap any of the 16 white keys to load named factory styles (`1: TEXAS SHUFFLE` … `16: BO DIDDLEY`) or save your own setups (`USER SETTINGS 1` … `USER SETTINGS 16`) in flash.
 
-| Lead Sheet | Band Mixer | Band Style | Band Feel |
-|---|---|---|---|
-| ![Lead Sheet](assets/screenshots/screen1.jpg) | ![Band Mixer](assets/screenshots/screen2.jpg) | ![Band Style](assets/screenshots/screen3.jpg) | ![Band Feel](assets/screenshots/screen4.jpg) |
+| Boot Splash | Lead Sheet | Band Mixer | Band Style | Band Feel |
+|---|---|---|---|---|
+| ![Boot Splash](assets/screenshots/splash.jpg) | ![Lead Sheet](assets/screenshots/screen1.jpg) | ![Band Mixer](assets/screenshots/screen2.jpg) | ![Band Style](assets/screenshots/screen3.jpg) | ![Band Feel](assets/screenshots/screen4.jpg) |
 
 ---
 

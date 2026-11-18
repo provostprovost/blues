@@ -2,7 +2,7 @@
 #define APP_CONFIG_H
 
 #define TB1_VERSION_MAJOR         2
-#define TB1_VERSION_MINOR         0
+#define TB1_VERSION_MINOR         1
 #undef APP_NAME
 #define APP_NAME                  "BLUES BOX"
 #ifndef FELUCCA_ID
@@ -16,7 +16,7 @@
 #define NUM_PRESET_SLOTS          16
 #define PRESET_BLOB_SLOT          0
 #define SETTINGS_MAGIC            0x54423130u /* 'TB10' */
-#define PRESET_MAGIC              0x66u
+#define PRESET_MAGIC              0x67u
 #define AUTOSAVE_DEBOUNCE_MS      2000
 #define DOUBLE_TAP_WINDOW_MS      250
 

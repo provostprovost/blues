@@ -1,6 +1,7 @@
 #include "ui_screens.h"
 #include "hal_adapter.h"
 #include "blues_harmony.h"
+#include "../gen/pixelart_assets.h"
 
 static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
 static const char *GROOVE_NAMES[NUM_DRUM_PATTERNS] = {
@@ -72,6 +73,10 @@ static uint8_t g_last_queued_key = 0xFF;
 static uint8_t g_last_intro_mode = 0xFF;
 static uint8_t g_last_outro_type = 0xFF;
 static uint8_t g_last_intro_bars = 0xFF;
+static uint8_t g_last_stage_strum = 0xFF;
+static uint8_t g_last_stage_flash = 0xFF;
+static uint8_t g_last_stage_chord = 0xFF;
+static uint8_t g_last_stage_lead  = 0xFF;
 
 static uint8_t g_last_m_bass_vol = 0xFF;
 static uint8_t g_last_m_keys_vol = 0xFF;
@@ -126,6 +131,10 @@ void ui_init(void) {
     g_last_intro_mode = 0xFF;
     g_last_outro_type = 0xFF;
     g_last_intro_bars = 0xFF;
+    g_last_stage_strum = 0xFF;
+    g_last_stage_flash = 0xFF;
+    g_last_stage_chord = 0xFF;
+    g_last_stage_lead  = 0xFF;
 
     g_last_m_bass_vol = 0xFF;
     g_last_m_keys_vol = 0xFF;
@@ -167,6 +176,13 @@ static void format_chord_str(char *buf, uint8_t root_key, ScaleDegree deg) {
     buf[ci] = '\0';
 }
 
+static void draw_rect_border(int x, int y, int w, int h, int t, uint16_t col) {
+    hal_fill_rect(x, y, w, t, col);
+    hal_fill_rect(x, y + h - t, w, t, col);
+    hal_fill_rect(x, y + t, t, h - 2 * t, col);
+    hal_fill_rect(x + w - t, y + t, t, h - 2 * t, col);
+}
+
 static void render_single_bar_box(const HarmonyState *hs, uint8_t b, uint8_t is_current) {
     uint8_t total_bars = (hs->form_mode == FORM_8BAR) ? 8 : 12;
     if (b >= total_bars) return;
@@ -174,12 +190,13 @@ static void render_single_bar_box(const HarmonyState *hs, uint8_t b, uint8_t is_
     uint8_t col = b % 4;
     uint8_t row = b / 4;
     int bx = 4 + col * 59;
-    int by = 46 + row * 46;
+    int by = 46 + row * 24;
 
-    uint16_t bg_col = is_current ? RGB(235, 150, 15) : RGB(32, 32, 32);
-    uint16_t fg_col = is_current ? C_BLACK : RGB(225, 225, 225);
+    uint16_t border_col = is_current ? RGB(235, 150, 15) : RGB(48, 48, 48);
+    uint16_t fg_col     = is_current ? RGB(255, 200, 60) : RGB(225, 225, 225);
 
-    hal_fill_rect(bx, by, 55, 42, bg_col);
+    draw_rect_border(bx, by, 55, 21, is_current ? 2 : 1, border_col);
+    hal_fill_rect(bx + 2, by + 2, 51, 17, C_BLACK);
 
     HarmonyState tmp_hs = *hs;
     tmp_hs.current_bar = b;
@@ -187,15 +204,133 @@ static void render_single_bar_box(const HarmonyState *hs, uint8_t b, uint8_t is_
 
     char cstr[16];
     format_chord_str(cstr, hs->root_semitone, slot.primary);
-    hal_draw_text_box(bx, by + 12, 55, 0, cstr, fg_col, 1);
+    hal_draw_text_box(bx + 2, by + 3, 51, 0, cstr, fg_col, 1);
 }
 
-static void render_beat_pips(const HarmonyState *hs) {
-    int pip_y = 190;
-    for (uint8_t p = 0; p < 4; p++) {
-        int px = 50 + p * 38;
-        uint16_t p_col = (hs->is_playing && hs->current_beat == p) ? C_WHITE : RGB(45, 45, 45);
-        hal_fill_rect(px, pip_y, 28, 12, p_col);
+static void draw_beamed_note_burst(int x, int y, uint16_t c1, uint16_t c2, uint8_t alt) {
+    int dy = alt ? -2 : 0;
+    // Beamed eighth-note pair
+    hal_fill_rect(x + 8,  y + 9 + dy, 4, 4, c1);
+    hal_fill_rect(x + 16, y + 7 + dy, 4, 4, c1);
+    hal_fill_rect(x + 10, y + 1 + dy, 2, 9, c1);
+    hal_fill_rect(x + 18, y + 0 + dy, 2, 8, c1);
+    hal_fill_rect(x + 10, y + 0 + dy, 10, 2, c1);
+    // Radiating 8-bit sparks
+    hal_fill_rect(x + (alt ? 1 : 0),  y + 3, 3, 2, c2);
+    hal_fill_rect(x + (alt ? 5 : 4),  y + 0, 2, 3, c1);
+    hal_fill_rect(x + 24, y + (alt ? 1 : 2), 4, 2, c2);
+    hal_fill_rect(x + 28, y + (alt ? 4 : 5), 2, 4, c1);
+    hal_fill_rect(x + 24, y + 10, 3, 2, c2);
+}
+
+static void render_shred_stage(const HarmonyState *hs, const PresetConfig *preset, uint8_t full_redraw) {
+    (void)preset;
+    if (full_redraw) {
+        hal_fill_rect(0, 120, 240, 86, C_BLACK);
+        // Fender Blues Junior Lacquered Tweed Mini-Amp (x=178..236, y=140..200)
+        // 1. Brown leather handle + brass end caps
+        hal_fill_rect(195, 140, 24, 4, RGB(105, 55, 22));
+        hal_fill_rect(193, 142, 3, 2, RGB(225, 180, 75));
+        hal_fill_rect(218, 142, 3, 2, RGB(225, 180, 75));
+        // 2. Lacquered gold tweed cabinet with woven horizontal texture
+        hal_fill_rect(178, 144, 58, 56, RGB(215, 162, 68));
+        for (int ty = 146; ty < 199; ty += 4) {
+            hal_fill_rect(178, ty, 58, 1, RGB(172, 118, 38));
+        }
+        draw_rect_border(178, 144, 58, 56, 1, RGB(135, 88, 24));
+        // 3. Chrome control plate + knobs + red jewel lamp
+        hal_fill_rect(182, 147, 50, 8, RGB(195, 200, 210));
+        hal_fill_rect(182, 154, 50, 1, RGB(120, 125, 135));
+        hal_fill_rect(185, 149, 3, 4, RGB(30, 30, 35));
+        hal_fill_rect(191, 149, 3, 4, RGB(30, 30, 35));
+        hal_fill_rect(197, 149, 3, 4, RGB(30, 30, 35));
+        hal_fill_rect(203, 149, 3, 4, RGB(30, 30, 35));
+        hal_fill_rect(224, 149, 4, 4, RGB(255, 50, 35)); // Red Fender jewel light
+        // 4. Oxblood/brown grill cloth with gold piping & inner chord window
+        draw_rect_border(182, 158, 50, 38, 1, RGB(235, 185, 75));
+        hal_fill_rect(183, 159, 48, 36, RGB(110, 42, 24));
+        for (int gy = 161; gy < 194; gy += 3) {
+            hal_fill_rect(183, gy, 48, 1, RGB(145, 65, 34));
+        }
+        draw_rect_border(186, 166, 42, 22, 1, RGB(220, 165, 60));
+        hal_fill_rect(187, 167, 40, 20, RGB(18, 12, 10));
+    }
+
+    uint8_t d_on = (hs->is_playing && hs->vis_drum_pulse > 0) ? 1 : 0;
+    uint8_t b_on = (hs->is_playing && hs->vis_bass_pulse > 0) ? 1 : 0;
+    uint8_t k_on = (hs->is_playing && hs->vis_keys_pulse > 0) ? 1 : 0;
+    uint8_t alt = (hs->current_beat & 1u);
+
+    // 1. Drummer (x=4, y=138, 54x60) + Footlight + Impact Rays
+    uint8_t d_sig = (uint8_t)((d_on << 1) | alt);
+    if (full_redraw || d_sig != g_last_stage_flash) {
+        hal_blit_sprite_2x(4, 138, DRUM_SPRITE_W, DRUM_SPRITE_H, DRUM_SPRITE_PAL, d_on ? DRUM_SPRITE_DOWN : DRUM_SPRITE_UP);
+        hal_fill_rect(6, 200, 50, 3, d_on ? RGB(255, 95, 75) : RGB(45, 22, 22));
+        hal_fill_rect(0, 128, 60, 10, C_BLACK);
+        if (d_on) {
+            uint16_t r_hi = RGB(255, 110, 80), r_lo = RGB(255, 210, 120);
+            hal_fill_rect(12, 132, 4, 2, r_hi); hal_fill_rect(18, 129, 2, 3, r_lo); hal_fill_rect(8,  135, 3, 2, r_lo);
+            hal_fill_rect(42, 132, 4, 2, r_hi); hal_fill_rect(38, 129, 2, 3, r_lo); hal_fill_rect(47, 135, 3, 2, r_lo);
+        }
+        g_last_stage_flash = d_sig;
+    }
+
+    // 2. Guitarist/Bassist (x=64, y=138, 48x60) + Footlight + Gold Notes & Sparks
+    uint8_t b_sig = (uint8_t)((b_on << 1) | alt);
+    if (full_redraw || b_sig != g_last_stage_strum) {
+        hal_blit_sprite_2x(64, 138, SRV_SPRITE_W, SRV_SPRITE_H, SRV_SPRITE_PAL, b_on ? SRV_SPRITE_DOWN : SRV_SPRITE_UP);
+        hal_fill_rect(66, 200, 44, 3, b_on ? RGB(255, 200, 50) : RGB(45, 36, 15));
+        hal_fill_rect(64, 119, 52, 17, C_BLACK);
+        if (b_on) {
+            draw_beamed_note_burst(74, 122, RGB(255, 215, 60), RGB(255, 150, 40), alt);
+        }
+        g_last_stage_strum = b_sig;
+    }
+
+    // 3. Cool Girl Keyboardist (x=118, y=138, 54x60) + Footlight + Cyan Notes & Sparks
+    uint8_t k_sig = (uint8_t)((k_on << 1) | alt);
+    if (full_redraw || k_sig != g_last_beat) {
+        hal_blit_sprite_2x(118, 138, KEYS_SPRITE_W, KEYS_SPRITE_H, KEYS_SPRITE_PAL, k_on ? KEYS_SPRITE_DOWN : KEYS_SPRITE_UP);
+        hal_fill_rect(120, 200, 50, 3, k_on ? RGB(60, 225, 255) : RGB(18, 42, 48));
+        hal_fill_rect(120, 119, 54, 17, C_BLACK);
+        if (k_on) {
+            draw_beamed_note_burst(130, 122, RGB(60, 225, 255), RGB(180, 250, 255), alt ^ 1u);
+        }
+        g_last_beat = k_sig;
+    }
+
+    // 4. Live Chord inside Mini-Amp speaker grille
+    BarSlot slot = harmony_get_current_bar_slot(hs);
+    ScaleDegree active_deg = (hs->is_playing && hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
+    uint8_t chord_sig = (uint8_t)(((hs->root_semitone & 0x0Fu) << 4) | ((uint8_t)active_deg & 0x0Fu));
+    if (full_redraw || chord_sig != g_last_stage_chord) {
+        char cstr[16];
+        format_chord_str(cstr, hs->root_semitone, active_deg);
+        hal_fill_rect(187, 167, 40, 20, RGB(18, 12, 10));
+        hal_draw_text_box(187, 169, 40, 0, cstr, RGB(255, 215, 70), 1);
+        g_last_stage_chord = chord_sig;
+    }
+
+    // 5. Sound waves radiating from the Mini-Amp whenever lead keys are held
+    uint8_t lead_on = (hal_get_keys_mask() != 0 && !(hal_get_btns_mask() & ((1u << BTN_SEL) | (1u << BTN_SAVE)))) ? 1 : 0;
+    uint8_t wave_phase = (uint8_t)((hal_millis() / 90u) & 1u);
+    uint8_t l_sig = lead_on ? (uint8_t)(2u + wave_phase) : 0u;
+    if (full_redraw || l_sig != g_last_stage_lead) {
+        hal_fill_rect(176, 120, 62, 19, C_BLACK);
+        if (lead_on) {
+            uint16_t w1 = wave_phase ? RGB(255, 245, 160) : RGB(255, 195, 50);
+            uint16_t w2 = wave_phase ? RGB(255, 165, 35)  : RGB(255, 245, 160);
+            // Radiating 8-bit soundwave arcs above the Tweed amp
+            hal_fill_rect(198, 134, 18, 2, w1);
+            hal_fill_rect(195, 132, 3, 2, w1);  hal_fill_rect(216, 132, 3, 2, w1);
+            hal_fill_rect(192, 129, 20, 2, w2);
+            hal_fill_rect(189, 127, 3, 2, w2);  hal_fill_rect(212, 127, 3, 2, w2);
+            hal_fill_rect(186, 123, 30, 2, w1);
+            hal_fill_rect(183, 121, 3, 2, w1);  hal_fill_rect(216, 121, 3, 2, w1);
+            // Side speaker pulse ticks
+            hal_fill_rect(176, 129, 4, 2, w2);  hal_fill_rect(232, 129, 4, 2, w2);
+        }
+        g_last_stage_lead = l_sig;
     }
 }
 
@@ -487,7 +622,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
 
         if (full_grid_needed) {
             if (form_changed || screen_switched) {
-                hal_fill_rect(0, 44, 240, 142, C_BLACK);
+                hal_fill_rect(0, 44, 240, 76, C_BLACK);
             }
             uint8_t total_bars = (hs->form_mode == FORM_8BAR) ? 8 : 12;
             for (uint8_t b = 0; b < total_bars; b++) {
@@ -501,9 +636,7 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
             render_single_bar_box(hs, hs->current_bar, 1);
         }
 
-        if (screen_switched || hs->current_beat != g_last_beat || full_grid_needed) {
-            render_beat_pips(hs);
-        }
+        render_shred_stage(hs, preset, screen_switched || force_redraw);
 
         uint32_t now_ms = hal_millis();
         uint8_t toast_active = (hs->toast_until_ms != 0 && ((int32_t)(hs->toast_until_ms - now_ms) > 0));
@@ -543,7 +676,6 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     }
 
     g_last_bar = hs->current_bar;
-    g_last_beat = hs->current_beat;
     g_last_screen = screen_id;
     g_last_preset = preset_idx;
     g_last_key = hs->root_semitone;
@@ -560,65 +692,8 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     g_last_form = hs->form_mode;
 }
 
-static void draw_rect_border(int x, int y, int w, int h, int t, uint16_t col) {
-    hal_fill_rect(x, y, w, t, col);
-    hal_fill_rect(x, y + h - t, w, t, col);
-    hal_fill_rect(x, y + t, t, h - 2 * t, col);
-    hal_fill_rect(x + w - t, y + t, t, h - 2 * t, col);
-}
-
 void ui_render_splash(void) {
-    // Vintage Tweed / Tube Amp Nameplate Splash Screen (240x240, non-overlapping borders to avoid SPI flicker)
-    // 1. Warm lacquered tweed cabinet outer frame (14px border around 212x212 center)
-    uint16_t tweed_hi = RGB(175, 120, 42);
-    uint16_t tweed_lo = RGB(140, 92, 28);
-    hal_fill_rect(0, 0, 240, 14, tweed_hi);
-    hal_fill_rect(0, 226, 240, 14, tweed_hi);
-    hal_fill_rect(0, 14, 14, 212, tweed_hi);
-    hal_fill_rect(226, 14, 14, 212, tweed_hi);
-    for (int y = 0; y < 240; y += 8) {
-        if (y < 14 || y >= 226) {
-            hal_fill_rect(0, y, 240, 3, tweed_lo);
-        } else {
-            hal_fill_rect(0, y, 14, 3, tweed_lo);
-            hal_fill_rect(226, y, 14, 3, tweed_lo);
-        }
-    }
-    // Chrome corner protectors with brass rivets
-    hal_fill_rect(0, 0, 22, 22, RGB(95, 70, 30));
-    hal_fill_rect(218, 0, 22, 22, RGB(95, 70, 30));
-    hal_fill_rect(0, 218, 22, 22, RGB(95, 70, 30));
-    hal_fill_rect(218, 218, 22, 22, RGB(95, 70, 30));
-    hal_fill_rect(7, 7, 6, 6, RGB(240, 195, 90));
-    hal_fill_rect(227, 7, 6, 6, RGB(240, 195, 90));
-    hal_fill_rect(7, 227, 6, 6, RGB(240, 195, 90));
-    hal_fill_rect(227, 227, 6, 6, RGB(240, 195, 90));
-
-    // 2. Recessed dark grill cloth baffle with gold piping (only fill outside the nameplate)
-    draw_rect_border(14, 14, 212, 212, 3, RGB(220, 175, 75));
-    hal_fill_rect(17, 17, 206, 39, RGB(26, 18, 14));
-    hal_fill_rect(17, 184, 206, 39, RGB(26, 18, 14));
-    hal_fill_rect(17, 56, 7, 128, RGB(26, 18, 14));
-    hal_fill_rect(216, 56, 7, 128, RGB(26, 18, 14));
-    for (int y = 22; y < 218; y += 6) {
-        if (y < 56 || y >= 184) {
-            hal_fill_rect(20, y, 200, 2, RGB(42, 28, 20));
-        }
-    }
-
-    // 3. Engraved Tube-Amp Center Nameplate Badge (borders + single dark face fill)
-    draw_rect_border(24, 56, 192, 128, 3, RGB(235, 185, 70));
-    draw_rect_border(27, 59, 186, 122, 4, RGB(16, 14, 12));
-    draw_rect_border(31, 63, 178, 114, 2, RGB(180, 135, 45));
-    hal_fill_rect(33, 65, 174, 110, RGB(18, 16, 14));
-
-    // Side mounting rivets on the nameplate
-    hal_fill_rect(39, 117, 6, 6, RGB(225, 180, 80));
-    hal_fill_rect(195, 117, 6, 6, RGB(225, 180, 80));
-
-    // Typography on the nameplate (FONT_L 32px title + FONT_S 16px subtitle & version)
-    hal_draw_text_box(36, 74, 168, 1, "BLUES BOX", RGB(255, 200, 40), 1);
-    hal_fill_rect(52, 114, 136, 2, RGB(220, 165, 45));
-    hal_draw_text_box(36, 124, 168, 0, "BACKING BAND", RGB(235, 230, 215), 1);
-    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V2.0", RGB(180, 145, 75), 1);
+    hal_blit_sprite_2x(0, 0, SPLASH_ART_W, SPLASH_ART_H, SPLASH_ART_PAL, SPLASH_ART_DATA);
+    hal_fill_rect(0, 220, 240, 20, RGB(12, 12, 18));
+    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.1", RGB(240, 195, 90), 1);
 }

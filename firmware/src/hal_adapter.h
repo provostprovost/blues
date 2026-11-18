@@ -106,6 +106,25 @@ static inline void hal_draw_text_box(int x, int y, int w, int font_sz, const cha
     hal_draw_text(x, y, s, fg, 0);
 }
 
+static inline void hal_blit_sprite_2x(int x, int y, int w, int h, const uint16_t *pal16, const uint8_t *packed4) {
+    for (int sy = 0; sy < h; sy++) {
+        for (int sx = 0; sx < w; sx++) {
+            int p = sy * w + sx;
+            uint8_t b = packed4[p >> 1];
+            uint8_t idx = (p & 1) ? (b & 0x0Fu) : ((b >> 4) & 0x0Fu);
+            uint16_t col = pal16[idx];
+            int dx = x + sx * 2, dy = y + sy * 2;
+            for (int oy = 0; oy < 2; oy++) {
+                for (int ox = 0; ox < 2; ox++) {
+                    if ((uint32_t)(dx + ox) < 240u && (uint32_t)(dy + oy) < 240u) {
+                        g_mock_fb[(dy + oy) * 240 + (dx + ox)] = col;
+                    }
+                }
+            }
+        }
+    }
+}
+
 static inline void hal_dump_ppm(const char *filename) {
     FILE *f = fopen(filename, "wb");
     if (!f) return;
@@ -166,6 +185,33 @@ static inline void     hal_fill_rect(int x, int y, int w, int h, uint16_t col) {
 static inline void     hal_draw_text(int x, int y, const char *s, uint16_t fg, uint16_t bg) { (void)bg; draw_text_box(x, y, 240 - x, &FONT_S, s, fg, 0); }
 static inline void     hal_draw_text_box(int x, int y, int w, int font_sz, const char *s, uint16_t fg, int align) {
     draw_text_box(x, y, w, font_sz ? &FONT_L : &FONT_S, s, fg, align);
+}
+static inline void     hal_blit_sprite_2x(int x, int y, int w, int h, const uint16_t *pal16, const uint8_t *packed4) {
+    uint32_t dw = (uint32_t)w * 2u;
+    uint32_t max_src_rows = CV_MAX / (dw * 2u);
+    if (max_src_rows == 0) return;
+    uint32_t sy0 = 0;
+    while (sy0 < (uint32_t)h) {
+        uint32_t rows = (uint32_t)h - sy0;
+        if (rows > max_src_rows) rows = max_src_rows;
+        lcd_sync();
+        for (uint32_t ry = 0; ry < rows; ry++) {
+            uint32_t sy = sy0 + ry;
+            uint16_t *row0 = &cv_px[(ry * 2u) * dw];
+            uint16_t *row1 = &cv_px[(ry * 2u + 1u) * dw];
+            for (uint32_t sx = 0; sx < (uint32_t)w; sx++) {
+                uint32_t p = sy * (uint32_t)w + sx;
+                uint8_t b = packed4[p >> 1];
+                uint8_t idx = (p & 1u) ? (b & 0x0Fu) : ((b >> 4) & 0x0Fu);
+                uint16_t c = swap16(pal16[idx]);
+                row0[sx * 2u] = c; row0[sx * 2u + 1u] = c;
+                row1[sx * 2u] = c; row1[sx * 2u + 1u] = c;
+            }
+        }
+        lcd_blit((uint32_t)x, (uint32_t)y + sy0 * 2u, dw, rows * 2u, cv_px);
+        sy0 += rows;
+    }
+    lcd_sync();
 }
 static inline void     hal_dump_ppm(const char *filename) { (void)filename; }
 
