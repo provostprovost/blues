@@ -3,6 +3,7 @@
   "author": "Brian Provost",
   "kinds": ["groove", "synth"],
   "cheat": "https://provostprovost.github.io/blues/",
+  "play": "https://joakimeriksson.github.io/fm1-emu/?package=https://provostprovost.github.io/blues/bluesbox.fwsc&name=BLUES%20BOX&mhz=60",
   "image": "docs/card.jpg",
   "color": "#F59E0B",
   "sounds": "none"
