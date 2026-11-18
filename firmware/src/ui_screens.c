@@ -336,7 +336,7 @@ static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset
         hal_draw_text_box(0, 216, 240, 0, "[SEL+K4/GLO+LFO]: EASY LEAD", RGB(140, 140, 140), 1);
     }
 
-    uint8_t l_vol = preset->lead_vol > 0 ? preset->lead_vol : 115;
+    uint8_t l_vol = preset->lead_vol;
     uint8_t lp = preset->lead_play_style % NUM_LEAD_PLAY_STYLES;
     uint8_t ez = hs->easy_lead ? 1 : 0;
     uint8_t lp_comb = (uint8_t)((ez << 4) | lp);
@@ -544,5 +544,5 @@ void ui_render_splash(void) {
     hal_draw_text_box(36, 74, 168, 1, "BLUES BOX", RGB(255, 200, 40), 1);
     hal_fill_rect(52, 114, 136, 2, RGB(220, 165, 45));
     hal_draw_text_box(36, 124, 168, 0, "BACKING BAND", RGB(235, 230, 215), 1);
-    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V1.4", RGB(180, 145, 75), 1);
+    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V1.5", RGB(180, 145, 75), 1);
 }

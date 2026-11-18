@@ -153,10 +153,10 @@ static void init_factory_presets(void) {
         p->preset_id = i;
         copy_preset_name(p->name, FACTORY_NAMES[i]);
         p->master_tuning = 0; // 440 Hz
-        p->bass_vol = 108;
-        p->keys_vol = 68;
-        p->drums_vol = 105;
-        p->lead_vol = 115;
+        p->bass_vol = 96;
+        p->keys_vol = 88;
+        p->drums_vol = 96;
+        p->lead_vol = 116;
         p->reverb_mix = 35;
         p->bass_cutoff = 85;
         p->drive_level = 20;
@@ -390,9 +390,6 @@ static void app_main(void) {
         if (flash_presets[0].magic == PRESET_MAGIC) {
             for (int i = 0; i < NUM_PRESET_SLOTS; i++) {
                 g_presets[i] = flash_presets[i];
-                if (g_presets[i].lead_vol == 0) {
-                    g_presets[i].lead_vol = 115;
-                }
             }
         }
     }

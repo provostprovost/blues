@@ -528,7 +528,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                 p->drum_pattern = hs->drum_pattern;
             }
         } else if (is_mixer) {
-            if (glo_held) p->swing     = clamp_step_u8(p->swing,     delta * 2, 0, 100);
+            if (glo_held) p->swing     = clamp_step_u8(p->swing,     delta * 4, 0, 100);
             else          p->drums_vol = clamp_step_u8(p->drums_vol, delta * 4, 0, 127);
         } else {
             if (glo_held) {

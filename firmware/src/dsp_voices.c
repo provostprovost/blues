@@ -467,11 +467,11 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     break;
             }
 
-            if (b_sample > 22000) b_sample = 22000 + ((b_sample - 22000) >> 2);
-            else if (b_sample < -22000) b_sample = -22000 + ((b_sample + 22000) >> 2);
+            if (b_sample > 20000) b_sample = 20000 + ((b_sample - 20000) >> 2);
+            else if (b_sample < -20000) b_sample = -20000 + ((b_sample + 20000) >> 2);
 
-            int32_t b_amp = (g_bass.env_q15 * preset->bass_vol) >> 15;
-            mix += ((b_sample * b_amp) * 5) >> 9; // Balanced middle ground (1.25x of >>7, never clips master bus so knob responds linearly)
+            int32_t b_env_scaled = (b_sample * g_bass.env_q15) >> 15;
+            mix += (b_env_scaled * preset->bass_vol) >> 7; // Uniform (sig * vol) >> 7 law across all 4 mixer sliders
 
             // Attack micro-ramp, then clear target_env so plucked-string decay runs freely
             if (g_bass.target_env > 0) {
@@ -504,7 +504,8 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             if (g_bass.target_env == 0 && g_bass.env_q15 < 100) g_bass.active = 0;
         }
 
-        // 2. Keys Synth Engine: 4-Voice Polyphony across 8 Instruments
+        // 2. Keys Synth Engine: 4-Voice Polyphony across 18 Instruments
+        int32_t keys_sum = 0;
         for (int k = 0; k < 4; k++) {
             if (g_keys[k].active) {
                 int16_t car = 0;
@@ -676,8 +677,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     }
                 }
 
-                int32_t k_amp = (g_keys[k].env_q15 * preset->keys_vol) >> 15;
-                mix += ((car * k_amp) * 3) >> 9; // Balanced 4-voice chord bus (0.75x of >>8: clear & warm without clipping)
+                keys_sum += (car * g_keys[k].env_q15) >> 16; // Normalized 4-voice sum (~±20,000 peak, matching bass_sample)
 
                 if (g_keys[k].gate_samples > 0) {
                     g_keys[k].gate_samples--;
@@ -694,6 +694,9 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 if (g_keys[k].env_q15 < 100) g_keys[k].active = 0;
             }
         }
+        if (keys_sum > 20000) keys_sum = 20000 + ((keys_sum - 20000) >> 2);
+        else if (keys_sum < -20000) keys_sum = -20000 + ((keys_sum + 20000) >> 2);
+        mix += (keys_sum * preset->keys_vol) >> 7; // Exact same (sig * vol) >> 7 law as Bass, Drums, and Lead!
 
         // 3. Synthesized Drums (12 Selectable Kits)
         static const uint32_t KICK_BASE_INC[NUM_DRUM_KITS] = {
@@ -708,6 +711,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         };
         uint8_t dkit = preset->drum_kit % NUM_DRUM_KITS;
 
+        int32_t drums_sum = 0;
         // Kick (0)
         if (g_drum_env[0] > 0) {
             uint32_t kick_inc = KICK_BASE_INC[dkit] + (uint32_t)g_drum_env[0] * KICK_SWEEP_MUL[dkit];
@@ -716,8 +720,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             if (dkit == DRUM_HEAVY_ROCK) {
                 k_sample = (int16_t)((k_sample * 5 / 4) > 32767 ? 32767 : (k_sample * 5 / 4) < -32767 ? -32767 : (k_sample * 5 / 4));
             }
-            int32_t d0_amp = (g_drum_env[0] * preset->drums_vol) >> 15;
-            mix += (k_sample * d0_amp) >> 7;
+            drums_sum += (k_sample * g_drum_env[0]) >> 15;
             g_drum_env[0] = (g_drum_env[0] * g_drum_decay[0]) >> 15;
         }
 
@@ -747,8 +750,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             } else {
                 s_sample = (noise_sample >> 1) + (body >> 1); // Studio snare
             }
-            int32_t d1_amp = (g_drum_env[1] * preset->drums_vol) >> 15;
-            mix += (s_sample * d1_amp) >> 7;
+            drums_sum += (s_sample * g_drum_env[1]) >> 15;
             g_drum_env[1] = (g_drum_env[1] * g_drum_decay[1]) >> 15;
         }
 
@@ -756,8 +758,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         if (g_drum_env[2] > 0) {
             g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
             int16_t n_sample = (int16_t)(g_lfsr & 0xFFFF);
-            int32_t d2_amp = (g_drum_env[2] * preset->drums_vol) >> 15;
-            mix += (n_sample * d2_amp) >> 9; // Sit hats behind kick & snare
+            drums_sum += (n_sample * g_drum_env[2]) >> 17; // Sit hats behind kick & snare
             g_drum_env[2] = (g_drum_env[2] * g_drum_decay[2]) >> 15;
         }
 
@@ -770,15 +771,20 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             };
             g_drum_pitch[3] += RIM_INC[dkit];
             int16_t r_sample = hal_sine_q15(g_drum_pitch[3]);
-            int32_t d3_amp = (g_drum_env[3] * preset->drums_vol) >> 15;
-            mix += (r_sample * d3_amp) >> 7;
+            drums_sum += (r_sample * g_drum_env[3]) >> 15;
             g_drum_env[3] = (g_drum_env[3] * g_drum_decay[3]) >> 15;
         }
+        if (drums_sum > 20000) drums_sum = 20000 + ((drums_sum - 20000) >> 2);
+        else if (drums_sum < -20000) drums_sum = -20000 + ((drums_sum + 20000) >> 2);
+        mix += (drums_sum * preset->drums_vol) >> 7; // Uniform (sig * vol) >> 7 law
 
-        // 4. Solo Lead Voice (4-Voice Polyphony across 14 Lead Instruments + 4 Play Styles)
+        // 4. Solo Lead Voice (4-Voice Polyphony across 25 Lead Instruments + 4 Play Styles)
+        int32_t lead_mix = 0;
+        uint8_t lead_sounding = 0;
         g_lead_play_style = preset->lead_play_style % NUM_LEAD_PLAY_STYLES;
         for (int v = 0; v < MAX_LEAD_VOICES; v++) {
             if (g_lead[v].active) {
+                if (g_lead[v].env_q15 > 2000) lead_sounding = 1;
                 if (g_lead[v].bend_samples > 0) {
                     g_lead[v].bend_samples--;
                     int32_t diff = (int32_t)g_lead[v].target_inc - (int32_t)g_lead[v].phase_inc;
@@ -1042,9 +1048,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     }
                 }
 
-                uint8_t l_vol = preset->lead_vol > 0 ? preset->lead_vol : 115;
-                int32_t l_amp = (g_lead[v].env_q15 * l_vol) >> 15;
-                mix += (lead_sample * l_amp) >> 8;
+                lead_mix += (lead_sample * g_lead[v].env_q15) >> 15;
 
                 if (g_lead[v].gate_samples > 0) {
                     if (g_lead[v].gate_samples > 1) g_lead[v].gate_samples--;
@@ -1064,6 +1068,13 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 }
             }
         }
+
+        if (lead_mix > 24000) lead_mix = 24000 + ((lead_mix - 24000) >> 2);
+        else if (lead_mix < -24000) lead_mix = -24000 + ((lead_mix + 24000) >> 2);
+        if (lead_sounding) {
+            mix = (mix * 3) >> 2; // 25% backing-band duck while soloing so lead always cuts through
+        }
+        mix += (lead_mix * preset->lead_vol) >> 7; // Uniform (sig * vol) >> 7 law (and 0 = truly silent!)
 
         // 4-Comb Schroeder Room Reverb Parallel Summation
         int16_t c0 = g_comb_buf0[g_comb_ptr0];
@@ -1105,8 +1116,10 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
         int32_t rev_wet = (int32_t)preset->reverb_mix + ((int32_t)preset->reverb_mix >> 1);
         mix += (rev_sum * rev_wet) >> 7;
 
-        // Q15 Polynomial Soft-Clip Saturator: x - (x^3 / 4)
-        int32_t mix_q15 = mix;
+        // Headroom-preserving softknee before Q15 saturator so top of volume sliders never flattens out
+        int32_t mix_q15 = (mix * 3) >> 2;
+        if (mix_q15 > 24000)  mix_q15 = 24000 + ((mix_q15 - 24000) >> 2);
+        if (mix_q15 < -24000) mix_q15 = -24000 + ((mix_q15 + 24000) >> 2);
         if (mix_q15 > 32767)  mix_q15 = 32767;
         if (mix_q15 < -32767) mix_q15 = -32767;
 
