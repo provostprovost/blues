@@ -5,6 +5,9 @@
 
 ScaleDegreeInfo harmony_get_degree_info(ScaleDegree deg);
 void harmony_init(HarmonyState *hs);
+IntroMode harmony_resolve_intro_style(IntroMode mode, GrooveStyle groove);
+uint8_t harmony_intro_bar_count(IntroMode concrete_mode);
+void harmony_start_playback(HarmonyState *hs, GrooveStyle groove, uint8_t force_intro);
 void harmony_tick_subdivision(HarmonyState *hs);
 BarSlot harmony_get_current_bar_slot(const HarmonyState *hs);
 BarSlot harmony_get_next_bar_slot(const HarmonyState *hs);

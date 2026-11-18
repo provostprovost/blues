@@ -160,10 +160,10 @@ static void init_factory_presets(void) {
         p->reverb_mix = 35;
         p->bass_cutoff = 85;
         p->drive_level = 20;
-        p->count_in_enabled = 0;
+        p->count_in_enabled = INTRO_OFF;
         p->fullness = 65;
         p->opening_var = VAR_FLAT_FOUR;
-        p->outro_type = OUTRO_TAG;
+        p->outro_type = OUTRO_CLASSIC_SLIDE;
         p->bass_instrument = (uint8_t)(i % 4);
         p->drum_kit = (uint8_t)(i % 3);
         p->lead_instrument = (uint8_t)(i % 4);

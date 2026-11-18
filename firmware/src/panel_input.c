@@ -207,17 +207,77 @@ void panel_clear_autosave_needed(void) {
     g_save_pending = 0;
 }
 
+static const char *INTRO_TOAST_LABELS[NUM_INTRO_MODES] = {
+    "INTRO: OFF", "INTRO: AUTO", "INTRO: 1B V7", "INTRO: 2B TURN",
+    "INTRO: 2B FUNK", "INTRO: 4B BAND", "INTRO: 1B CLICK"
+};
+static const char *OUTRO_TOAST_LABELS[NUM_OUTRO_TYPES] = {
+    "OUTRO: CLASSIC SLIDE", "OUTRO: V-bV-IV-I", "OUTRO: IV-I TURN", "OUTRO: 1B QUICK", "OUTRO: STINGER"
+};
+
+static void handle_footswitch(HarmonyState *hs, uint8_t sw) {
+    uint32_t ms_now = hal_millis();
+    switch (sw & 3u) {
+        case 0: // Switch A: Start (stopped) / Next-Measure Outro (playing) / Hard Stop (if already in outro)
+            if (!hs->is_playing) {
+                harmony_start_playback(hs, (GrooveStyle)hs->drum_pattern, 0);
+            } else if (hs->ending_armed == ENDING_NONE) {
+                hs->ending_armed = ENDING_ARMED_NEXT_BAR;
+                set_toast(hs, ms_now, "OUTRO NEXT BAR");
+                hs->ui_dirty = 1;
+            } else {
+                hs->is_playing = 0;
+                hs->ending_armed = ENDING_NONE;
+                hs->count_in_bars_remaining = 0;
+                hs->stop_time_counter = 0;
+                hs->queued_cue = CUE_NONE;
+                dsp_all_notes_off();
+                hs->ui_dirty = 1;
+            }
+            break;
+        case 1: // Switch B: 1-Stomp Start WITH Style Intro (stopped) / Drum Fill or Turnaround (playing)
+            if (!hs->is_playing) {
+                harmony_start_playback(hs, (GrooveStyle)hs->drum_pattern, 1);
+            } else if (hs->fill_pending) {
+                hs->queued_cue = CUE_FORCE_TURNAROUND;
+                hs->ui_dirty = 1;
+            } else {
+                hs->fill_pending = 1;
+                hs->ui_dirty = 1;
+            }
+            break;
+        case 2: // Switch C: Cycle Intro Mode (stopped) / Stop-Time Break (playing)
+            if (!hs->is_playing) {
+                hs->count_in_enabled = (uint8_t)((hs->count_in_enabled + 1) % NUM_INTRO_MODES);
+                set_toast(hs, ms_now, INTRO_TOAST_LABELS[hs->count_in_enabled]);
+            } else {
+                hs->queued_cue = CUE_STOP_TIME;
+            }
+            hs->ui_dirty = 1;
+            break;
+        case 3: // Switch D: Cycle Outro Style (stopped) / Vamp Toggle (playing)
+            if (!hs->is_playing) {
+                hs->outro_type = (OutroType)(((uint8_t)hs->outro_type + 1) % NUM_OUTRO_TYPES);
+                set_toast(hs, ms_now, OUTRO_TOAST_LABELS[(uint8_t)hs->outro_type]);
+            } else {
+                hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP);
+            }
+            hs->ui_dirty = 1;
+            break;
+    }
+}
+
 void panel_handle_midi_in(HarmonyState *hs, uint8_t status, uint8_t d1, uint8_t d2) {
     if (status == 0xFA) { // Real-Time Start
-        hs->is_playing = 1;
-        hs->current_bar = 0;
-        hs->current_beat = 0;
-        hs->current_subdiv = 0;
-        hs->ui_dirty = 1;
+        harmony_start_playback(hs, (GrooveStyle)hs->drum_pattern, 0);
         return;
     }
     if (status == 0xFC) { // Real-Time Stop
         hs->is_playing = 0;
+        hs->ending_armed = ENDING_NONE;
+        hs->count_in_bars_remaining = 0;
+        hs->stop_time_counter = 0;
+        hs->queued_cue = CUE_NONE;
         dsp_all_notes_off();
         hs->ui_dirty = 1;
         return;
@@ -230,39 +290,24 @@ void panel_handle_midi_in(HarmonyState *hs, uint8_t status, uint8_t d1, uint8_t 
     }
 
     uint8_t msg_type = status & 0xF0;
+    if (msg_type == 0xC0) { // Program Change (M-VAVE Chocolate default mode: PC 0..3)
+        handle_footswitch(hs, (uint8_t)(d1 & 3u));
+        return;
+    }
+    if (msg_type == 0x90 && d2 > 0) { // Note On (Chocolate Custom Note mode: C4/D4/E4/F4)
+        if (d1 == 60)      handle_footswitch(hs, 0);
+        else if (d1 == 62) handle_footswitch(hs, 1);
+        else if (d1 == 64) handle_footswitch(hs, 2);
+        else if (d1 == 65) handle_footswitch(hs, 3);
+        return;
+    }
     if (msg_type == 0xB0) { // Control Change
-        switch (d1) {
-            case 64: // Sustain Pedal -> Hold Chord
-                hs->hold_chord_active = (d2 >= 64) ? 1 : 0;
-                hs->ui_dirty = 1;
-                break;
-            case 80: // Footswitch 1 -> Early Turnaround
-                if (d2 >= 64) {
-                    hs->queued_cue = CUE_FORCE_TURNAROUND;
-                    hs->ui_dirty = 1;
-                }
-                break;
-            case 81: // Footswitch 2 -> Stop Time Break
-                if (d2 >= 64) {
-                    hs->queued_cue = CUE_STOP_TIME;
-                    hs->ui_dirty = 1;
-                }
-                break;
-            case 82: // Footswitch 3 -> Vamp Toggle
-                if (d2 >= 64) {
-                    hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP);
-                    hs->ui_dirty = 1;
-                }
-                break;
-            case 83: // Footswitch 4 -> End Song
-                if (d2 >= 64) {
-                    hs->ending_armed = 1;
-                    hs->outro_type = OUTRO_STOP;
-                    hs->ui_dirty = 1;
-                }
-                break;
-            default:
-                break;
+        if (d1 == 64) { // Sustain Pedal -> Hold Chord
+            hs->hold_chord_active = (d2 >= 64) ? 1 : 0;
+            hs->ui_dirty = 1;
+        } else if (d2 >= 64) {
+            if (d1 >= 80 && d1 <= 83)      handle_footswitch(hs, (uint8_t)(d1 - 80));
+            else if (d1 >= 20 && d1 <= 23) handle_footswitch(hs, (uint8_t)(d1 - 20));
         }
     }
 }
@@ -275,26 +320,35 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     // 1. Buttons
     uint16_t btn_edges = hal_get_btn_edges();
     if (btn_edges & (1u << BTN_PLAY)) {
-        hs->is_playing = !hs->is_playing;
-        if (hs->is_playing) {
-            hs->current_bar = 0;
-            hs->current_beat = 0;
-            hs->current_subdiv = 0;
-            hs->count_in_bars_remaining = hs->count_in_enabled ? 1 : 0;
+        if (!hs->is_playing) {
+            harmony_start_playback(hs, (GrooveStyle)p->groove_style, 0);
         } else {
+            hs->is_playing = 0;
+            hs->ending_armed = ENDING_NONE;
             hs->count_in_bars_remaining = 0;
             hs->stop_time_counter = 0;
             hs->queued_cue = CUE_NONE;
             dsp_all_notes_off();
+            hs->ui_dirty = 1;
         }
-        hs->ui_dirty = 1;
     }
     if (btn_edges & (1u << BTN_REC)) {
-        hs->count_in_enabled = !hs->count_in_enabled;
-        p->count_in_enabled = hs->count_in_enabled;
-        set_toast(hs, ms_now, hs->count_in_enabled ? "COUNT-IN: ON" : "COUNT-IN: OFF");
-        g_save_pending = 1;
-        g_last_param_change_ms = ms_now;
+        if (!hs->is_playing) {
+            hs->count_in_enabled = (uint8_t)((hs->count_in_enabled + 1) % NUM_INTRO_MODES);
+            p->count_in_enabled = hs->count_in_enabled;
+            set_toast(hs, ms_now, INTRO_TOAST_LABELS[hs->count_in_enabled]);
+            g_save_pending = 1;
+            g_last_param_change_ms = ms_now;
+        } else {
+            if (hs->ending_armed == ENDING_NONE) {
+                hs->ending_armed = ENDING_ARMED_NEXT_BAR;
+                set_toast(hs, ms_now, "OUTRO NEXT BAR");
+            } else if (hs->ending_armed == ENDING_ARMED_NEXT_BAR) {
+                hs->ending_armed = ENDING_NONE;
+                set_toast(hs, ms_now, "OUTRO CANCELLED");
+            }
+        }
+        hs->ui_dirty = 1;
     }
     if (btn_edges & (1u << BTN_HOME)) {
         if (ui_screen) {
@@ -349,9 +403,22 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         hs->ui_dirty = 1;
     }
     if (btn_edges & (1u << BTN_EDIT)) {
-        // Arm/cancel song ending (tag ending at end of chorus)
-        hs->ending_armed = !hs->ending_armed;
-        set_toast(hs, ms_now, hs->ending_armed ? "ENDING: ARMED" : "ENDING: OFF");
+        if (!hs->is_playing) {
+            hs->outro_type = (OutroType)(((uint8_t)hs->outro_type + 1) % NUM_OUTRO_TYPES);
+            p->outro_type = (uint8_t)hs->outro_type;
+            set_toast(hs, ms_now, OUTRO_TOAST_LABELS[(uint8_t)hs->outro_type]);
+            g_save_pending = 1;
+            g_last_param_change_ms = ms_now;
+        } else {
+            if (hs->ending_armed == ENDING_NONE) {
+                hs->ending_armed = ENDING_ARMED_NEXT_BAR;
+                set_toast(hs, ms_now, "OUTRO NEXT BAR");
+            } else if (hs->ending_armed == ENDING_ARMED_NEXT_BAR) {
+                hs->ending_armed = ENDING_NONE;
+                set_toast(hs, ms_now, "OUTRO CANCELLED");
+            }
+        }
+        hs->ui_dirty = 1;
     }
     if (btn_edges & (1u << BTN_ENV)) {
         // Immediate Vamp Mode toggle on current chord
@@ -491,7 +558,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             }
         } else if (is_style) {
             if (glo_held) {
-                p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, NUM_KEYS_INSTRUMENTS);
+                p->drum_kit = wrap_step_u8(p->drum_kit, delta, NUM_DRUM_KITS);
             } else {
                 hs->keys_style = wrap_step_u8(hs->keys_style, delta, NUM_KEYS_STYLES);
                 p->keys_style = hs->keys_style;
@@ -522,7 +589,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             else          { hs->drums_fullness = clamp_step_u8(hs->drums_fullness, delta * 5, 0, 100); p->drums_fullness = hs->drums_fullness; }
         } else if (is_style) {
             if (glo_held) {
-                p->drum_kit = wrap_step_u8(p->drum_kit, delta, NUM_DRUM_KITS);
+                hs->count_in_enabled = wrap_step_u8(hs->count_in_enabled, delta, NUM_INTRO_MODES);
+                p->count_in_enabled = hs->count_in_enabled;
+                set_toast(hs, ms_now, INTRO_TOAST_LABELS[hs->count_in_enabled]);
             } else {
                 hs->drum_pattern = wrap_step_u8(hs->drum_pattern, delta, NUM_DRUM_PATTERNS);
                 p->drum_pattern = hs->drum_pattern;
@@ -551,7 +620,9 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             else          set_master_fullness(hs, p, clamp_step_u8(hs->fullness, delta * 5, 0, 100));
         } else if (is_style) {
             if (glo_held) {
-                p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
+                hs->outro_type = (OutroType)wrap_step_u8((uint8_t)hs->outro_type, delta, NUM_OUTRO_TYPES);
+                p->outro_type = (uint8_t)hs->outro_type;
+                set_toast(hs, ms_now, OUTRO_TOAST_LABELS[(uint8_t)hs->outro_type]);
             } else {
                 hs->form_mode = (FormMode)wrap_step_u8((uint8_t)hs->form_mode, delta, 5);
                 p->form_mode = hs->form_mode;
@@ -692,22 +763,25 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                         g_last_param_change_ms = ms_now;
                     } else if (k >= 23 && k <= 26) {
                         // Zone 4: Outros & Endings (tap again to disarm)
-                        OutroType chosen = OUTRO_TAG;
-                        const char *toast = "ENDING: TAG";
+                        OutroType chosen = OUTRO_CLASSIC_SLIDE;
                         switch (k) {
-                            case 23: chosen = OUTRO_STOP;      toast = "ENDING: HARD STOP";   break;
-                            case 24: chosen = OUTRO_TAG;       toast = "ENDING: TAG";         break;
-                            case 25: chosen = OUTRO_TRIPLE;    toast = "ENDING: TRIPLE";      break;
-                            case 26: chosen = OUTRO_CHROMATIC; toast = "ENDING: CHROM SLIDE"; break;
+                            case 23: chosen = OUTRO_CLASSIC_SLIDE; break;
+                            case 24: chosen = OUTRO_V_bV_IV_I;     break;
+                            case 25: chosen = OUTRO_IV_I_TURN;     break;
+                            case 26: chosen = OUTRO_QUICK_1BAR;    break;
                         }
-                        if (hs->ending_armed && hs->outro_type == chosen) {
-                            hs->ending_armed = 0;
-                            set_toast(hs, ms_now, "ENDING: OFF");
+                        if (hs->ending_armed == ENDING_ARMED_NEXT_BAR && hs->outro_type == chosen) {
+                            hs->ending_armed = ENDING_NONE;
+                            set_toast(hs, ms_now, "OUTRO CANCELLED");
                         } else {
                             hs->outro_type = chosen;
-                            hs->ending_armed = 1;
-                            p->outro_type = hs->outro_type;
-                            set_toast(hs, ms_now, toast);
+                            p->outro_type = (uint8_t)hs->outro_type;
+                            if (hs->is_playing) {
+                                hs->ending_armed = ENDING_ARMED_NEXT_BAR;
+                                set_toast(hs, ms_now, "OUTRO NEXT BAR");
+                            } else {
+                                set_toast(hs, ms_now, OUTRO_TOAST_LABELS[(uint8_t)chosen]);
+                            }
                         }
                         hs->ui_dirty = 1;
                     }
@@ -720,11 +794,19 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
 void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     (void)active_preset_idx;
     uint8_t play_led = hs->is_playing ? 1 : 0;
-    if (hs->is_playing && hs->ending_armed) {
-        play_led = (hs->current_subdiv < 12) ? 1 : 0; // Blink PLAY LED when an ending is queued
+    if (hs->is_playing && hs->ending_armed != ENDING_NONE) {
+        play_led = (hs->current_subdiv < 12) ? 1 : 0; // Blink PLAY LED when an ending is queued/active
     }
     hal_set_btn_led(BTN_PLAY, play_led);
-    hal_set_btn_led(BTN_REC, (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4) ? 1 : 0);
+    uint8_t rec_led = 0;
+    if (!hs->is_playing) {
+        rec_led = (hs->count_in_enabled != INTRO_OFF) ? 1 : 0;
+    } else if (hs->ending_armed == ENDING_ARMED_NEXT_BAR) {
+        rec_led = (hs->current_subdiv < 12) ? 1 : 0;
+    } else {
+        rec_led = (hs->current_beat == 0 && hs->current_subdiv < 4) ? 1 : 0;
+    }
+    hal_set_btn_led(BTN_REC, rec_led);
 
     uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
     uint8_t save_held = (hal_get_btns_mask() & (1u << BTN_SAVE)) != 0;

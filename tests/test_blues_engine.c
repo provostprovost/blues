@@ -164,41 +164,43 @@ void test_stage1_harmony(void) {
     seq_advance_bar(&hs);
     assert(hs.stop_time_counter == 4);
 
-    // 7. Test Outro Cadences and Termination (all 4 must stop playback)
-    OutroType outros[4] = { OUTRO_TAG, OUTRO_TRIPLE, OUTRO_CHROMATIC, OUTRO_STOP };
-    for (int o = 0; o < 4; o++) {
+    // 7. Test Outro Cadences and Termination (all 5 must transition next bar and stop)
+    OutroType outros[5] = { OUTRO_CLASSIC_SLIDE, OUTRO_V_bV_IV_I, OUTRO_IV_I_TURN, OUTRO_QUICK_1BAR, OUTRO_STINGER_ONLY };
+    for (int o = 0; o < 5; o++) {
         harmony_init(&hs);
         hs.is_playing = 1;
         hs.outro_type = outros[o];
-        hs.current_bar = 9;
-        hs.queued_cue = CUE_ENDING_TAG;
+        hs.current_bar = 3; // Mid-chorus bar!
+        hs.ending_armed = ENDING_ARMED_NEXT_BAR;
         seq_advance_bar(&hs);
-        assert(hs.ending_armed == 1);
-        assert(hs.current_bar == 10);
-
-        // Bar 10 slot check
-        BarSlot s10 = harmony_get_current_bar_slot(&hs);
-        assert(s10.primary <= DEG_SHARP_IV_DIM7);
-
-        // Advance to Bar 11
-        seq_advance_bar(&hs);
-        assert(hs.current_bar == 11);
-        BarSlot s11 = harmony_get_current_bar_slot(&hs);
-        assert(s11.primary <= DEG_SHARP_IV_DIM7);
-
-        // Advance past Bar 11 (completing Bar 12) -> enters final Beat-1 Root stinger (ending_armed == 2)
-        seq_advance_bar(&hs);
-        assert(hs.ending_armed == 2);
-        assert(hs.current_bar == 0);
+        if (outros[o] == OUTRO_STINGER_ONLY) {
+            assert(hs.ending_armed == ENDING_STINGER);
+        } else {
+            if (outros[o] == OUTRO_QUICK_1BAR) {
+                assert(hs.ending_armed == ENDING_BAR_2);
+            } else {
+                assert(hs.ending_armed == ENDING_BAR_1);
+                BarSlot s1 = harmony_get_current_bar_slot(&hs);
+                assert(s1.primary <= DEG_SHARP_IV_DIM7);
+                seq_advance_bar(&hs);
+                assert(hs.ending_armed == ENDING_BAR_2);
+            }
+            BarSlot s2 = harmony_get_current_bar_slot(&hs);
+            assert(s2.primary <= DEG_SHARP_IV_DIM7);
+            // Next bar -> enters final Beat-1 Root stinger (ENDING_STINGER)
+            seq_advance_bar(&hs);
+            assert(hs.ending_armed == ENDING_STINGER);
+        }
         // If seq_advance_bar runs again without arranger, it also stops cleanly
         seq_advance_bar(&hs);
-        assert(hs.is_playing == 0 || hs.current_bar == 1);
+        assert(hs.is_playing == 0);
+        assert(hs.ending_armed == ENDING_NONE);
     }
 
-    // Verify arranger_generate_frame plays final Root (I7) hit on ending_armed == 2 and stops
+    // Verify arranger_generate_frame plays final Root (I9) hit on ENDING_STINGER and stops
     harmony_init(&hs);
     hs.is_playing = 1;
-    hs.ending_armed = 2;
+    hs.ending_armed = ENDING_STINGER;
     hs.root_semitone = 4; // E
     hs.current_bar = 0;
     hs.current_beat = 0;
@@ -211,9 +213,10 @@ void test_stage1_harmony(void) {
     assert(end_f.bass_trigger == 1);
     assert(end_f.bass_note == 40); // E2 root
     assert(end_f.comp_trigger == 1);
+    assert(end_f.comp_voicing.count == 4);
     assert(end_f.drum_mask == 0x07);
     assert(hs.is_playing == 0);
-    assert(hs.ending_armed == 0);
+    assert(hs.ending_armed == ENDING_NONE);
 
     // 8. Test Single-Tap (Next Chorus) vs Double-Tap (Next Bar) Key Modulation
     harmony_init(&hs);
@@ -331,6 +334,7 @@ void test_stage2_arranger(void) {
     assert(frame.drum_mask & 0x04); // Hat
 
     // Count-in mode: only rimshot click on beat 0
+    hs.active_intro_style = INTRO_CLICK_1BAR;
     hs.count_in_bars_remaining = 1;
     hs.current_beat = 0;
     hs.current_subdiv = 0;
@@ -487,7 +491,7 @@ void test_stage4_panel_ui(void) {
         presets[i].count_in_enabled = 0;
         presets[i].form_mode = FORM_12BAR;
         presets[i].opening_var = VAR_FLAT_FOUR;
-        presets[i].outro_type = OUTRO_TAG;
+        presets[i].outro_type = OUTRO_CLASSIC_SLIDE;
         presets[i].bass_instrument = (uint8_t)(i % 4);
         presets[i].drum_kit = (uint8_t)(i % 4);
         presets[i].lead_instrument = (uint8_t)(i % 8);
@@ -505,18 +509,20 @@ void test_stage4_panel_ui(void) {
     panel_handle_midi_in(&hs, 0xB0, 64, 127); // CC 64 Sustain / Hold
     assert(hs.hold_chord_active == 1);
 
-    panel_handle_midi_in(&hs, 0xB0, 80, 127); // CC 80 Early Turnaround
+    panel_handle_midi_in(&hs, 0xB0, 80, 127); // Footswitch A while playing -> Arm Next-Bar Outro
+    assert(hs.ending_armed == ENDING_ARMED_NEXT_BAR);
+    hs.ending_armed = ENDING_NONE;
+
+    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Footswitch B while playing -> Drum Fill
+    assert(hs.fill_pending == 1);
+    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Second press -> Force Turnaround
     assert(hs.queued_cue == CUE_FORCE_TURNAROUND);
 
-    panel_handle_midi_in(&hs, 0xB0, 81, 127); // CC 81 Stop Time Break
+    panel_handle_midi_in(&hs, 0xB0, 82, 127); // Footswitch C while playing -> Stop Time Break
     assert(hs.queued_cue == CUE_STOP_TIME);
 
-    panel_handle_midi_in(&hs, 0xB0, 82, 127); // CC 82 Vamp Toggle
+    panel_handle_midi_in(&hs, 0xB0, 83, 127); // Footswitch D while playing -> Vamp Toggle
     assert(hs.queued_cue == CUE_TO_VAMP);
-
-    panel_handle_midi_in(&hs, 0xB0, 83, 127); // CC 83 Ending Armed
-    assert(hs.ending_armed == 1);
-    assert(hs.outro_type == OUTRO_STOP);
 
     panel_handle_midi_in(&hs, 0xF8, 0, 0); // MIDI Clock
     assert(hs.ext_clock_active == 1);
@@ -567,7 +573,7 @@ void test_stage5_integration(void) {
         presets[i].count_in_enabled = 0;
         presets[i].form_mode = (i == 5) ? FORM_MINOR_BLUES : FORM_12BAR;
         presets[i].opening_var = VAR_FLAT_FOUR;
-        presets[i].outro_type = OUTRO_TAG;
+        presets[i].outro_type = OUTRO_CLASSIC_SLIDE;
         presets[i].bass_instrument = (uint8_t)(i % 4);
         presets[i].drum_kit = (uint8_t)(i % 4);
         presets[i].lead_instrument = (uint8_t)(i % 8);
@@ -707,6 +713,123 @@ void test_stage5_integration(void) {
     printf("[Stage 5] Full-system integration & MIDI tests passed!\n");
 }
 
+void test_stage6_v2_features(void) {
+    printf("[Stage 6] Testing V2 Footswitch, Musical Lead-Ins, Next-Bar Outro & Riffs...\n");
+    HarmonyState hs;
+    PresetConfig p;
+    memset(&p, 0, sizeof(p));
+    p.bpm = 120;
+    p.swing = 67;
+    p.bass_vol = 96;
+    p.keys_vol = 88;
+    p.drums_vol = 96;
+    p.lead_vol = 116;
+
+    // 1. M-VAVE Chocolate Program Change (PC 0..3) while stopped -> Start, Intro Start, Cycle Intro, Cycle Outro
+    harmony_init(&hs);
+    assert(hs.count_in_enabled == INTRO_OFF);
+    assert(hs.outro_type == OUTRO_CLASSIC_SLIDE);
+
+    // PC 2 while stopped cycles Intro mode
+    panel_handle_midi_in(&hs, 0xC0, 2, 0);
+    assert(hs.count_in_enabled == INTRO_AUTO);
+    // PC 3 while stopped cycles Outro style
+    panel_handle_midi_in(&hs, 0xC0, 3, 0);
+    assert(hs.outro_type == OUTRO_V_bV_IV_I);
+    // PC 0 starts playback with Intro armed
+    panel_handle_midi_in(&hs, 0xC0, 0, 0);
+    assert(hs.is_playing == 1);
+    assert(hs.count_in_bars_remaining == 2); // TEXAS SHUFFLE -> INTRO_TURNAROUND_2BAR (2 bars)
+    // PC 0 while playing arms Next-Bar Outro
+    panel_handle_midi_in(&hs, 0xC0, 0, 0);
+    assert(hs.ending_armed == ENDING_ARMED_NEXT_BAR);
+    // PC 0 again during armed outro hard-stops
+    panel_handle_midi_in(&hs, 0xC0, 0, 0);
+    assert(hs.is_playing == 0);
+    assert(hs.ending_armed == ENDING_NONE);
+
+    // 2. Chocolate Switch B (Note 62 / CC 21) while stopped -> 1-stomp Start WITH Intro even when INTRO_OFF!
+    harmony_init(&hs);
+    hs.count_in_enabled = INTRO_OFF;
+    hs.drum_pattern = GROOVE_POCKET_FUNK;
+    panel_handle_midi_in(&hs, 0x90, 62, 127);
+    assert(hs.is_playing == 1);
+    assert(hs.active_intro_style == INTRO_FUNK_2BAR);
+    assert(hs.count_in_bars_remaining == 2);
+
+    // 3. Verify all Intro styles emit Bass + Keys + Drum notes while keeping current_bar == 0
+    IntroMode intro_modes[5] = { INTRO_V7_1BAR, INTRO_TURNAROUND_2BAR, INTRO_FUNK_2BAR, INTRO_BAND_4BAR, INTRO_CLICK_1BAR };
+    uint8_t expected_bars[5] = { 1, 2, 2, 4, 1 };
+    for (int m = 0; m < 5; m++) {
+        harmony_init(&hs);
+        hs.count_in_enabled = (uint8_t)intro_modes[m];
+        harmony_start_playback(&hs, GROOVE_TEXAS_SHUFFLE, 0);
+        assert(hs.count_in_bars_remaining == expected_bars[m]);
+        int bass_hits = 0, keys_hits = 0, drum_hits = 0;
+        Voicing v = { {0}, 0 };
+        for (int b = 0; b < expected_bars[m]; b++) {
+            assert(hs.current_bar == 0);
+            for (int beat = 0; beat < 4; beat++) {
+                for (int sub = 0; sub < 24; sub++) {
+                    hs.current_beat = (uint8_t)beat;
+                    hs.current_subdiv = (uint8_t)sub;
+                    PerformanceFrame f;
+                    arranger_generate_frame(&hs, &p, &f, &v);
+                    if (f.bass_trigger) bass_hits++;
+                    if (f.comp_trigger) keys_hits++;
+                    if (f.drum_mask) drum_hits++;
+                }
+            }
+            seq_advance_bar(&hs);
+        }
+        assert(hs.count_in_bars_remaining == 0);
+        assert(hs.current_bar == 0); // Now lands cleanly on Chorus 1 Bar 1!
+        assert(drum_hits >= 4);
+        if (intro_modes[m] != INTRO_CLICK_1BAR) {
+            assert(bass_hits >= 4);
+            assert(keys_hits >= 3);
+        }
+    }
+
+    // 4. Verify Classic Slide Outro #I9 -> I9 half-step slide-down from mid-chorus (Bar 4)
+    harmony_init(&hs);
+    hs.is_playing = 1;
+    hs.root_semitone = 4; // E (bass root = 40, keys root = 64)
+    hs.current_bar = 4;
+    hs.outro_type = OUTRO_CLASSIC_SLIDE;
+    hs.ending_armed = ENDING_ARMED_NEXT_BAR;
+    seq_advance_bar(&hs);
+    assert(hs.ending_armed == ENDING_BAR_1);
+    seq_advance_bar(&hs);
+    assert(hs.ending_armed == ENDING_BAR_2);
+
+    // Check Beat 4& (subdiv 16 for swing 67 -> step16 = 14) emits #I9 (bass=41, keys[0]=65)
+    Voicing ov = { {0}, 0 };
+    PerformanceFrame of;
+    hs.current_beat = 3;
+    hs.current_subdiv = 16;
+    arranger_generate_frame(&hs, &p, &of, &ov);
+    assert(of.bass_trigger == 1 && of.bass_note == 41); // F2 (#I)
+    assert(of.comp_trigger == 1 && of.comp_voicing.notes[0] == 65); // F4 (#I9)
+
+    // Advance to ENDING_STINGER -> Beat 1 emits I9 (bass=40, keys[0]=64) and stops
+    seq_advance_bar(&hs);
+    assert(hs.ending_armed == ENDING_STINGER);
+    hs.current_beat = 0;
+    hs.current_subdiv = 0;
+    arranger_generate_frame(&hs, &p, &of, &ov);
+    assert(of.bass_trigger == 1 && of.bass_note == 40); // E2 (I)
+    assert(of.comp_trigger == 1 && of.comp_voicing.notes[0] == 64); // E4 (I9)
+    assert(hs.is_playing == 0);
+    assert(hs.ending_armed == ENDING_NONE);
+
+    // 5. Render Lead Sheet & Style screens cleanly
+    ui_init();
+    ui_render(&hs, &p, 0, 0, 1);
+    ui_render(&hs, &p, 0, 2, 1);
+    printf("[Stage 6] V2 Footswitch, Lead-Ins, Next-Bar Outro & Riffs passed!\n");
+}
+
 int main(void) {
     printf("[TB-1 Test Suite] Running Stage Tests...\n");
     test_stage1_harmony();
@@ -714,6 +837,7 @@ int main(void) {
     test_stage3_dsp();
     test_stage4_panel_ui();
     test_stage5_integration();
+    test_stage6_v2_features();
     printf("[TB-1 Test Suite] All tests completed with 100%% assertions passing.\n");
     return 0;
 }

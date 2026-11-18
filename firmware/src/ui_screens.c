@@ -40,7 +40,12 @@ static const char *KEYS_STYLE_NAMES[NUM_KEYS_STYLES] = {
     "FUNK CLAV", "COUNTRY CHP"
 };
 static const char *FORM_NAMES[5]       = { "12-BAR MAJ", "QUICK CHG", "1-4-5 OPEN", "8-BAR BLUES", "MINOR BLUES" };
-static const char *TUNE_NAMES[3]       = { "440 HZ", "432 HZ", "442 HZ" };
+static const char *INTRO_SHORT_NAMES[NUM_INTRO_MODES] = {
+    "OFF", "AUTO", "1B V7", "2B TURN", "2B FUNK", "4B BAND", "1B CLICK"
+};
+static const char *OUTRO_SHORT_NAMES[NUM_OUTRO_TYPES] = {
+    "SLIDE", "V-bV-IV", "IV-I TRN", "1B QUICK", "STINGER"
+};
 
 static uint8_t g_last_bar = 0xFF;
 static uint8_t g_last_beat = 0xFF;
@@ -64,6 +69,9 @@ static uint8_t g_last_stop_time = 0xFF;
 static uint8_t g_last_vamp = 0xFF;
 static uint8_t g_last_ending = 0xFF;
 static uint8_t g_last_queued_key = 0xFF;
+static uint8_t g_last_intro_mode = 0xFF;
+static uint8_t g_last_outro_type = 0xFF;
+static uint8_t g_last_intro_bars = 0xFF;
 
 static uint8_t g_last_m_bass_vol = 0xFF;
 static uint8_t g_last_m_keys_vol = 0xFF;
@@ -115,6 +123,9 @@ void ui_init(void) {
     g_last_vamp = 0xFF;
     g_last_ending = 0xFF;
     g_last_queued_key = 0xFF;
+    g_last_intro_mode = 0xFF;
+    g_last_outro_type = 0xFF;
+    g_last_intro_bars = 0xFF;
 
     g_last_m_bass_vol = 0xFF;
     g_last_m_keys_vol = 0xFF;
@@ -257,25 +268,48 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
     hal_draw_text_box(0, 24, 240, 0, subheader, sub_col, 1);
 }
 
+static void append_str(char *dst, int *pos, int max_len, const char *src) {
+    while (*src && *pos < max_len) {
+        dst[(*pos)++] = *src++;
+    }
+}
+
 static void render_status_and_footer(const HarmonyState *hs, const PresetConfig *preset, uint8_t toast_active) {
-    const char *status_str = (hs->form_mode == FORM_MINOR_BLUES) ? "PRESS PLAY (MINOR BLUES)" : "PRESS PLAY";
+    char status_buf[36];
+    const char *status_str = status_buf;
     uint16_t status_col = RGB(255, 200, 60);
+
+    uint8_t im = hs->count_in_enabled % NUM_INTRO_MODES;
+    uint8_t om = (uint8_t)hs->outro_type % NUM_OUTRO_TYPES;
+
     if (toast_active && hs->toast_msg[0] != '\0') {
         status_str = hs->toast_msg;
         status_col = RGB(0, 220, 255);
     } else if (hs->is_playing) {
-        if (hs->stop_time_counter > 0) {
+        if (hs->ending_armed == ENDING_ARMED_NEXT_BAR) {
+            int p = 0;
+            append_str(status_buf, &p, 34, "OUTRO NEXT BAR: ");
+            append_str(status_buf, &p, 34, OUTRO_SHORT_NAMES[om]);
+            status_buf[p] = '\0';
+            status_col = RGB(255, 160, 60);
+        } else if (hs->ending_armed >= ENDING_BAR_1) {
+            static const char *OUTRO_STATUS[NUM_OUTRO_TYPES] = {
+                "ENDING: CLASSIC SLIDE", "ENDING: V-bV-IV-I", "ENDING: IV-I TURN", "ENDING: 1B QUICK", "ENDING: STINGER"
+            };
+            status_str = OUTRO_STATUS[om];
+            status_col = RGB(255, 90, 90);
+        } else if (hs->count_in_bars_remaining > 0) {
+            int p = 0;
+            append_str(status_buf, &p, 34, "INTRO: ");
+            append_str(status_buf, &p, 34, INTRO_SHORT_NAMES[(uint8_t)hs->active_intro_style % NUM_INTRO_MODES]);
+            status_buf[p] = '\0';
+            status_col = RGB(0, 220, 255);
+        } else if (hs->stop_time_counter > 0) {
             status_str = "STOP-TIME BREAK";
             status_col = RGB(255, 80, 80);
         } else if (hs->is_vamp_mode) {
             status_str = "VAMP LOOP ACTIVE";
             status_col = RGB(80, 200, 255);
-        } else if (hs->ending_armed) {
-            static const char *OUTRO_STATUS[4] = {
-                "ENDING: TAG", "ENDING: TRIPLE", "ENDING: CHROM SLIDE", "ENDING: HARD STOP"
-            };
-            status_str = OUTRO_STATUS[(uint8_t)hs->outro_type % 4];
-            status_col = RGB(255, 100, 100);
         } else if (hs->has_queued_key) {
             status_str = "KEY MOD QUEUED";
             status_col = RGB(255, 220, 80);
@@ -283,6 +317,20 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
             status_str = (hs->form_mode == FORM_MINOR_BLUES) ? "PLAYING (MINOR BLUES)" : "PLAYING";
             status_col = RGB(80, 240, 80);
         }
+    } else {
+        int p = 0;
+        if (im == INTRO_OFF) {
+            append_str(status_buf, &p, 34, "PRESS PLAY [OUT:");
+            append_str(status_buf, &p, 34, OUTRO_SHORT_NAMES[om]);
+            append_str(status_buf, &p, 34, "]");
+        } else {
+            append_str(status_buf, &p, 34, "PLAY [IN:");
+            append_str(status_buf, &p, 34, INTRO_SHORT_NAMES[im]);
+            append_str(status_buf, &p, 34, " OUT:");
+            append_str(status_buf, &p, 34, OUTRO_SHORT_NAMES[om]);
+            append_str(status_buf, &p, 34, "]");
+        }
+        status_buf[p] = '\0';
     }
     hal_fill_rect(0, 208, 240, 16, C_BLACK);
     hal_draw_text_box(0, 208, 240, 0, status_str, status_col, 1);
@@ -375,7 +423,7 @@ static void render_style_view(const HarmonyState *hs, const PresetConfig *preset
         hal_fill_rect(0, 0, 240, 240, C_BLACK);
         hal_draw_text_box(0, 6, 240, 0, "BLUES BOX STYLE", RGB(255, 190, 0), 1);
         hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:FRM", RGB(0, 220, 255), 1);
-        hal_draw_text_box(0, 198, 240, 0, "[GLO]: BASS / KEYS / KIT / TUNE", RGB(255, 180, 0), 1);
+        hal_draw_text_box(0, 198, 240, 0, "[GLO]: BASS / KIT / INTRO / OUT", RGB(255, 180, 0), 1);
         hal_draw_text_box(0, 216, 240, 0, "HOME: BAND FEEL VIEW", RGB(140, 140, 140), 1);
     }
 
@@ -384,18 +432,18 @@ static void render_style_view(const HarmonyState *hs, const PresetConfig *preset
     uint8_t dp = hs->drum_pattern % NUM_DRUM_PATTERNS;
     uint8_t fm = (uint8_t)hs->form_mode % 5;
     uint8_t bi = preset->bass_instrument % NUM_BASS_INSTRUMENTS;
-    uint8_t ki = preset->ep_tone_algo % NUM_KEYS_INSTRUMENTS;
     uint8_t di = preset->drum_kit % NUM_DRUM_KITS;
-    uint8_t tn = preset->master_tuning % 3;
+    uint8_t im = hs->count_in_enabled % NUM_INTRO_MODES;
+    uint8_t om = (uint8_t)hs->outro_type % NUM_OUTRO_TYPES;
 
     render_style_row(24,  "BASS LINE", BASS_STYLE_NAMES[bs], RGB(80, 180, 255),  full_redraw, bs, &g_last_s_bstyle);
     render_style_row(43,  "KEYS RHY",  KEYS_STYLE_NAMES[ks], RGB(255, 190, 60),  full_redraw, ks, &g_last_s_kstyle);
     render_style_row(62,  "DRUM BEAT", GROOVE_NAMES[dp],     RGB(255, 95, 95),   full_redraw, dp, &g_last_s_dpat);
     render_style_row(81,  "FORM",      FORM_NAMES[fm],       RGB(80, 240, 140),  full_redraw, fm, &g_last_s_form);
     render_style_row(100, "[G] BASS",  BASS_NAMES[bi],       RGB(140, 210, 255), full_redraw, bi, &g_last_s_bass);
-    render_style_row(119, "[G] KEYS",  ALGO_NAMES[ki],       RGB(255, 220, 120), full_redraw, ki, &g_last_s_keys);
-    render_style_row(138, "[G] KIT",   DRUM_NAMES[di],       RGB(255, 150, 150), full_redraw, di, &g_last_s_drum);
-    render_style_row(157, "[G] TUNE",  TUNE_NAMES[tn],       RGB(200, 160, 255), full_redraw, tn, &g_last_s_tune);
+    render_style_row(119, "[G] KIT",   DRUM_NAMES[di],       RGB(255, 150, 150), full_redraw, di, &g_last_s_drum);
+    render_style_row(138, "[G] INTRO", INTRO_SHORT_NAMES[im],RGB(0, 220, 255),   full_redraw, im, &g_last_s_keys);
+    render_style_row(157, "[G] OUTRO", OUTRO_SHORT_NAMES[om],RGB(255, 140, 100), full_redraw, om, &g_last_s_tune);
 }
 
 static void render_feel_view(const HarmonyState *hs, uint8_t full_redraw) {
@@ -463,7 +511,10 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
         uint8_t status_flags_changed = (stop_time_active != g_last_stop_time) ||
                                        (hs->is_vamp_mode != g_last_vamp) ||
                                        (hs->ending_armed != g_last_ending) ||
-                                       (hs->has_queued_key != g_last_queued_key);
+                                       (hs->has_queued_key != g_last_queued_key) ||
+                                       (hs->count_in_enabled != g_last_intro_mode) ||
+                                       ((uint8_t)hs->outro_type != g_last_outro_type) ||
+                                       (hs->count_in_bars_remaining != g_last_intro_bars);
         uint8_t footer_changed = screen_switched || (hs->is_playing != g_last_playing) ||
                                  (preset->ep_tone_algo != g_last_algo) || (preset->lead_instrument != g_last_lead) ||
                                  (preset->lead_play_style != g_last_lead_play) || (hs->easy_lead != g_last_easy_lead) ||
@@ -480,6 +531,9 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
         g_last_vamp = hs->is_vamp_mode;
         g_last_ending = hs->ending_armed;
         g_last_queued_key = hs->has_queued_key;
+        g_last_intro_mode = hs->count_in_enabled;
+        g_last_outro_type = (uint8_t)hs->outro_type;
+        g_last_intro_bars = hs->count_in_bars_remaining;
     } else if (screen_id == 1) {
         render_mixer_view(hs, preset, preset_idx, screen_switched || force_redraw);
     } else if (screen_id == 2) {
@@ -506,12 +560,29 @@ void ui_render(const HarmonyState *hs, const PresetConfig *preset, uint8_t prese
     g_last_form = hs->form_mode;
 }
 
+static void draw_rect_border(int x, int y, int w, int h, int t, uint16_t col) {
+    hal_fill_rect(x, y, w, t, col);
+    hal_fill_rect(x, y + h - t, w, t, col);
+    hal_fill_rect(x, y + t, t, h - 2 * t, col);
+    hal_fill_rect(x + w - t, y + t, t, h - 2 * t, col);
+}
+
 void ui_render_splash(void) {
-    // Option B: Vintage Tweed / Tube Amp Nameplate Splash Screen (240x240)
-    // 1. Warm lacquered tweed cabinet outer frame
-    hal_fill_rect(0, 0, 240, 240, RGB(175, 120, 42));
+    // Vintage Tweed / Tube Amp Nameplate Splash Screen (240x240, non-overlapping borders to avoid SPI flicker)
+    // 1. Warm lacquered tweed cabinet outer frame (14px border around 212x212 center)
+    uint16_t tweed_hi = RGB(175, 120, 42);
+    uint16_t tweed_lo = RGB(140, 92, 28);
+    hal_fill_rect(0, 0, 240, 14, tweed_hi);
+    hal_fill_rect(0, 226, 240, 14, tweed_hi);
+    hal_fill_rect(0, 14, 14, 212, tweed_hi);
+    hal_fill_rect(226, 14, 14, 212, tweed_hi);
     for (int y = 0; y < 240; y += 8) {
-        hal_fill_rect(0, y, 240, 3, RGB(140, 92, 28));
+        if (y < 14 || y >= 226) {
+            hal_fill_rect(0, y, 240, 3, tweed_lo);
+        } else {
+            hal_fill_rect(0, y, 14, 3, tweed_lo);
+            hal_fill_rect(226, y, 14, 3, tweed_lo);
+        }
     }
     // Chrome corner protectors with brass rivets
     hal_fill_rect(0, 0, 22, 22, RGB(95, 70, 30));
@@ -523,18 +594,23 @@ void ui_render_splash(void) {
     hal_fill_rect(7, 227, 6, 6, RGB(240, 195, 90));
     hal_fill_rect(227, 227, 6, 6, RGB(240, 195, 90));
 
-    // 2. Recessed oxblood / dark grill cloth baffle with gold piping
-    hal_fill_rect(14, 14, 212, 212, RGB(220, 175, 75));
-    hal_fill_rect(17, 17, 206, 206, RGB(26, 18, 14));
+    // 2. Recessed dark grill cloth baffle with gold piping (only fill outside the nameplate)
+    draw_rect_border(14, 14, 212, 212, 3, RGB(220, 175, 75));
+    hal_fill_rect(17, 17, 206, 39, RGB(26, 18, 14));
+    hal_fill_rect(17, 184, 206, 39, RGB(26, 18, 14));
+    hal_fill_rect(17, 56, 7, 128, RGB(26, 18, 14));
+    hal_fill_rect(216, 56, 7, 128, RGB(26, 18, 14));
     for (int y = 22; y < 218; y += 6) {
-        hal_fill_rect(20, y, 200, 2, RGB(42, 28, 20));
+        if (y < 56 || y >= 184) {
+            hal_fill_rect(20, y, 200, 2, RGB(42, 28, 20));
+        }
     }
 
-    // 3. Engraved Tube-Amp Center Nameplate Badge
-    hal_fill_rect(24, 56, 192, 128, RGB(235, 185, 70));  // Outer brass plate
-    hal_fill_rect(27, 59, 186, 122, RGB(16, 14, 12));   // Inner black enamel
-    hal_fill_rect(31, 63, 178, 114, RGB(180, 135, 45)); // Inner gold hairline
-    hal_fill_rect(33, 65, 174, 110, RGB(18, 16, 14));   // Badge face
+    // 3. Engraved Tube-Amp Center Nameplate Badge (borders + single dark face fill)
+    draw_rect_border(24, 56, 192, 128, 3, RGB(235, 185, 70));
+    draw_rect_border(27, 59, 186, 122, 4, RGB(16, 14, 12));
+    draw_rect_border(31, 63, 178, 114, 2, RGB(180, 135, 45));
+    hal_fill_rect(33, 65, 174, 110, RGB(18, 16, 14));
 
     // Side mounting rivets on the nameplate
     hal_fill_rect(39, 117, 6, 6, RGB(225, 180, 80));
@@ -544,5 +620,5 @@ void ui_render_splash(void) {
     hal_draw_text_box(36, 74, 168, 1, "BLUES BOX", RGB(255, 200, 40), 1);
     hal_fill_rect(52, 114, 136, 2, RGB(220, 165, 45));
     hal_draw_text_box(36, 124, 168, 0, "BACKING BAND", RGB(235, 230, 215), 1);
-    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V1.5.1", RGB(180, 145, 75), 1);
+    hal_draw_text_box(36, 146, 168, 0, "M-VAVE FM-1  *  V2.0", RGB(180, 145, 75), 1);
 }

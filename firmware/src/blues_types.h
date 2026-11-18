@@ -48,11 +48,34 @@ typedef enum {
 } OpeningVar;
 
 typedef enum {
-    OUTRO_TAG = 0,
-    OUTRO_TRIPLE,
-    OUTRO_CHROMATIC,
-    OUTRO_STOP
+    OUTRO_CLASSIC_SLIDE = 0, // 2-bar walkdown + #I9 -> I9 half-step slide
+    OUTRO_V_bV_IV_I,         // 2-bar V9 -> bV9 -> IV9 -> I9 breakdown
+    OUTRO_IV_I_TURN,         // 2-bar IV7 -> #IVdim7 -> I7 -> VI7 -> ii7 -> V7 -> I9
+    OUTRO_QUICK_1BAR,        // 1-bar V7 -> bV7 -> IV7 -> #I9 -> I9 quick tag
+    OUTRO_STINGER_ONLY       // 0-bar Beat-1 I9 stinger + immediate stop
 } OutroType;
+
+#define NUM_OUTRO_TYPES 5
+
+typedef enum {
+    INTRO_OFF = 0,
+    INTRO_AUTO,              // Style-matched intro for current groove
+    INTRO_V7_1BAR,           // 1-bar V7 turnaround lick
+    INTRO_TURNAROUND_2BAR,   // 2-bar classic blues contrapuntal turnaround
+    INTRO_FUNK_2BAR,         // 2-bar syncopated funk/soul pickup
+    INTRO_BAND_4BAR,         // 4-bar V7 | IV7 | I7-IV7 | I7-V7 intro
+    INTRO_CLICK_1BAR         // 1-bar rimshot count-in
+} IntroMode;
+
+#define NUM_INTRO_MODES 7
+
+typedef enum {
+    ENDING_NONE = 0,
+    ENDING_ARMED_NEXT_BAR,   // Armed: enters outro on the very next bar boundary
+    ENDING_BAR_1,            // Playing Bar 1 of 2-bar outro riff
+    ENDING_BAR_2,            // Playing Bar 2 of 2-bar outro (or 1-bar quick outro)
+    ENDING_STINGER           // Beat-1 final I9 stinger + stop
+} EndingState;
 
 typedef enum {
     CUE_NONE = 0,
@@ -266,6 +289,8 @@ typedef struct {
     uint8_t     fill_pending;
     uint8_t     count_in_enabled;
     uint8_t     count_in_bars_remaining;
+    uint8_t     intro_total_bars;
+    IntroMode   active_intro_style;
     uint8_t     hold_chord_active;
     uint8_t     is_playing;
     uint8_t     ui_dirty;

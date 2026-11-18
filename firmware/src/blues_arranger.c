@@ -460,6 +460,355 @@ static uint8_t bass_compute_styled_note(ChordContext current, ChordContext next,
     return note;
 }
 
+static uint8_t get_bass_root(uint8_t root_semitone) {
+    uint8_t r = (uint8_t)(40 + (((root_semitone % 12) + 8) % 12));
+    while (r < 40) r += 12;
+    while (r > 51) r -= 12;
+    return r;
+}
+
+static uint8_t get_keys_root(uint8_t root_semitone) {
+    return (uint8_t)(60 + (root_semitone % 12));
+}
+
+static void emit_scripted_bass(PerformanceFrame *frame, uint8_t bass_root, int8_t offset, uint8_t vel) {
+    int note = (int)bass_root + offset;
+    while (note < 36) note += 12;
+    while (note > 64) note -= 12;
+    frame->bass_trigger = 1;
+    frame->bass_note = (uint8_t)note;
+    frame->bass_vel = vel;
+}
+
+static void emit_scripted_keys_chord(PerformanceFrame *frame, Voicing *last_voicing, ScaleDegree deg, uint8_t root_semitone, uint8_t vel) {
+    frame->comp_trigger = 1;
+    frame->comp_vel = vel;
+    frame->comp_voicing = voice_lead_select(*last_voicing, deg, root_semitone, 0);
+    *last_voicing = frame->comp_voicing;
+}
+
+static void emit_scripted_keys_9th(PerformanceFrame *frame, Voicing *last_voicing, uint8_t keys_root, int8_t transpose, uint8_t minor_3rd, uint8_t vel) {
+    uint8_t r = (uint8_t)((int)keys_root + transpose);
+    frame->comp_trigger = 1;
+    frame->comp_vel = vel;
+    frame->comp_voicing.count = 4;
+    frame->comp_voicing.notes[0] = r;
+    frame->comp_voicing.notes[1] = (uint8_t)(r + (minor_3rd ? 3 : 4));
+    frame->comp_voicing.notes[2] = (uint8_t)(r + 10);
+    frame->comp_voicing.notes[3] = (uint8_t)(r + 14);
+    *last_voicing = frame->comp_voicing;
+}
+
+static void emit_scripted_keys_dyad(PerformanceFrame *frame, Voicing *last_voicing, uint8_t n1, uint8_t n2, uint8_t vel) {
+    frame->comp_trigger = 1;
+    frame->comp_vel = vel;
+    frame->comp_voicing.count = 2;
+    frame->comp_voicing.notes[0] = n1;
+    frame->comp_voicing.notes[1] = n2;
+    *last_voicing = frame->comp_voicing;
+}
+
+static void emit_scripted_keys_note(PerformanceFrame *frame, Voicing *last_voicing, uint8_t note, uint8_t vel) {
+    frame->comp_trigger = 1;
+    frame->comp_vel = vel;
+    frame->comp_voicing.count = 1;
+    frame->comp_voicing.notes[0] = note;
+    *last_voicing = frame->comp_voicing;
+}
+
+static void render_turnaround_walkdown_bar(HarmonyState *hs, PerformanceFrame *frame, Voicing *last_voicing, uint8_t step16, uint8_t is_intro) {
+    uint8_t br = get_bass_root(hs->root_semitone);
+    uint8_t kr = get_keys_root(hs->root_semitone);
+    uint8_t is_min = (hs->form_mode == FORM_MINOR_BLUES);
+    ScaleDegree root_deg = is_min ? DEG_i7 : DEG_I7;
+    if (step16 == 0) {
+        emit_scripted_bass(frame, br, 0, 114);
+        emit_scripted_keys_chord(frame, last_voicing, root_deg, hs->root_semitone, 108);
+        frame->drum_mask = 0x05; frame->drum_vel[0] = 112; frame->drum_vel[2] = 95;
+    } else if (step16 == 2) {
+        emit_scripted_bass(frame, br, is_intro ? 3 : 4, 102);
+        emit_scripted_keys_dyad(frame, last_voicing, (uint8_t)(kr + 10), (uint8_t)(kr + 12), 98);
+        frame->drum_mask = 0x04; frame->drum_vel[2] = 75;
+    } else if (step16 == 4) {
+        emit_scripted_bass(frame, br, is_intro ? 4 : 5, 106);
+        emit_scripted_keys_dyad(frame, last_voicing, (uint8_t)(kr + 9), (uint8_t)(kr + 12), 100);
+        frame->drum_mask = 0x06; frame->drum_vel[1] = 104; frame->drum_vel[2] = 90;
+    } else if (step16 == 8) {
+        emit_scripted_bass(frame, br, is_intro ? 5 : 6, 108);
+        emit_scripted_keys_dyad(frame, last_voicing, (uint8_t)(kr + 8), (uint8_t)(kr + 12), 102);
+        frame->drum_mask = 0x05; frame->drum_vel[0] = 105; frame->drum_vel[2] = 88;
+    } else if (step16 == 12) {
+        emit_scripted_bass(frame, br, is_intro ? 6 : 7, 112);
+        emit_scripted_keys_chord(frame, last_voicing, DEG_V7, hs->root_semitone, 108);
+        frame->drum_mask = 0x06; frame->drum_vel[1] = 108; frame->drum_vel[2] = 92;
+    }
+}
+
+static void render_scripted_intro_frame(HarmonyState *hs, PerformanceFrame *frame, Voicing *last_voicing, uint8_t sub_slot) {
+    uint8_t step16 = (uint8_t)(hs->current_beat * 4 + sub_slot);
+    uint8_t bar_idx = (hs->intro_total_bars >= hs->count_in_bars_remaining)
+                      ? (uint8_t)(hs->intro_total_bars - hs->count_in_bars_remaining) : 0;
+    uint8_t br = get_bass_root(hs->root_semitone);
+    uint8_t kr = get_keys_root(hs->root_semitone);
+    uint8_t is_min = (hs->form_mode == FORM_MINOR_BLUES);
+    ScaleDegree root_deg = is_min ? DEG_i7 : DEG_I7;
+    ScaleDegree four_deg = is_min ? DEG_iv7 : DEG_IV7;
+    IntroMode im = hs->active_intro_style;
+    if (im == INTRO_OFF) return;
+
+    if (im == INTRO_CLICK_1BAR) {
+        if (sub_slot == 0) {
+            frame->drum_mask = 0x08;
+            frame->drum_vel[3] = (hs->current_beat == 0) ? 115 : 90;
+        }
+        return;
+    }
+
+    if (im == INTRO_V7_1BAR) {
+        // 1-bar V7 turnaround lick: V9 stab + descending blues lick + chromatic bass walk-up
+        if (step16 == 0) {
+            emit_scripted_bass(frame, br, 7, 116);
+            emit_scripted_keys_chord(frame, last_voicing, DEG_V7, hs->root_semitone, 114);
+            frame->drum_mask = 0x05; frame->drum_vel[0] = 115; frame->drum_vel[2] = 100;
+        } else if (step16 == 2) {
+            emit_scripted_keys_note(frame, last_voicing, (uint8_t)(kr + 7), 96);
+        } else if (step16 == 4) {
+            emit_scripted_keys_note(frame, last_voicing, (uint8_t)(kr + 5), 98);
+            frame->drum_mask = 0x06; frame->drum_vel[1] = 104; frame->drum_vel[2] = 88;
+        } else if (step16 == 6) {
+            emit_scripted_keys_note(frame, last_voicing, (uint8_t)(kr + 3), 98);
+        } else if (step16 == 8) {
+            emit_scripted_bass(frame, br, 3, 104);
+            emit_scripted_keys_note(frame, last_voicing, (uint8_t)(kr + 2), 100);
+            frame->drum_mask = 0x05; frame->drum_vel[0] = 105; frame->drum_vel[2] = 90;
+        } else if (step16 == 10) {
+            emit_scripted_bass(frame, br, 4, 108);
+            emit_scripted_keys_note(frame, last_voicing, kr, 104);
+        } else if (step16 == 12) {
+            emit_scripted_bass(frame, br, 5, 112);
+            frame->drum_mask = 0x02; frame->drum_vel[1] = 106;
+        } else if (step16 == 14) {
+            emit_scripted_bass(frame, br, 6, 116);
+            frame->drum_mask = 0x03; frame->drum_vel[0] = 95; frame->drum_vel[1] = 114;
+        }
+        return;
+    }
+
+    if (im == INTRO_FUNK_2BAR) {
+        if (bar_idx == 0) {
+            // Bar 1: Syncopated unison funk riff (1 - 1 - b3 - 3 - 5 - b7 - 1)
+            static const int8_t FUNK_OFF[6] = { 0, 0, 3, 4, 7, 10 };
+            static const uint8_t FUNK_STEPS[6] = { 0, 2, 6, 8, 10, 14 };
+            for (int i = 0; i < 6; i++) {
+                if (step16 == FUNK_STEPS[i]) {
+                    emit_scripted_bass(frame, br, FUNK_OFF[i], (i == 0) ? 116 : 104);
+                    emit_scripted_keys_note(frame, last_voicing, (uint8_t)(kr + FUNK_OFF[i]), (i == 0) ? 110 : 98);
+                }
+            }
+            if (step16 == 0 || step16 == 6 || step16 == 10) { frame->drum_mask |= 0x01; frame->drum_vel[0] = 110; }
+            if (step16 == 4 || step16 == 12) { frame->drum_mask |= 0x02; frame->drum_vel[1] = 106; }
+            if (sub_slot == 0 || sub_slot == 2) { frame->drum_mask |= 0x04; frame->drum_vel[2] = 86; }
+        } else {
+            // Bar 2: V7 syncopated stabs + tight Beat-4 snare pickup
+            if (step16 == 0 || step16 == 6 || step16 == 8) {
+                emit_scripted_bass(frame, br, (step16 == 6) ? 10 : 7, 112);
+                emit_scripted_keys_chord(frame, last_voicing, DEG_V7, hs->root_semitone, 110);
+                frame->drum_mask |= 0x05; frame->drum_vel[0] = 110; frame->drum_vel[2] = 92;
+            }
+            if (step16 == 4) { frame->drum_mask |= 0x02; frame->drum_vel[1] = 102; }
+            if (step16 == 12) {
+                emit_scripted_bass(frame, br, 7, 108);
+                frame->drum_mask = 0x02; frame->drum_vel[1] = 104;
+            } else if (step16 == 14) {
+                emit_scripted_bass(frame, br, 10, 115);
+                frame->drum_mask = 0x03; frame->drum_vel[0] = 96; frame->drum_vel[1] = 116;
+            }
+        }
+        return;
+    }
+
+    // INTRO_BAND_4BAR: Bars 0..1 play V7 -> IV7 stabs, Bars 2..3 play the 2-bar turnaround
+    uint8_t turn_bar = bar_idx;
+    if (im == INTRO_BAND_4BAR) {
+        if (bar_idx < 2) {
+            ScaleDegree deg = (bar_idx == 0) ? DEG_V7 : four_deg;
+            int8_t boff = (bar_idx == 0) ? 7 : 5;
+            if (step16 == 0 || step16 == 6 || step16 == 12) {
+                emit_scripted_bass(frame, br, (step16 == 12) ? (int8_t)(boff + 3) : boff, 112);
+                emit_scripted_keys_chord(frame, last_voicing, deg, hs->root_semitone, 108);
+            } else if (step16 == 4 || step16 == 8) {
+                emit_scripted_bass(frame, br, (int8_t)(boff + (step16 == 4 ? 4 : 5)), 104);
+            }
+            if (step16 == 0 || step16 == 8) { frame->drum_mask |= 0x01; frame->drum_vel[0] = 110; }
+            if (step16 == 4 || step16 == 12) { frame->drum_mask |= 0x02; frame->drum_vel[1] = 105; }
+            if (sub_slot == 0 || sub_slot == 2) { frame->drum_mask |= 0x04; frame->drum_vel[2] = 88; }
+            return;
+        }
+        turn_bar = (uint8_t)(bar_idx - 2);
+    }
+
+    // INTRO_TURNAROUND_2BAR (and Bars 2..3 of INTRO_BAND_4BAR)
+    if (turn_bar == 0) {
+        render_turnaround_walkdown_bar(hs, frame, last_voicing, step16, 1);
+    } else {
+        // Bar 2: V7 punchy hits + Beat-4 drum pickup into Bar 1
+        if (step16 == 0) {
+            emit_scripted_bass(frame, br, 7, 115);
+            emit_scripted_keys_chord(frame, last_voicing, DEG_V7, hs->root_semitone, 112);
+            frame->drum_mask = 0x05; frame->drum_vel[0] = 114; frame->drum_vel[2] = 95;
+        } else if (step16 == 4) {
+            emit_scripted_bass(frame, br, 4, 104);
+            emit_scripted_keys_chord(frame, last_voicing, root_deg, hs->root_semitone, 100);
+            frame->drum_mask = 0x06; frame->drum_vel[1] = 104; frame->drum_vel[2] = 90;
+        } else if (step16 == 8) {
+            emit_scripted_bass(frame, br, 7, 116);
+            emit_scripted_keys_chord(frame, last_voicing, DEG_V7, hs->root_semitone, 114);
+            frame->drum_mask = 0x07; frame->drum_vel[0] = 115; frame->drum_vel[1] = 105; frame->drum_vel[2] = 100;
+        } else if (step16 == 12) {
+            frame->drum_mask = 0x02; frame->drum_vel[1] = 102;
+        } else if (step16 == 14) {
+            emit_scripted_bass(frame, br, 10, 112);
+            frame->drum_mask = 0x0A; frame->drum_vel[1] = 112; frame->drum_vel[3] = 95;
+        }
+    }
+}
+
+static void render_scripted_outro_frame(HarmonyState *hs, PerformanceFrame *frame, Voicing *last_voicing, uint8_t sub_slot) {
+    uint8_t step16 = (uint8_t)(hs->current_beat * 4 + sub_slot);
+    uint8_t br = get_bass_root(hs->root_semitone);
+    uint8_t kr = get_keys_root(hs->root_semitone);
+    uint8_t is_min = (hs->form_mode == FORM_MINOR_BLUES);
+    ScaleDegree root_deg = is_min ? DEG_i7 : DEG_I7;
+    ScaleDegree four_deg = is_min ? DEG_iv7 : DEG_IV7;
+    uint8_t is_bar1 = (hs->ending_armed == ENDING_BAR_1);
+
+    if (hs->outro_type == OUTRO_CLASSIC_SLIDE) {
+        if (is_bar1) {
+            render_turnaround_walkdown_bar(hs, frame, last_voicing, step16, 0);
+        } else {
+            // Bar 2: III -> IV -> #IV -> V walkup + #I9 -> I9 half-step slide pickup!
+            if (step16 == 0) {
+                emit_scripted_bass(frame, br, 4, 112);
+                emit_scripted_keys_chord(frame, last_voicing, root_deg, hs->root_semitone, 108);
+                frame->drum_mask = 0x05; frame->drum_vel[0] = 112; frame->drum_vel[2] = 95;
+            } else if (step16 == 2) {
+                emit_scripted_bass(frame, br, 5, 108);
+                emit_scripted_keys_chord(frame, last_voicing, four_deg, hs->root_semitone, 104);
+            } else if (step16 == 4) {
+                emit_scripted_bass(frame, br, 6, 112);
+                emit_scripted_keys_chord(frame, last_voicing, DEG_SHARP_IV_DIM7, hs->root_semitone, 108);
+                frame->drum_mask = 0x06; frame->drum_vel[1] = 108; frame->drum_vel[2] = 92;
+            } else if (step16 == 8) {
+                emit_scripted_bass(frame, br, 7, 118);
+                emit_scripted_keys_chord(frame, last_voicing, DEG_V7, hs->root_semitone, 116);
+                frame->drum_mask = 0x07; frame->drum_vel[0] = 116; frame->drum_vel[1] = 108; frame->drum_vel[2] = 105;
+            } else if (step16 == 14) {
+                // #I9 (bII9) slide-down pickup on Beat 4&!
+                emit_scripted_bass(frame, br, 1, 120);
+                emit_scripted_keys_9th(frame, last_voicing, kr, 1, is_min, 118);
+                frame->drum_mask = 0x03; frame->drum_vel[0] = 108; frame->drum_vel[1] = 116;
+            }
+        }
+        return;
+    }
+
+    if (hs->outro_type == OUTRO_V_bV_IV_I) {
+        if (is_bar1) {
+            // Bar 1: V9 -> bV9 -> IV9 chromatic ensemble hits
+            if (step16 == 0) {
+                emit_scripted_bass(frame, br, 7, 118);
+                emit_scripted_keys_9th(frame, last_voicing, kr, 7, 0, 116);
+                frame->drum_mask = 0x05; frame->drum_vel[0] = 118; frame->drum_vel[2] = 105;
+            } else if (step16 == 6) {
+                emit_scripted_bass(frame, br, 6, 116);
+                emit_scripted_keys_9th(frame, last_voicing, kr, 6, 0, 114);
+                frame->drum_mask = 0x03; frame->drum_vel[0] = 110; frame->drum_vel[1] = 112;
+            } else if (step16 == 12) {
+                emit_scripted_bass(frame, br, 5, 118);
+                emit_scripted_keys_9th(frame, last_voicing, kr, 5, is_min, 116);
+                frame->drum_mask = 0x06; frame->drum_vel[1] = 114; frame->drum_vel[2] = 98;
+            }
+        } else {
+            // Bar 2: Unison blues-box tag (1 -> b3 -> 3 -> 5 -> 6 -> b7) + #I9 pickup
+            static const int8_t TAG_OFF[6] = { 0, 3, 4, 7, 9, 10 };
+            static const uint8_t TAG_STEP[6] = { 0, 2, 4, 8, 10, 12 };
+            for (int i = 0; i < 6; i++) {
+                if (step16 == TAG_STEP[i]) {
+                    emit_scripted_bass(frame, br, TAG_OFF[i], 112);
+                    emit_scripted_keys_note(frame, last_voicing, (uint8_t)(kr + TAG_OFF[i]), 110);
+                }
+            }
+            if (step16 == 0 || step16 == 8) { frame->drum_mask |= 0x01; frame->drum_vel[0] = 110; }
+            if (step16 == 4 || step16 == 12) { frame->drum_mask |= 0x02; frame->drum_vel[1] = 106; }
+            if (step16 == 14) {
+                emit_scripted_bass(frame, br, 1, 120);
+                emit_scripted_keys_9th(frame, last_voicing, kr, 1, is_min, 118);
+                frame->drum_mask = 0x03; frame->drum_vel[0] = 108; frame->drum_vel[1] = 116;
+            }
+        }
+        return;
+    }
+
+    if (hs->outro_type == OUTRO_IV_I_TURN) {
+        if (is_bar1) {
+            // Bar 1: IV7 (beats 1-2) -> #IVdim7 (beats 3-4)
+            if (step16 == 0 || step16 == 4) {
+                emit_scripted_bass(frame, br, (step16 == 0) ? 5 : 0, 110);
+                emit_scripted_keys_chord(frame, last_voicing, four_deg, hs->root_semitone, 108);
+            } else if (step16 == 8 || step16 == 12) {
+                emit_scripted_bass(frame, br, 6, 112);
+                emit_scripted_keys_chord(frame, last_voicing, DEG_SHARP_IV_DIM7, hs->root_semitone, 110);
+            }
+            if (step16 == 0 || step16 == 8) { frame->drum_mask |= 0x01; frame->drum_vel[0] = 110; }
+            if (step16 == 4 || step16 == 12) { frame->drum_mask |= 0x02; frame->drum_vel[1] = 105; }
+            if (sub_slot == 0 || sub_slot == 2) { frame->drum_mask |= 0x04; frame->drum_vel[2] = 88; }
+        } else {
+            // Bar 2: I7 -> VI7 -> ii7 -> V7 -> #I9 -> I9
+            if (step16 == 0) {
+                emit_scripted_bass(frame, br, 7, 112);
+                emit_scripted_keys_chord(frame, last_voicing, root_deg, hs->root_semitone, 110);
+                frame->drum_mask = 0x05; frame->drum_vel[0] = 112; frame->drum_vel[2] = 95;
+            } else if (step16 == 4) {
+                emit_scripted_bass(frame, br, 9, 110);
+                emit_scripted_keys_chord(frame, last_voicing, DEG_VI7, hs->root_semitone, 108);
+                frame->drum_mask = 0x06; frame->drum_vel[1] = 106; frame->drum_vel[2] = 90;
+            } else if (step16 == 8) {
+                emit_scripted_bass(frame, br, 2, 112);
+                emit_scripted_keys_chord(frame, last_voicing, DEG_ii7, hs->root_semitone, 110);
+                frame->drum_mask = 0x05; frame->drum_vel[0] = 110; frame->drum_vel[2] = 92;
+            } else if (step16 == 12) {
+                emit_scripted_bass(frame, br, 7, 116);
+                emit_scripted_keys_chord(frame, last_voicing, DEG_V7, hs->root_semitone, 114);
+                frame->drum_mask = 0x06; frame->drum_vel[1] = 110; frame->drum_vel[2] = 96;
+            } else if (step16 == 14) {
+                emit_scripted_bass(frame, br, 1, 120);
+                emit_scripted_keys_9th(frame, last_voicing, kr, 1, is_min, 118);
+                frame->drum_mask = 0x03; frame->drum_vel[0] = 108; frame->drum_vel[1] = 116;
+            }
+        }
+        return;
+    }
+
+    // OUTRO_QUICK_1BAR (1 bar + stinger): V9 -> bV9 -> IV9 -> #I9 -> I9
+    if (step16 == 0) {
+        emit_scripted_bass(frame, br, 7, 118);
+        emit_scripted_keys_9th(frame, last_voicing, kr, 7, 0, 116);
+        frame->drum_mask = 0x05; frame->drum_vel[0] = 116; frame->drum_vel[2] = 100;
+    } else if (step16 == 4) {
+        emit_scripted_bass(frame, br, 6, 114);
+        emit_scripted_keys_9th(frame, last_voicing, kr, 6, 0, 112);
+        frame->drum_mask = 0x06; frame->drum_vel[1] = 110; frame->drum_vel[2] = 95;
+    } else if (step16 == 8) {
+        emit_scripted_bass(frame, br, 5, 116);
+        emit_scripted_keys_9th(frame, last_voicing, kr, 5, is_min, 114);
+        frame->drum_mask = 0x05; frame->drum_vel[0] = 114; frame->drum_vel[2] = 96;
+    } else if (step16 == 14) {
+        emit_scripted_bass(frame, br, 1, 120);
+        emit_scripted_keys_9th(frame, last_voicing, kr, 1, is_min, 118);
+        frame->drum_mask = 0x03; frame->drum_vel[0] = 108; frame->drum_vel[1] = 116;
+    }
+}
+
 void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, PerformanceFrame *frame, Voicing *last_voicing) {
     frame->bass_trigger = 0;
     frame->bass_vel = 0;
@@ -469,47 +818,6 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
     for (int d = 0; d < 4; d++) frame->drum_vel[d] = 0;
 
     if (!hs->is_playing) return;
-
-    if (hs->count_in_bars_remaining > 0) {
-        if (hs->current_subdiv == 0) {
-            frame->drum_mask = 0x08; // Rimshot click
-            frame->drum_vel[3] = 90;
-        }
-        return;
-    }
-
-    if (hs->ending_armed == 2) {
-        // Final resolution stinger: unified Root (I7) hit on Beat 1, then stop and ring out
-        if (hs->current_beat == 0 && hs->current_subdiv == 0) {
-            uint8_t curr_root = (uint8_t)(40 + (((hs->root_semitone % 12) + 8) % 12));
-            while (curr_root < 40) curr_root += 12;
-            while (curr_root > 51) curr_root -= 12;
-
-            frame->bass_trigger = 1;
-            frame->bass_note = curr_root;
-            frame->bass_vel = 127;
-
-            ScaleDegree root_deg = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_i7 : DEG_I7;
-            frame->comp_trigger = 1;
-            frame->comp_vel = 120;
-            frame->comp_voicing = voice_lead_select(*last_voicing, root_deg, hs->root_semitone, 0);
-            *last_voicing = frame->comp_voicing;
-
-            frame->drum_mask = 0x07; // Kick + Snare + Cymbal crash
-            frame->drum_vel[0] = 127;
-            frame->drum_vel[1] = 115;
-            frame->drum_vel[2] = 110;
-
-            hs->is_playing = 0;
-            hs->ending_armed = 0;
-            hs->ui_dirty = 1;
-        }
-        return;
-    }
-
-    if (hs->stop_time_counter > 0) {
-        if (hs->current_beat > 0 || hs->current_subdiv > 0) return;
-    }
 
     const GrooveTemplate *gt = &GROOVE_TEMPLATES[hs->drum_pattern % NUM_DRUM_PATTERNS];
     uint8_t sub_slot = 0xFF;
@@ -524,6 +832,49 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         else if (hs->current_subdiv == 6 && preset->swing < 30) sub_slot = 1;
         else if (hs->current_subdiv == offbeat_subdiv) sub_slot = 2;
         else if (hs->current_subdiv == 18 && preset->swing < 30) sub_slot = 3;
+    }
+
+    if (hs->ending_armed == ENDING_STINGER) {
+        // Final resolution stinger: unified Root (I9 / i7) hit on Beat 1, then stop and ring out
+        if (hs->current_beat == 0 && hs->current_subdiv == 0) {
+            uint8_t br = get_bass_root(hs->root_semitone);
+            uint8_t kr = get_keys_root(hs->root_semitone);
+            uint8_t is_min = (hs->form_mode == FORM_MINOR_BLUES);
+
+            frame->bass_trigger = 1;
+            frame->bass_note = br;
+            frame->bass_vel = 127;
+
+            emit_scripted_keys_9th(frame, last_voicing, kr, 0, is_min, 122);
+
+            frame->drum_mask = 0x07; // Kick + Snare + Cymbal crash
+            frame->drum_vel[0] = 127;
+            frame->drum_vel[1] = 115;
+            frame->drum_vel[2] = 112;
+
+            hs->is_playing = 0;
+            hs->ending_armed = ENDING_NONE;
+            hs->ui_dirty = 1;
+        }
+        return;
+    }
+
+    if (hs->ending_armed == ENDING_BAR_1 || hs->ending_armed == ENDING_BAR_2) {
+        if (sub_slot != 0xFF) {
+            render_scripted_outro_frame(hs, frame, last_voicing, sub_slot);
+        }
+        return;
+    }
+
+    if (hs->count_in_bars_remaining > 0) {
+        if (sub_slot != 0xFF) {
+            render_scripted_intro_frame(hs, frame, last_voicing, sub_slot);
+        }
+        return;
+    }
+
+    if (hs->stop_time_counter > 0) {
+        if (hs->current_beat > 0 || hs->current_subdiv > 0) return;
     }
 
     if (sub_slot != 0xFF) {
@@ -643,11 +994,11 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             }
         }
 
-        // Automatic phrase-end drum fills: Bar 12 (d_var > 25), Bar 4 & 8 (d_var > 65)
+        // Automatic phrase-end drum fills: Bar 12 (d_var > 25), Bar 4 & 8 (d_var > 65), or Outro Armed
         uint8_t is_phrase_end = (hs->current_bar == 11) || (d_var > 65 && (hs->current_bar == 3 || hs->current_bar == 7));
-        if ((is_phrase_end && d_full >= 25 && d_var > 25) || hs->fill_pending) {
+        if ((is_phrase_end && d_full >= 25 && d_var > 25) || hs->fill_pending || hs->ending_armed == ENDING_ARMED_NEXT_BAR) {
             if (hs->current_beat == 3) {
-                uint8_t is_turnaround_bar = (hs->current_bar == 11 || hs->fill_pending);
+                uint8_t is_turnaround_bar = (hs->current_bar == 11 || hs->fill_pending || hs->ending_armed == ENDING_ARMED_NEXT_BAR);
                 if (sub_slot == 0) {
                     frame->drum_mask |= 0x02;
                     int dv1 = (is_turnaround_bar ? 105 : 88) + j_vel;

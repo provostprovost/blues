@@ -19,6 +19,8 @@ run() { echo "== $1"; shift; "$@" || fail=1; }
 [ -f build/bluesbox.fwsc ] || { echo "run ./build.sh first"; exit 1; }
 
 run "FM-1 app on the host: the default script plays, screens and sound" sh tests/run_host.sh
+$CC -DSTANDALONE_TEST -Ifirmware/src -o "$OUT/test_blues_engine" tests/test_blues_engine.c firmware/src/blues_harmony.c firmware/src/blues_arranger.c firmware/src/dsp_voices.c firmware/src/panel_input.c firmware/src/ui_screens.c -lm
+run "Blues Box engine unit tests (harmony, arranger, DSP, panel, V2 footswitch/intros/outros)" "$OUT/test_blues_engine"
 run "SMK-37 app on the host: the default script" env BOARD=smk37 sh tests/run_host.sh
 run "FM-1 MIDI: USB, the TRS jack, a clock, the channel" sh tests/run_host.sh tests/scripts/midi.txt
 run "SMK-37: velocity, a pad, an outer key, the pitch wheel" env BOARD=smk37 sh tests/run_host.sh tests/scripts/smk37.txt
