@@ -826,5 +826,5 @@ void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t 
 void ui_render_splash(void) {
     hal_blit_sprite_2x(0, 0, SPLASH_ART_W, SPLASH_ART_H, SPLASH_ART_PAL, SPLASH_ART_DATA);
     hal_fill_rect(0, 220, 240, 20, RGB(12, 12, 18));
-    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.2", RGB(240, 195, 90), 1);
+    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.2.1", RGB(240, 195, 90), 1);
 }
