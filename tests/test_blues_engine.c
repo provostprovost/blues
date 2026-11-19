@@ -513,19 +513,19 @@ void test_stage4_panel_ui(void) {
     assert(hs.ending_armed == ENDING_ARMED_NEXT_BAR);
     hs.ending_armed = ENDING_NONE;
 
-    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Footswitch B while playing -> Escalate Heat 3->4 + Drum Fill
-    assert(hs.heat_level == 4);
-    assert(hs.fill_pending == 1);
-    hs.fill_pending = 0;
-    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Second press -> Escalate Heat 4->5 + Drum Fill
-    assert(hs.heat_level == 5);
-    assert(hs.fill_pending == 1);
-
-    panel_handle_midi_in(&hs, 0xB0, 82, 127); // Footswitch C while playing -> Stop Time Break
-    assert(hs.queued_cue == CUE_STOP_TIME);
-
-    panel_handle_midi_in(&hs, 0xB0, 83, 127); // Footswitch D while playing -> Vamp Toggle
+    panel_handle_midi_in(&hs, 0xB0, 81, 127); // Footswitch B while playing -> Vamp Toggle
     assert(hs.queued_cue == CUE_TO_VAMP);
+    hs.queued_cue = CUE_NONE;
+
+    panel_handle_midi_in(&hs, 0xB0, 82, 127); // Footswitch C while playing -> Heat Down 3->2
+    assert(hs.heat_level == 2);
+    assert(hs.fill_pending == 0);
+
+    panel_handle_midi_in(&hs, 0xB0, 83, 127); // Footswitch D while playing -> Heat Up 2->3
+    assert(hs.heat_level == 3);
+    panel_handle_midi_in(&hs, 0xB0, 83, 127); // Second press -> Heat Up 3->4 (no drum fill)
+    assert(hs.heat_level == 4);
+    assert(hs.fill_pending == 0);
 
     panel_handle_midi_in(&hs, 0xF8, 0, 0); // MIDI Clock
     assert(hs.ext_clock_active == 1);
@@ -733,14 +733,16 @@ void test_stage6_v2_features(void) {
     assert(hs.count_in_enabled == INTRO_AUTO);
     assert(hs.outro_type == OUTRO_CLASSIC_SLIDE);
 
-    // PC 2 while stopped cycles Intro mode (INTRO_AUTO -> INTRO_V7_1BAR)
-    panel_handle_midi_in(&hs, 0xC0, 2, 0);
+    // PC 1 (Switch B) while stopped cycles Intro mode (INTRO_AUTO -> INTRO_V7_1BAR)
+    panel_handle_midi_in(&hs, 0xC0, 1, 0);
     assert(hs.count_in_enabled == INTRO_V7_1BAR);
     // Cycle back to INTRO_AUTO
     hs.count_in_enabled = INTRO_AUTO;
-    // PC 3 while stopped cycles Outro style
+    // PC 2 (Switch C) / PC 3 (Switch D) while stopped step Heat Down/Up
+    panel_handle_midi_in(&hs, 0xC0, 2, 0);
+    assert(hs.heat_level == 2);
     panel_handle_midi_in(&hs, 0xC0, 3, 0);
-    assert(hs.outro_type == OUTRO_V_bV_IV_I);
+    assert(hs.heat_level == 3);
     // PC 0 starts playback with Intro armed
     panel_handle_midi_in(&hs, 0xC0, 0, 0);
     assert(hs.is_playing == 1);
@@ -753,14 +755,19 @@ void test_stage6_v2_features(void) {
     assert(hs.is_playing == 0);
     assert(hs.ending_armed == ENDING_NONE);
 
-    // 2. Chocolate Switch B (Note 62 / CC 21) while stopped -> Cycle starting Heat 3->4->5->1
+    // 2. Chocolate Switch D (Note 65 / CC 23 / PC 3) & Switch C (Note 64 / CC 22 / PC 2) while stopped -> Clamped Heat
     harmony_init(&hs);
     assert(hs.heat_level == 3);
-    panel_handle_midi_in(&hs, 0x90, 62, 127);
+    panel_handle_midi_in(&hs, 0x90, 65, 127); // Note 65 (Sw D): 3 -> 4
     assert(hs.heat_level == 4 && hs.is_playing == 0);
-    panel_handle_midi_in(&hs, 0xB0, 21, 127);
+    panel_handle_midi_in(&hs, 0xB0, 23, 127); // CC 23 (Sw D): 4 -> 5
     assert(hs.heat_level == 5);
-    panel_handle_midi_in(&hs, 0xC0, 1, 0);
+    panel_handle_midi_in(&hs, 0xC0, 3, 0);    // PC 3 (Sw D): clamped at 5
+    assert(hs.heat_level == 5);
+    panel_handle_midi_in(&hs, 0x90, 64, 127); // Note 64 (Sw C): 5 -> 4
+    assert(hs.heat_level == 4);
+    harmony_set_heat_level(&hs, &p, 1, 0);
+    panel_handle_midi_in(&hs, 0xB0, 22, 127); // CC 22 (Sw C): clamped at 1
     assert(hs.heat_level == 1 && hs.fullness == 25 && hs.variation == 15);
 
     // 3. Verify all Intro styles emit Bass + Keys + Drum notes while keeping current_bar == 0
@@ -861,16 +868,39 @@ void test_stage7_escalation_heat(void) {
         assert(hs.variation == EXP_VAR[lvl - 1]);
     }
 
-    // Verify 5 -> 1 drop while playing does NOT trigger a drum fill, whereas 1 -> 2 DOES
+    // Verify Switch D (Heat Up, clamped 5) & Switch C (Heat Down, clamped 1) with no drum fill, plus Switch B (Vamp)
     hs.is_playing = 1;
     hs.fill_pending = 0;
     harmony_set_heat_level(&hs, &p, 5, 0);
-    panel_handle_midi_in(&hs, 0xC0, 1, 0); // Switch B: 5 -> 1
-    assert(hs.heat_level == 1);
+    panel_handle_midi_in(&hs, 0xC0, 3, 0); // Switch D at 5 -> stays clamped at 5
+    assert(hs.heat_level == 5);
     assert(hs.fill_pending == 0);
-    panel_handle_midi_in(&hs, 0xC0, 1, 0); // Switch B: 1 -> 2
+    panel_handle_midi_in(&hs, 0xC0, 2, 0); // Switch C: 5 -> 4
+    assert(hs.heat_level == 4);
+    assert(hs.fill_pending == 0);
+    harmony_set_heat_level(&hs, &p, 1, 0);
+    panel_handle_midi_in(&hs, 0xC0, 2, 0); // Switch C at 1 -> stays clamped at 1
+    assert(hs.heat_level == 1);
+    panel_handle_midi_in(&hs, 0xC0, 3, 0); // Switch D: 1 -> 2
     assert(hs.heat_level == 2);
-    assert(hs.fill_pending == 1);
+    assert(hs.fill_pending == 0);
+
+    // Verify Minor Blues i-iv Vamp (2 bars i7, 2 bars iv7) via Switch B
+    hs.form_mode = FORM_MINOR_BLUES;
+    hs.queued_cue = CUE_NONE;
+    panel_handle_midi_in(&hs, 0xC0, 1, 0); // Switch B: queue Vamp
+    assert(hs.queued_cue == CUE_TO_VAMP);
+    seq_advance_bar(&hs);
+    assert(hs.is_vamp_mode == 1 && hs.vamp_bar_counter == 0);
+    assert(harmony_get_current_bar_slot(&hs).primary == DEG_i7);
+    seq_advance_bar(&hs);
+    assert(hs.vamp_bar_counter == 1 && harmony_get_current_bar_slot(&hs).primary == DEG_i7);
+    seq_advance_bar(&hs);
+    assert(hs.vamp_bar_counter == 2 && harmony_get_current_bar_slot(&hs).primary == DEG_iv7);
+    seq_advance_bar(&hs);
+    assert(hs.vamp_bar_counter == 3 && harmony_get_current_bar_slot(&hs).primary == DEG_iv7);
+    hs.is_vamp_mode = 0;
+    hs.form_mode = FORM_12BAR;
 
     // Verify DSP volume escalation (Level 1 < Level 3 < Level 5)
     dsp_init();

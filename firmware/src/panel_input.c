@@ -224,12 +224,11 @@ static uint8_t step_heat_cycle(HarmonyState *hs, PresetConfig *p, int8_t dir, ui
     uint8_t cur = (hs->heat_level >= 1 && hs->heat_level <= 5) ? hs->heat_level : 3;
     uint8_t next;
     if (dir < 0) {
-        next = (cur <= 1) ? 5 : (uint8_t)(cur - 1);
+        next = (cur <= 1) ? 1 : (uint8_t)(cur - 1);
     } else {
-        next = (cur >= 5) ? 1 : (uint8_t)(cur + 1);
+        next = (cur >= 5) ? 5 : (uint8_t)(cur + 1);
     }
-    uint8_t do_fill = (next > cur && hs->is_playing) ? 1 : 0;
-    harmony_set_heat_level(hs, p, next, do_fill);
+    harmony_set_heat_level(hs, p, next, 0);
     set_toast(hs, ms_now, HEAT_TOAST_LABELS[next - 1]);
     return next;
 }
@@ -254,26 +253,26 @@ static void handle_footswitch(HarmonyState *hs, uint8_t sw) {
                 hs->ui_dirty = 1;
             }
             break;
-        case 1: // Switch B: Escalate Band Heat 1->2->3->4->5 (with Beat-4 drum pickup) -> 1 (direct drop)
-            step_heat_cycle(hs, 0, 1, ms_now);
-            break;
-        case 2: // Switch C: Cycle Intro Mode (stopped) / Stop-Time Break (playing)
+        case 1: // Switch B: Cycle Intro Mode (stopped) / Vamp Toggle (playing)
             if (!hs->is_playing) {
                 hs->count_in_enabled = (uint8_t)((hs->count_in_enabled + 1) % NUM_INTRO_MODES);
                 set_toast(hs, ms_now, INTRO_TOAST_LABELS[hs->count_in_enabled]);
             } else {
-                hs->queued_cue = CUE_STOP_TIME;
+                if (hs->queued_cue == CUE_TO_VAMP || hs->queued_cue == CUE_TO_12BAR) {
+                    hs->queued_cue = CUE_NONE;
+                    set_toast(hs, ms_now, "VAMP CUE CANCELLED");
+                } else {
+                    hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP);
+                    set_toast(hs, ms_now, hs->is_vamp_mode ? "12-BAR NEXT BAR" : "VAMP NEXT BAR");
+                }
             }
             hs->ui_dirty = 1;
             break;
-        case 3: // Switch D: Cycle Outro Style (stopped) / Vamp Toggle (playing)
-            if (!hs->is_playing) {
-                hs->outro_type = (OutroType)(((uint8_t)hs->outro_type + 1) % NUM_OUTRO_TYPES);
-                set_toast(hs, ms_now, OUTRO_TOAST_LABELS[(uint8_t)hs->outro_type]);
-            } else {
-                hs->queued_cue = (hs->is_vamp_mode ? CUE_TO_12BAR : CUE_TO_VAMP);
-            }
-            hs->ui_dirty = 1;
+        case 2: // Switch C: Band Heat Down (5->4->3->2->1, clamped at 1)
+            step_heat_cycle(hs, 0, -1, ms_now);
+            break;
+        case 3: // Switch D: Band Heat Up (1->2->3->4->5, clamped at 5)
+            step_heat_cycle(hs, 0, 1, ms_now);
             break;
     }
 }
@@ -844,8 +843,8 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
                 hal_set_key_led(k, 0);
             }
         }
-    } else if (!sel_held) {
-        // Classic blues phrasing LED guide (both when playing AND when stopped):
+    } else {
+        // Classic blues phrasing LED guide (both when playing, stopped, and while holding SEL to preview key changes):
         // Current chord root = FULL WHITE, other scale notes = HALF WHITE (glow), non-scale = OFF.
         uint8_t chord_root = 0;
         const uint8_t *scale = 0;
@@ -866,21 +865,6 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
             } else {
                 hal_set_key_led(k, 0);
                 hal_set_key_led_glow(k, 0);
-            }
-        }
-    } else {
-        // Stopped or SEL held: all keys backlit for navigation & section cues
-        for (uint8_t k = 0; k < 27; k++) {
-            hal_set_key_led_glow(k, 0);
-            if (k < 12) {
-                uint8_t semitone = (uint8_t)((KEY0_OFFSET + k) % 12);
-                if (semitone == hs->root_semitone && root_blink) {
-                    hal_set_key_led(k, 0);
-                } else {
-                    hal_set_key_led(k, 1);
-                }
-            } else {
-                hal_set_key_led(k, 1);
             }
         }
     }

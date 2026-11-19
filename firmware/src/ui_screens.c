@@ -68,6 +68,8 @@ static uint8_t g_last_toast_active = 0;
 static uint32_t g_last_toast_until = 0;
 static uint8_t g_last_stop_time = 0xFF;
 static uint8_t g_last_vamp = 0xFF;
+static uint8_t g_last_vamp_bar = 0xFF;
+static uint8_t g_last_queued_cue = 0xFF;
 static uint8_t g_last_ending = 0xFF;
 static uint8_t g_last_queued_key = 0xFF;
 static uint8_t g_last_intro_mode = 0xFF;
@@ -130,6 +132,8 @@ void ui_init(void) {
     g_last_toast_until = 0;
     g_last_stop_time = 0xFF;
     g_last_vamp = 0xFF;
+    g_last_vamp_bar = 0xFF;
+    g_last_queued_cue = 0xFF;
     g_last_ending = 0xFF;
     g_last_queued_key = 0xFF;
     g_last_intro_mode = 0xFF;
@@ -546,8 +550,24 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
         } else if (hs->stop_time_counter > 0) {
             status_str = "STOP-TIME BREAK";
             status_col = RGB(255, 80, 80);
+        } else if (hs->queued_cue == CUE_TO_VAMP || hs->queued_cue == CUE_TO_12BAR) {
+            status_str = (hs->queued_cue == CUE_TO_VAMP) ? "VAMP NEXT BAR" : "12-BAR NEXT BAR";
+            status_col = RGB(255, 200, 60);
         } else if (hs->is_vamp_mode) {
-            status_str = "VAMP LOOP ACTIVE";
+            char c1[12], c4[12];
+            ScaleDegree d1 = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_i7 : DEG_I7;
+            ScaleDegree d4 = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_iv7 : DEG_IV7;
+            format_chord_str(c1, hs->root_semitone, d1);
+            format_chord_str(c4, hs->root_semitone, d4);
+            int p = 0;
+            append_str(status_buf, &p, 34, "VAMP ");
+            append_str(status_buf, &p, 34, c1);
+            append_str(status_buf, &p, 34, "/");
+            append_str(status_buf, &p, 34, c4);
+            append_str(status_buf, &p, 34, " [");
+            if (p < 32) status_buf[p++] = (char)('1' + (hs->vamp_bar_counter & 3u));
+            append_str(status_buf, &p, 34, "/4]");
+            status_buf[p] = '\0';
             status_col = RGB(80, 200, 255);
         } else if (hs->has_queued_key) {
             status_str = "KEY MOD QUEUED";
@@ -749,6 +769,8 @@ void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t 
         uint8_t stop_time_active = (hs->stop_time_counter > 0);
         uint8_t status_flags_changed = (stop_time_active != g_last_stop_time) ||
                                        (hs->is_vamp_mode != g_last_vamp) ||
+                                       (hs->vamp_bar_counter != g_last_vamp_bar) ||
+                                       ((uint8_t)hs->queued_cue != g_last_queued_cue) ||
                                        (hs->ending_armed != g_last_ending) ||
                                        (hs->has_queued_key != g_last_queued_key) ||
                                        (hs->count_in_enabled != g_last_intro_mode) ||
@@ -768,6 +790,8 @@ void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t 
         g_last_toast_until = hs->toast_until_ms;
         g_last_stop_time = stop_time_active;
         g_last_vamp = hs->is_vamp_mode;
+        g_last_vamp_bar = hs->vamp_bar_counter;
+        g_last_queued_cue = (uint8_t)hs->queued_cue;
         g_last_ending = hs->ending_armed;
         g_last_queued_key = hs->has_queued_key;
         g_last_intro_mode = hs->count_in_enabled;

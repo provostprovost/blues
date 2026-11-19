@@ -183,16 +183,16 @@ void harmony_start_playback(HarmonyState *hs, GrooveStyle groove, uint8_t force_
 }
 
 BarSlot harmony_get_current_bar_slot(const HarmonyState *hs) {
+    ScaleDegree root_deg = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_i7 : DEG_I7;
+    ScaleDegree four_deg = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_iv7 : DEG_IV7;
+
     if (hs->is_vamp_mode) {
         BarSlot slot;
-        slot.primary = (hs->vamp_bar_counter < 2) ? DEG_I7 : DEG_IV7;
+        slot.primary = (hs->vamp_bar_counter < 2) ? root_deg : four_deg;
         slot.secondary = slot.primary;
         slot.has_split = 0;
         return slot;
     }
-
-    ScaleDegree root_deg = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_i7 : DEG_I7;
-    ScaleDegree four_deg = (hs->form_mode == FORM_MINOR_BLUES) ? DEG_iv7 : DEG_IV7;
 
     if (hs->ending_armed == ENDING_STINGER) {
         BarSlot slot = { root_deg, root_deg, 0 };
@@ -248,7 +248,7 @@ BarSlot harmony_get_current_bar_slot(const HarmonyState *hs) {
     }
     if (hs->form_mode == FORM_I_IV_VAMP) {
         BarSlot slot;
-        slot.primary = (hs->current_bar % 2 == 0) ? DEG_I7 : DEG_IV7;
+        slot.primary = (hs->current_bar % 2 == 0) ? root_deg : four_deg;
         slot.secondary = slot.primary;
         slot.has_split = 0;
         return slot;
