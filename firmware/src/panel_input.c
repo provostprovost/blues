@@ -809,23 +809,28 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
 
 void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
     (void)active_preset_idx;
-    uint8_t play_led = hs->is_playing ? 1 : 0;
+    uint16_t btns_mask = hal_get_btns_mask();
+
+    // Soft dim backlight on all 14 function buttons so they stay visible in low light;
+    // held buttons and selected active states light up full bright.
+    for (uint8_t b = 0; b < 14; b++) {
+        hal_set_btn_led_glow(b, 1);
+        if (b != BTN_PLAY) {
+            hal_set_btn_led(b, (btns_mask & (1u << b)) ? 1 : 0);
+        }
+    }
+    if (hs->is_vamp_mode || hs->queued_cue == CUE_TO_VAMP) hal_set_btn_led(BTN_ENV, 1);
+    if (hs->stop_time_counter > 0 || hs->queued_cue == CUE_STOP_TIME) hal_set_btn_led(BTN_SEQ, 1);
+    if (hs->form_mode != FORM_MINOR_BLUES) hal_set_btn_led(BTN_LFO, 1);
+
+    uint8_t play_led = (hs->is_playing || (btns_mask & (1u << BTN_PLAY))) ? 1 : 0;
     if (hs->is_playing && hs->ending_armed != ENDING_NONE) {
         play_led = (hs->current_subdiv < 12) ? 1 : 0; // Blink PLAY LED when an ending is queued/active
     }
     hal_set_btn_led(BTN_PLAY, play_led);
-    uint8_t rec_led = 0;
-    if (!hs->is_playing) {
-        rec_led = (hs->count_in_enabled != INTRO_OFF) ? 1 : 0;
-    } else if (hs->ending_armed == ENDING_ARMED_NEXT_BAR) {
-        rec_led = (hs->current_subdiv < 12) ? 1 : 0;
-    } else {
-        rec_led = (hs->current_beat == 0 && hs->current_subdiv < 4) ? 1 : 0;
-    }
-    hal_set_btn_led(BTN_REC, rec_led);
 
-    uint8_t sel_held = (hal_get_btns_mask() & (1u << BTN_SEL)) != 0;
-    uint8_t save_held = (hal_get_btns_mask() & (1u << BTN_SAVE)) != 0;
+    uint8_t sel_held = (btns_mask & (1u << BTN_SEL)) != 0;
+    uint8_t save_held = (btns_mask & (1u << BTN_SAVE)) != 0;
     uint8_t glo_held = hal_get_glo_held();
     uint8_t root_blink = (hs->is_playing && hs->current_beat == 0 && hs->current_subdiv < 4);
 
