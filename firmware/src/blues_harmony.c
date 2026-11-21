@@ -31,6 +31,17 @@ static const BarSlot FORM_8BAR_GRID[8] = {
     {DEG_I7, DEG_I7, 0}, {DEG_V7, DEG_V7, 0},  {DEG_I7, DEG_I7, 0},   {DEG_V7, DEG_V7, 0}
 };
 
+static const BarSlot FORM_RIGHTEOUS_GRID[8] = {
+    {DEG_I7, DEG_I7, 0},       {DEG_bVII7, DEG_bVII7, 0},
+    {DEG_IV7, DEG_IV7, 0},     {DEG_I7, DEG_I7, 0},
+    {DEG_I7, DEG_I7, 0},       {DEG_bVII7, DEG_bVII7, 0},
+    {DEG_IV7, DEG_IV7, 0},     {DEG_I7, DEG_I7, 0}
+};
+
+static uint8_t harmony_form_bars(FormMode mode) {
+    return (mode == FORM_8BAR || mode == FORM_I_bVII_IV) ? 8 : 12;
+}
+
 static const BarSlot FORM_MINOR_BLUES_GRID[12] = {
     {DEG_i7, DEG_i7, 0},   {DEG_i7, DEG_i7, 0},   {DEG_i7, DEG_i7, 0}, {DEG_i7, DEG_i7, 0},
     {DEG_iv7, DEG_iv7, 0}, {DEG_iv7, DEG_iv7, 0}, {DEG_i7, DEG_i7, 0}, {DEG_i7, DEG_i7, 0},
@@ -126,6 +137,8 @@ void harmony_set_heat_level(HarmonyState *hs, PresetConfig *p, uint8_t level, ui
 IntroMode harmony_resolve_intro_style(IntroMode mode, GrooveStyle groove) {
     if (mode != INTRO_AUTO) return mode;
     switch (groove) {
+        case GROOVE_SWAMP_ROCK:
+            return INTRO_DRONE_1BAR;
         case GROOVE_STRAIGHT_ROCK:
         case GROOVE_BOOGIE_WOOGIE:
         case GROOVE_TRAIN_BEAT:
@@ -150,6 +163,7 @@ uint8_t harmony_intro_bar_count(IntroMode concrete_mode) {
     switch (concrete_mode) {
         case INTRO_V7_1BAR:
         case INTRO_CLICK_1BAR:
+        case INTRO_DRONE_1BAR:
             return 1;
         case INTRO_TURNAROUND_2BAR:
         case INTRO_FUNK_2BAR:
@@ -243,15 +257,11 @@ BarSlot harmony_get_current_bar_slot(const HarmonyState *hs) {
     if (hs->form_mode == FORM_8BAR) {
         return FORM_8BAR_GRID[hs->current_bar % 8];
     }
+    if (hs->form_mode == FORM_I_bVII_IV) {
+        return FORM_RIGHTEOUS_GRID[hs->current_bar % 8];
+    }
     if (hs->form_mode == FORM_MINOR_BLUES) {
         return FORM_MINOR_BLUES_GRID[hs->current_bar % 12];
-    }
-    if (hs->form_mode == FORM_I_IV_VAMP) {
-        BarSlot slot;
-        slot.primary = (hs->current_bar % 2 == 0) ? root_deg : four_deg;
-        slot.secondary = slot.primary;
-        slot.has_split = 0;
-        return slot;
     }
 
     // FORM_12BAR and standard blues variations
@@ -310,7 +320,7 @@ BarSlot harmony_get_current_bar_slot(const HarmonyState *hs) {
 BarSlot harmony_get_next_bar_slot(const HarmonyState *hs) {
     HarmonyState next_hs = *hs;
     next_hs.current_bar++;
-    uint8_t max_bars = (hs->form_mode == FORM_8BAR) ? 8 : 12;
+    uint8_t max_bars = harmony_form_bars(hs->form_mode);
     if (next_hs.current_bar >= max_bars) {
         next_hs.current_bar = 0;
         next_hs.chorus_count++;
@@ -355,7 +365,7 @@ void seq_advance_bar(HarmonyState *hs) {
                 hs->hold_chord_active ^= 1;
                 break;
             case CUE_FORCE_TURNAROUND:
-                hs->current_bar = (hs->form_mode == FORM_8BAR) ? 6 : 10;
+                hs->current_bar = (harmony_form_bars(hs->form_mode) == 8) ? 6 : 10;
                 return;
             case CUE_STOP_TIME:
                 hs->stop_time_counter = 4;
@@ -413,7 +423,7 @@ void seq_advance_bar(HarmonyState *hs) {
     }
 
     hs->current_bar++;
-    uint8_t max_bars = (hs->form_mode == FORM_8BAR) ? 8 : 12;
+    uint8_t max_bars = harmony_form_bars(hs->form_mode);
     if (hs->current_bar >= max_bars) {
         hs->current_bar = 0;
         hs->chorus_count++;

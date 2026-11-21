@@ -180,6 +180,13 @@ void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_m
     }
 }
 
+void dsp_extend_drone_gate(uint32_t gate_samples) {
+    if (g_bass.active) g_bass.gate_samples = gate_samples;
+    for (int i = 0; i < 4; i++) {
+        if (g_keys[i].active) g_keys[i].gate_samples = gate_samples;
+    }
+}
+
 void dsp_set_lead_play_style(uint8_t play_style) {
     g_lead_play_style = play_style % NUM_LEAD_PLAY_STYLES;
     if (g_lead_play_style != LEAD_PLAY_LEGATO_GLIDE) {

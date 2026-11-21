@@ -69,12 +69,12 @@ void test_stage1_harmony(void) {
     // 4. Test all 6 FormMode progressions
     FormMode forms[6] = {
         FORM_12BAR, FORM_QUICK_CHANGE, FORM_145_OPENING,
-        FORM_8BAR, FORM_MINOR_BLUES, FORM_I_IV_VAMP
+        FORM_8BAR, FORM_MINOR_BLUES, FORM_I_bVII_IV
     };
     for (int f = 0; f < 6; f++) {
         hs.form_mode = forms[f];
         hs.chorus_count = 1; // Test standard form (past intro)
-        uint8_t max_b = (forms[f] == FORM_8BAR) ? 8 : 12;
+        uint8_t max_b = (forms[f] == FORM_8BAR || forms[f] == FORM_I_bVII_IV) ? 8 : 12;
         for (uint8_t b = 0; b < max_b; b++) {
             hs.current_bar = b;
             BarSlot s = harmony_get_current_bar_slot(&hs);
@@ -96,10 +96,12 @@ void test_stage1_harmony(void) {
     hs.current_bar = 1;
     assert(harmony_get_current_bar_slot(&hs).primary == DEG_V7);
 
-    hs.form_mode = FORM_I_IV_VAMP;
+    hs.form_mode = FORM_I_bVII_IV;
     hs.current_bar = 0;
     assert(harmony_get_current_bar_slot(&hs).primary == DEG_I7);
     hs.current_bar = 1;
+    assert(harmony_get_current_bar_slot(&hs).primary == DEG_bVII7);
+    hs.current_bar = 2;
     assert(harmony_get_current_bar_slot(&hs).primary == DEG_IV7);
 
     // 5. Test Opening Variations (Chorus 0 only)
@@ -771,9 +773,9 @@ void test_stage6_v2_features(void) {
     assert(hs.heat_level == 1 && hs.fullness == 25 && hs.variation == 15);
 
     // 3. Verify all Intro styles emit Bass + Keys + Drum notes while keeping current_bar == 0
-    IntroMode intro_modes[5] = { INTRO_V7_1BAR, INTRO_TURNAROUND_2BAR, INTRO_FUNK_2BAR, INTRO_BAND_4BAR, INTRO_CLICK_1BAR };
-    uint8_t expected_bars[5] = { 1, 2, 2, 4, 1 };
-    for (int m = 0; m < 5; m++) {
+    IntroMode intro_modes[6] = { INTRO_V7_1BAR, INTRO_TURNAROUND_2BAR, INTRO_FUNK_2BAR, INTRO_BAND_4BAR, INTRO_CLICK_1BAR, INTRO_DRONE_1BAR };
+    uint8_t expected_bars[6] = { 1, 2, 2, 4, 1, 1 };
+    for (int m = 0; m < 6; m++) {
         harmony_init(&hs);
         hs.count_in_enabled = (uint8_t)intro_modes[m];
         harmony_start_playback(&hs, GROOVE_TEXAS_SHUFFLE, 0);
@@ -798,7 +800,10 @@ void test_stage6_v2_features(void) {
         assert(hs.count_in_bars_remaining == 0);
         assert(hs.current_bar == 0); // Now lands cleanly on Chorus 1 Bar 1!
         assert(drum_hits >= 4);
-        if (intro_modes[m] != INTRO_CLICK_1BAR) {
+        if (intro_modes[m] == INTRO_DRONE_1BAR) {
+            assert(bass_hits == 1);
+            assert(keys_hits == 1);
+        } else if (intro_modes[m] != INTRO_CLICK_1BAR) {
             assert(bass_hits >= 4);
             assert(keys_hits >= 3);
         }
@@ -938,6 +943,21 @@ void test_stage7_escalation_heat(void) {
         hs.heat_level = lvl;
         ui_render(&hs, &p, 0, 0, 1);
     }
+
+    // Verify FORM_I_bVII_IV (8-bar I-bVII-IV-I) and GROOVE_SWAMP_ROCK
+    harmony_init(&hs);
+    arranger_apply_groove_defaults(&hs, &p, GROOVE_SWAMP_ROCK);
+    assert(p.groove_style == GROOVE_SWAMP_ROCK && hs.drum_pattern == GROOVE_SWAMP_ROCK);
+    hs.form_mode = FORM_I_bVII_IV;
+    static const ScaleDegree EXP_RGT[8] = {
+        DEG_I7, DEG_bVII7, DEG_IV7, DEG_I7, DEG_I7, DEG_bVII7, DEG_IV7, DEG_I7
+    };
+    for (uint8_t b = 0; b < 8; b++) {
+        assert(hs.current_bar == b);
+        assert(harmony_get_current_bar_slot(&hs).primary == EXP_RGT[b]);
+        seq_advance_bar(&hs);
+    }
+    assert(hs.current_bar == 0 && hs.chorus_count == 1);
 
     printf("[Stage 7] 5-Level Jam Escalation & Stage Visuals passed!\n");
 }

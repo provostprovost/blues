@@ -74,9 +74,7 @@ static void format_user_preset_name(char *dst, uint8_t slot_1based) {
 }
 
 static void compute_scale_context(const HarmonyState *hs, uint8_t *out_chord_root, const uint8_t **out_scale) {
-    static const uint8_t MAJ_BLUES[12] = { 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0 }; // 1, 2, b3, 3, 5, 6
-    static const uint8_t MIN_BLUES[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7
-    uint8_t use_minor_scale = (hs->form_mode == FORM_MINOR_BLUES);
+    static const uint8_t BLUES_SCALE[12] = { 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0 }; // 1, b3, 4, b5, 5, b7 across all forms
     uint8_t chord_root = (uint8_t)(hs->root_semitone % 12);
 
     if (hs->is_playing) {
@@ -84,15 +82,9 @@ static void compute_scale_context(const HarmonyState *hs, uint8_t *out_chord_roo
         ScaleDegree deg = (hs->current_beat >= 2 && slot.has_split) ? slot.secondary : slot.primary;
         ScaleDegreeInfo dinfo = harmony_get_degree_info(deg);
         chord_root = (uint8_t)((hs->root_semitone + dinfo.semitone_offset) % 12);
-        if (!use_minor_scale) {
-            if (deg == DEG_IV7 || deg == DEG_iv7 || deg == DEG_V7 || deg == DEG_v7 ||
-                deg == DEG_bVI7 || deg == DEG_bVII7 || deg == DEG_SHARP_IV_DIM7) {
-                use_minor_scale = 1;
-            }
-        }
     }
     *out_chord_root = chord_root;
-    *out_scale = use_minor_scale ? MIN_BLUES : MAJ_BLUES;
+    *out_scale = BLUES_SCALE;
 }
 
 static uint8_t resolve_easy_lead_note(const HarmonyState *hs, uint8_t note) {
@@ -211,7 +203,7 @@ void panel_clear_autosave_needed(void) {
 
 static const char *INTRO_TOAST_LABELS[NUM_INTRO_MODES] = {
     "INTRO: OFF", "INTRO: AUTO", "INTRO: 1B V7", "INTRO: 2B TURN",
-    "INTRO: 2B FUNK", "INTRO: 4B BAND", "INTRO: 1B CLICK"
+    "INTRO: 2B FUNK", "INTRO: 4B BAND", "INTRO: 1B CLICK", "INTRO: 1B DRONE"
 };
 static const char *OUTRO_TOAST_LABELS[NUM_OUTRO_TYPES] = {
     "OUTRO: CLASSIC SLIDE", "OUTRO: V-bV-IV-I", "OUTRO: IV-I TURN", "OUTRO: 1B QUICK", "OUTRO: STINGER"
@@ -640,7 +632,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                 p->outro_type = (uint8_t)hs->outro_type;
                 set_toast(hs, ms_now, OUTRO_TOAST_LABELS[(uint8_t)hs->outro_type]);
             } else {
-                hs->form_mode = (FormMode)wrap_step_u8((uint8_t)hs->form_mode, delta, 5);
+                hs->form_mode = (FormMode)wrap_step_u8((uint8_t)hs->form_mode, delta, NUM_FORM_MODES);
                 p->form_mode = hs->form_mode;
             }
         } else if (is_mixer) {

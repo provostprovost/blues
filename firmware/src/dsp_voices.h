@@ -9,6 +9,7 @@ void dsp_init(void);
 void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *preset);
 void dsp_note_on_bass(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode);
 void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_mode);
+void dsp_extend_drone_gate(uint32_t gate_samples);
 void dsp_note_on_lead(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode);
 void dsp_note_on_lead_ex(uint8_t key_note, uint8_t target_note, uint8_t velocity, uint8_t tuning_mode);
 void dsp_note_off_lead(uint8_t midi_note);

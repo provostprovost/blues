@@ -36,8 +36,10 @@ typedef enum {
     FORM_145_OPENING,
     FORM_8BAR,
     FORM_MINOR_BLUES,
-    FORM_I_IV_VAMP
+    FORM_I_bVII_IV
 } FormMode;
+
+#define NUM_FORM_MODES 6
 
 typedef enum {
     VAR_FLAT_FOUR = 0,
@@ -64,10 +66,11 @@ typedef enum {
     INTRO_TURNAROUND_2BAR,   // 2-bar classic blues contrapuntal turnaround
     INTRO_FUNK_2BAR,         // 2-bar syncopated funk/soul pickup
     INTRO_BAND_4BAR,         // 4-bar V7 | IV7 | I7-IV7 | I7-V7 intro
-    INTRO_CLICK_1BAR         // 1-bar rimshot count-in
+    INTRO_CLICK_1BAR,        // 1-bar rimshot count-in
+    INTRO_DRONE_1BAR         // 1-bar downbeat root+5th drone + 2, 3, 4 ticks
 } IntroMode;
 
-#define NUM_INTRO_MODES 7
+#define NUM_INTRO_MODES 8
 
 typedef enum {
     ENDING_NONE = 0,
@@ -107,10 +110,11 @@ typedef enum {
     GROOVE_NOLA_FUNK,
     GROOVE_BLUES_FUNK,
     GROOVE_SLOW_NEO_FUNK,
-    GROOVE_COUNTRY_TWANG
+    GROOVE_COUNTRY_TWANG,
+    GROOVE_SWAMP_ROCK
 } GrooveStyle;
 
-#define NUM_DRUM_PATTERNS 19
+#define NUM_DRUM_PATTERNS 20
 
 typedef enum {
     BASS_P_BASS = 0,

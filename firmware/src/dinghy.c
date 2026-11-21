@@ -100,6 +100,11 @@ static void app_audio(int32_t *out, uint32_t n) {
                 }
                 g_harmony.vis_keys_pulse = 3;
             }
+            if (g_harmony.count_in_bars_remaining > 0 &&
+                g_harmony.active_intro_style == INTRO_DRONE_1BAR &&
+                g_harmony.current_beat == 0 && g_harmony.current_subdiv == 0) {
+                dsp_extend_drone_gate(110000u); // Hold Beat-1 drone across the full bar
+            }
 
             if (frame.drum_mask) {
                 uint8_t open_hat = (frame.drum_mask & 0x04) && (g_harmony.variation > 75);

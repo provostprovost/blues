@@ -7,7 +7,7 @@ static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G",
 static const char *GROOVE_NAMES[NUM_DRUM_PATTERNS] = {
     "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE", "MEMPHIS SOUL", "RHUMBA BLUES", "BOOGIE WOOGIE",
     "PURDIE SHUF", "TRAIN BEAT", "BO DIDDLEY", "JAZZ SHUFFLE", "GOSPEL SWING", "DELTA STOMP",
-    "POCKET FUNK", "NOLA FUNK", "BLUES FUNK", "SLOW NEOFUNK", "COUNTRY TWANG"
+    "POCKET FUNK", "NOLA FUNK", "BLUES FUNK", "SLOW NEOFUNK", "COUNTRY TWANG", "SWAMP ROCK"
 };
 static const char *ALGO_NAMES[NUM_KEYS_INSTRUMENTS] = {
     "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET",
@@ -40,9 +40,11 @@ static const char *KEYS_STYLE_NAMES[NUM_KEYS_STYLES] = {
     "STRIDE", "BOOGIE 8TH", "GOSPEL SWELL", "MONTUNO", "12/8 ARP",
     "FUNK CLAV", "COUNTRY CHP"
 };
-static const char *FORM_NAMES[5]       = { "12-BAR MAJ", "QUICK CHG", "1-4-5 OPEN", "8-BAR BLUES", "MINOR BLUES" };
+static const char *FORM_NAMES[NUM_FORM_MODES] = {
+    "12-BAR MAJ", "QUICK CHG", "1-4-5 OPEN", "8-BAR BLUES", "MINOR BLUES", "I-bVII-IV"
+};
 static const char *INTRO_SHORT_NAMES[NUM_INTRO_MODES] = {
-    "OFF", "AUTO", "1B V7", "2B TURN", "2B FUNK", "4B BAND", "1B CLICK"
+    "OFF", "AUTO", "1B V7", "2B TURN", "2B FUNK", "4B BAND", "1B CLICK", "1B DRN"
 };
 static const char *OUTRO_SHORT_NAMES[NUM_OUTRO_TYPES] = {
     "SLIDE", "V-bV-IV", "IV-I TRN", "1B QUICK", "STINGER"
@@ -196,7 +198,7 @@ static void draw_rect_border(int x, int y, int w, int h, int t, uint16_t col) {
 }
 
 static void render_single_bar_box(const HarmonyState *hs, uint8_t b, uint8_t is_current) {
-    uint8_t total_bars = (hs->form_mode == FORM_8BAR) ? 8 : 12;
+    uint8_t total_bars = (hs->form_mode == FORM_8BAR || hs->form_mode == FORM_I_bVII_IV) ? 8 : 12;
     if (b >= total_bars) return;
 
     uint8_t col = b % 4;
@@ -480,6 +482,12 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
         subheader[slen++] = '8';
         subheader[slen++] = 'B';
         subheader[slen++] = ')';
+    } else if (hs->form_mode == FORM_I_bVII_IV) {
+        subheader[slen++] = ' ';
+        subheader[slen++] = '(';
+        subheader[slen++] = 'b';
+        subheader[slen++] = '7';
+        subheader[slen++] = ')';
     } else if (hs->form_mode == FORM_QUICK_CHANGE) {
         subheader[slen++] = ' ';
         subheader[slen++] = '(';
@@ -689,7 +697,7 @@ static void render_style_view(const HarmonyState *hs, const PresetConfig *preset
     uint8_t bs = hs->bass_style % NUM_BASS_STYLES;
     uint8_t ks = hs->keys_style % NUM_KEYS_STYLES;
     uint8_t dp = hs->drum_pattern % NUM_DRUM_PATTERNS;
-    uint8_t fm = (uint8_t)hs->form_mode % 5;
+    uint8_t fm = (uint8_t)hs->form_mode % NUM_FORM_MODES;
     uint8_t bi = preset->bass_instrument % NUM_BASS_INSTRUMENTS;
     uint8_t di = preset->drum_kit % NUM_DRUM_KITS;
     uint8_t im = hs->count_in_enabled % NUM_INTRO_MODES;
@@ -750,7 +758,7 @@ void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t 
             if (form_changed || screen_switched) {
                 hal_fill_rect(0, 44, 240, 76, C_BLACK);
             }
-            uint8_t total_bars = (hs->form_mode == FORM_8BAR) ? 8 : 12;
+            uint8_t total_bars = (hs->form_mode == FORM_8BAR || hs->form_mode == FORM_I_bVII_IV) ? 8 : 12;
             for (uint8_t b = 0; b < total_bars; b++) {
                 render_single_bar_box(hs, b, (b == hs->current_bar));
             }
@@ -826,5 +834,5 @@ void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t 
 void ui_render_splash(void) {
     hal_blit_sprite_2x(0, 0, SPLASH_ART_W, SPLASH_ART_H, SPLASH_ART_PAL, SPLASH_ART_DATA);
     hal_fill_rect(0, 220, 240, 20, RGB(12, 12, 18));
-    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.2.2", RGB(240, 195, 90), 1);
+    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.2.3", RGB(240, 195, 90), 1);
 }

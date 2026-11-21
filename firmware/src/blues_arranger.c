@@ -76,7 +76,11 @@ static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
     { GROOVE_COUNTRY_TWANG, 67, // Country shuffle boom-chick with alternating root-5th bass
       {127,0,0,0,  0,0,0,0,    122,0,0,0,   0,0,95,0},
       {0,0,0,0,    110,0,0,0,  0,0,0,0,     110,0,0,0},
-      {115,0,95,0, 115,0,95,0, 115,0,95,0,  115,0,95,0} }
+      {115,0,95,0, 115,0,95,0, 115,0,95,0,  115,0,95,0} },
+    { GROOVE_SWAMP_ROCK, 0, // Lucinda "Righteously" Swamp Rock: driving 16th-note hats + double-time swamp pocket (~104 BPM)
+      {127,0,98,0,  0,0,108,0, 122,0,98,0,  0,0,108,0},
+      {0,0,122,0,   0,0,0,0,   0,0,122,0,   0,0,90,0},
+      {115,82,102,82, 115,82,102,82, 115,82,102,82, 115,82,102,82} }
 };
 
 static uint16_t g_hmnz_lfsr = 0x5EEDu;
@@ -322,6 +326,7 @@ void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, Groo
         case GROOVE_STRAIGHT_ROCK:
         case GROOVE_TRAIN_BEAT:
         case GROOVE_DELTA_STOMP:
+        case GROOVE_SWAMP_ROCK:
             preset->bass_style = BASS_STYLE_ROOT_FIFTH;
             preset->keys_style = KEYS_STYLE_BACKBEAT;
             break;
@@ -560,6 +565,28 @@ static void render_scripted_intro_frame(HarmonyState *hs, PerformanceFrame *fram
         if (sub_slot == 0) {
             frame->drum_mask = 0x08;
             frame->drum_vel[3] = (hs->current_beat == 0) ? 115 : 90;
+        }
+        return;
+    }
+
+    if (im == INTRO_DRONE_1BAR) {
+        // Lucinda "Righteously" intro: ONE sustained downbeat drone on Beat 1, hi-hat + stick tick on 2, 3, 4
+        if (step16 == 0) {
+            emit_scripted_bass(frame, br, 0, 122);
+            last_voicing->count = 3;
+            last_voicing->notes[0] = kr;
+            last_voicing->notes[1] = (uint8_t)(kr + 7);
+            last_voicing->notes[2] = (uint8_t)(kr + 12);
+            frame->comp_voicing = *last_voicing;
+            frame->comp_trigger = 1;
+            frame->comp_vel = 116;
+            frame->drum_mask = 0x05; // Kick + Hat on Beat 1
+            frame->drum_vel[0] = 120;
+            frame->drum_vel[2] = 100;
+        } else if (sub_slot == 0) {
+            frame->drum_mask = 0x0C; // Closed Hi-Hat (0x04) + Stick Tick (0x08) on 2, 3, 4
+            frame->drum_vel[2] = 102;
+            frame->drum_vel[3] = 96;
         }
         return;
     }
