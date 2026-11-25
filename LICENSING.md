@@ -14,13 +14,16 @@ complete source under the same licence too.
 | The update loader's screen: `firmware/loader/ldr_screen.c`, `tests/ldr_screen_test.c` | Copyright (C) 2026 zvenson (from OberVave, the Firmware Hub's look); the idea, a loader that draws, its 5 x 7 letters and the order of things from [Skiff](https://github.com/illuminus5/skiff) by illuminus5, GPL-3.0 |
 | From OberVave: the storage (blobs, slots), `LCD_IDLE`, the SMK-37 wiring of `platform.c`, `store.h`, the pad event queue in `smk_input.h`, `tests/smk_flash_test.c`, `tests/run_tests.sh`, the CI workflow | Copyright (C) 2026 zvenson |
 | The app `firmware/src/dinghy.c`, the wiring `platform.c`, the host mode `tests/`, the docs | zvenson |
-| Blues Box engine & UI (`blues_harmony.*`, `blues_arranger.*`, `dsp_voices.*`, `panel_input.*`, `ui_screens.*`) | Brian Provost |
+| Blues Box engine & UI (`blues_harmony.*`, `blues_arranger.*`, `blues_patterns.c`, `dsp_voices.*`, `lead_fx.c`, `sampler.c`, `panel_input.*`, `ui_screens.*`), `tools/build_samples.py`, `tools/audition.py`, `tests/voice_*` | Brian Provost |
+| The sampled-piano engine `firmware/src/erk.c`, `erk.h`, `erk_bank.h`, `erk_codec.h`, `erk_pad.h` and the sample codec `tools/erkcodec.c` | **MPL-2.0**, Copyright (C) 2026 M. Geisler (genkigenki/makkuro), from [Erik37](https://github.com/genkigenki/erik37). Blues Box's changes to `erk.c` (the float setup replaced by precomputed tables, the pad layer left out) are marked in the file and stay MPL-2.0. MPL-2.0 files may be combined with GPL-3.0 code (MPL-2.0 section 3.3); their source stays available here under MPL-2.0. |
 
 ## Third-party material
 
 | What | Licence | Where |
 | --- | --- | --- |
 | Terminus font 8x16 (ter-u16n), rendered into `firmware/gen/felucca_font.h` | SIL OFL 1.1 | `assets/fonts/Terminus-LICENSE.txt` |
+| **Piano samples** (`assets/banks/piano.bank`, `firmware/gen/piano_bank.h`): "Salamander Grand Piano V3" by Alexander Holm, resampled, trimmed, looped and ADPCM-compressed (Erik37's `build_bank.py`: 16 zones x 2 velocity layers) | **CC BY 3.0** (<https://creativecommons.org/licenses/by/3.0/>), source <https://archive.org/details/SalamanderGrandPianoV3>. Keep this attribution when you pass the firmware on. | `firmware/gen/piano_bank.h` |
+| Bass, drum, sax and guitar samples (`firmware/gen/sample_bank.h`, made by `tools/build_samples.py`): Karoryfer Samples **Growlybass**, **Meatbass** and **Black And Green Guitars**; Versilian Studios / Karoryfer **Virtuosity Drums**; the tenor saxophone of the **Versilian Community Sample Library** | CC0 1.0 (no conditions; credited here anyway) | `firmware/gen/sample_bank.h` |
 | JieLi AC79 SDK: `uboot.boot`, `cfg_tool.bin`, `eq_cfg_hw.bin` are read from your SDK checkout at build time and placed in the package; no SDK files are in this tree | Apache-2.0 | <https://gitee.com/Jieli-Tech/fw-AC79_AIoT_SDK> |
 
 ## Trademarks

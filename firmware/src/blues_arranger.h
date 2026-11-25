@@ -11,8 +11,10 @@ typedef struct {
     Voicing comp_voicing;
     uint8_t comp_trigger;
     uint8_t comp_vel;
-    uint8_t drum_mask;
-    uint8_t drum_vel[4];
+    uint16_t drum_mask;                 /* bit DV_* */
+    uint8_t drum_vel[NUM_DRUM_VOICES];
+    uint8_t bass_gate_ticks;            /* note length in 1/24 beats; 0: the default gate */
+    uint8_t bass_ghost;                 /* a dead (muted) note */
 } PerformanceFrame;
 
 typedef struct {

@@ -1,6 +1,7 @@
 #include "blues_arranger.h"
+#include "blues_harmony.h"
 
-static const GrooveTemplate GROOVE_TEMPLATES[NUM_DRUM_PATTERNS] = {
+static const GrooveTemplate GROOVE_TEMPLATES[NUM_GROOVES] = {
     { GROOVE_SLOW_12_8, 67,
       {127,0,0,90, 100,0,0,90, 110,0,0,90, 100,0,0,90},
       {100,0,0,0,  0,0,80,0,   100,0,0,0,  0,0,80,0},
@@ -247,7 +248,7 @@ Voicing voice_lead_select(Voicing prev_voicing, ScaleDegree degree, uint8_t root
 }
 
 // 10 Independent Bass Line Patterns (16 steps per bar)
-static const uint8_t BASS_STYLE_MASKS[NUM_BASS_STYLES][16] = {
+static const uint8_t BASS_STYLE_MASKS[NUM_CLASSIC_BASS_STYLES][16] = {
     {127,0,0,0,  108,0,0,0,  118,0,0,0,  108,0,0,0},  // 0: WALKING 4/4 (quarter-note pocket)
     {127,0,88,0, 112,0,86,0, 120,0,88,0, 112,0,86,0}, // 1: SHUFFLE (repeats beat note on &)
     {127,0,98,0, 115,0,98,0, 122,0,98,0, 115,0,98,0}, // 2: BOOGIE BOX (1-3-5-6-b7-6-5-3)
@@ -302,8 +303,10 @@ static const uint8_t KEYS_STYLE_MASKS[NUM_KEYS_STYLES][2][16] = {
       {0,0,0,0,   104,0,0,0, 0,0,88,0,  104,0,0,0} }
 };
 
+#include "blues_patterns.c"
+
 void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, GrooveStyle style) {
-    uint8_t idx = (uint8_t)style % NUM_DRUM_PATTERNS;
+    uint8_t idx = (uint8_t)style % NUM_GROOVES;
     preset->groove_style = idx;
     preset->drum_pattern = idx;
     hs->drum_pattern = idx;
@@ -311,63 +314,72 @@ void arranger_apply_groove_defaults(HarmonyState *hs, PresetConfig *preset, Groo
 
     switch (idx) {
         case GROOVE_SLOW_12_8:
-            preset->bass_style = BASS_STYLE_SLOW_12_8;
+            preset->bass_style = BASS_RIFF_SLOW_BLUES;
             preset->keys_style = KEYS_STYLE_SLOW_12_8;
             break;
         case GROOVE_TEXAS_SHUFFLE:
-            preset->bass_style = BASS_STYLE_SHUFFLE_REP;
+            preset->bass_style = BASS_RIFF_TX_SHUFFLE;
             preset->keys_style = KEYS_STYLE_CHARLESTON;
             break;
         case GROOVE_CHICAGO_SWING:
-        case GROOVE_JAZZ_SHUFFLE:
-            preset->bass_style = BASS_STYLE_WALKING;
+            preset->bass_style = BASS_RIFF_CHI_WALK;
             preset->keys_style = KEYS_STYLE_CALL_RESP;
             break;
+        case GROOVE_JAZZ_SHUFFLE:
+        case GROOVE_GOSPEL_SWING:
+            preset->bass_style = BASS_RIFF_JAZZ_WALK;
+            preset->keys_style = (idx == GROOVE_GOSPEL_SWING) ? KEYS_STYLE_GOSPEL_SWELL : KEYS_STYLE_CALL_RESP;
+            break;
         case GROOVE_STRAIGHT_ROCK:
-        case GROOVE_TRAIN_BEAT:
-        case GROOVE_DELTA_STOMP:
-        case GROOVE_SWAMP_ROCK:
-            preset->bass_style = BASS_STYLE_ROOT_FIFTH;
+            preset->bass_style = BASS_RIFF_ROCK_8;
             preset->keys_style = KEYS_STYLE_BACKBEAT;
             break;
+        case GROOVE_TRAIN_BEAT:
+        case GROOVE_COUNTRY_TWANG:
+            preset->bass_style = BASS_RIFF_COUNTRY;
+            preset->keys_style = (idx == GROOVE_COUNTRY_TWANG) ? KEYS_STYLE_COUNTRY_CHOP : KEYS_STYLE_BACKBEAT;
+            break;
+        case GROOVE_DELTA_STOMP:
+            preset->bass_style = BASS_RIFF_LUMP;
+            preset->keys_style = KEYS_STYLE_BACKBEAT;
+            break;
+        case GROOVE_SWAMP_ROCK:
+        case GROOVE_BO_DIDDLEY:
+            preset->bass_style = BASS_RIFF_SWAMP;
+            preset->keys_style = (idx == GROOVE_BO_DIDDLEY) ? KEYS_STYLE_RUMBA_MONTUNO : KEYS_STYLE_BACKBEAT;
+            break;
         case GROOVE_SECOND_LINE:
-            preset->bass_style = BASS_STYLE_SECOND_LINE;
+            preset->bass_style = BASS_RIFF_NOLA;
             preset->keys_style = KEYS_STYLE_STRIDE;
             break;
+        case GROOVE_NOLA_FUNK:
+            preset->bass_style = BASS_RIFF_NOLA;
+            preset->keys_style = KEYS_STYLE_FUNK_CLAV;
+            break;
         case GROOVE_MEMPHIS_SOUL:
+            preset->bass_style = BASS_RIFF_MEMPHIS;
+            preset->keys_style = KEYS_STYLE_CALL_RESP;
+            break;
         case GROOVE_PURDIE_SHUFFLE:
-            preset->bass_style = BASS_STYLE_MOTOWN;
+            preset->bass_style = BASS_RIFF_SLOW_BLUES;
             preset->keys_style = KEYS_STYLE_CALL_RESP;
             break;
         case GROOVE_RHUMBA_BLUES:
-        case GROOVE_BO_DIDDLEY:
-            preset->bass_style = BASS_STYLE_RUMBA;
+            preset->bass_style = BASS_RIFF_RHUMBA;
             preset->keys_style = KEYS_STYLE_RUMBA_MONTUNO;
-            break;
-        case GROOVE_GOSPEL_SWING:
-            preset->bass_style = BASS_STYLE_GOSPEL_WALK;
-            preset->keys_style = KEYS_STYLE_GOSPEL_SWELL;
             break;
         case GROOVE_POCKET_FUNK:
         case GROOVE_BLUES_FUNK:
-            preset->bass_style = BASS_STYLE_FUNK_16;
-            preset->keys_style = KEYS_STYLE_FUNK_CLAV;
-            break;
-        case GROOVE_NOLA_FUNK:
-            preset->bass_style = BASS_STYLE_SECOND_LINE;
+            preset->bass_style = BASS_RIFF_FUNK;
             preset->keys_style = KEYS_STYLE_FUNK_CLAV;
             break;
         case GROOVE_SLOW_NEO_FUNK:
-            preset->bass_style = BASS_STYLE_SYNCOPATED;
-            preset->keys_style = KEYS_STYLE_CALL_RESP;
-            break;
-        case GROOVE_COUNTRY_TWANG:
-            preset->bass_style = BASS_STYLE_COUNTRY_2;
-            preset->keys_style = KEYS_STYLE_COUNTRY_CHOP;
+            preset->bass_style = BASS_RIFF_FUNK;
+            preset->keys_style = KEYS_STYLE_PAD;
             break;
         case GROOVE_BOOGIE_WOOGIE:
         default:
-            preset->bass_style = BASS_STYLE_BOOGIE_BOX;
+            preset->bass_style = BASS_RIFF_BOOGIE;
             preset->keys_style = KEYS_STYLE_BOOGIE_8;
             break;
     }
@@ -842,14 +854,25 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
     frame->comp_trigger = 0;
     frame->comp_vel = 0;
     frame->drum_mask = 0;
-    for (int d = 0; d < 4; d++) frame->drum_vel[d] = 0;
+    for (int d = 0; d < NUM_DRUM_VOICES; d++) frame->drum_vel[d] = 0;
+    frame->bass_gate_ticks = 0;
+    frame->bass_ghost = 0;
 
     if (!hs->is_playing) return;
 
-    const GrooveTemplate *gt = &GROOVE_TEMPLATES[hs->drum_pattern % NUM_DRUM_PATTERNS];
+    /* The beat being played. The classic (pre-2.3) beats are a hat line and a swing over one shared kick and snare
+     * (classic_tmpl: which of the old templates); the groove beats have their own lanes (blues_patterns.c) */
+    static const uint8_t CLASSIC_TMPL[NUM_DRUM_PATTERNS - NUM_GROOVES] = {
+        GROOVE_SLOW_12_8, GROOVE_TEXAS_SHUFFLE, GROOVE_BO_DIDDLEY, GROOVE_STRAIGHT_ROCK, GROOVE_POCKET_FUNK,
+        GROOVE_BLUES_FUNK, GROOVE_TRAIN_BEAT, GROOVE_RHUMBA_BLUES, GROOVE_DELTA_STOMP, GROOVE_JAZZ_SHUFFLE
+    };
+    uint8_t dpat = hs->drum_pattern % NUM_DRUM_PATTERNS;
+    uint8_t classic_drums = (dpat >= NUM_GROOVES);
+    const GrooveTemplate *gt = &GROOVE_TEMPLATES[classic_drums ? CLASSIC_TMPL[dpat - NUM_GROOVES] : dpat];
+    uint8_t is_12_8 = (gt->style == GROOVE_SLOW_12_8);
     uint8_t sub_slot = 0xFF;
 
-    if (gt->style == GROOVE_SLOW_12_8) {
+    if (is_12_8) {
         if (hs->current_subdiv == 0) sub_slot = 0;
         else if (hs->current_subdiv == 8) sub_slot = 1;
         else if (hs->current_subdiv == 16) sub_slot = 2;
@@ -904,6 +927,13 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         if (hs->current_beat > 0 || hs->current_subdiv > 0) return;
     }
 
+    {
+        int8_t j_vel = get_hmnz_jitter(hs->drums_variation);
+        uint8_t riff_style = hs->bass_style % NUM_BASS_STYLES;
+        if (riff_style >= NUM_CLASSIC_BASS_STYLES) bass_riff_generate(hs, preset, frame, riff_style, is_12_8, j_vel);
+        if (!classic_drums) drums_generate(hs, preset, frame, j_vel);
+    }
+
     if (sub_slot != 0xFF) {
         uint8_t step16 = (uint8_t)((hs->current_beat * 4) + sub_slot);
         BarSlot curr_slot = harmony_get_current_bar_slot(hs);
@@ -916,11 +946,13 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         uint8_t k_var  = hs->keys_variation;
         uint8_t d_var  = hs->drums_variation;
         uint8_t b_style = hs->bass_style % NUM_BASS_STYLES;
+        uint8_t classic_bass = (b_style < NUM_CLASSIC_BASS_STYLES);
         uint8_t k_style = hs->keys_style % NUM_KEYS_STYLES;
 
         // Bass engine trigger: per-instrument Fullness & Spice
-        uint8_t bass_vel_mask = BASS_STYLE_MASKS[b_style][step16 % 16];
+        uint8_t bass_vel_mask = classic_bass ? BASS_STYLE_MASKS[b_style][step16 % 16] : 0;
         uint8_t bass_hit = (bass_vel_mask > 0);
+        if (!classic_bass) b_full = 50;                                 /* (the riff line has played above) */
         if (b_full < 20) {
             bass_hit = (hs->current_beat == 0 && sub_slot == 0); // Lowest fullness: 1 note per measure (Root)
         } else if (b_full < 40) {
@@ -928,7 +960,7 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
         } else if (b_full > 85 && hs->current_beat == 3 && sub_slot == 2) {
             bass_hit = 1;
         }
-        if (bass_hit) {
+        if (bass_hit && classic_bass) {
             frame->bass_trigger = 1;
             int base_v = (bass_vel_mask > 0) ? bass_vel_mask : 86;
             int bv = base_v + j_vel + ((b_full > 75) ? 8 : (b_full < 40) ? -8 : 0);
@@ -969,6 +1001,8 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
             *last_voicing = frame->comp_voicing;
             hs->manual_stab_pending = 0;
         }
+
+        if (!classic_drums) return;
 
         // Drum channels: Hi-hat / Ride (gated by Drums Fullness: <20 none, 20..44 quarter-notes, >=45 full pattern)
         if (gt->drum_hat_mask[step16 % 16] > 0 && d_full >= 20) {
@@ -1043,6 +1077,11 @@ void arranger_generate_frame(HarmonyState *hs, const PresetConfig *preset, Perfo
                     hs->fill_pending = 0;
                 }
             }
+        }
+        /* classic beats at a high variation: the hat opens on the last off-beat of the bar */
+        if (hs->variation > 75 && (frame->drum_mask & (1u << DV_HAT)) && hs->current_beat == 3 && sub_slot == 2) {
+            frame->drum_mask = (uint16_t)((frame->drum_mask & ~(1u << DV_HAT)) | (1u << DV_HAT_OPEN));
+            frame->drum_vel[DV_HAT_OPEN] = frame->drum_vel[DV_HAT];
         }
     }
 }

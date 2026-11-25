@@ -7,15 +7,17 @@
 
 Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, walking bass, and comping chords—that follows a real 12-bar or 8-bar form while you solo on guitar or play the built-in 4-voice lead keyboard.
 
-- **Real blues & funk accompaniment:** 19 groove/drum beat patterns (including 70s Pocket Funk, NOLA Meters Funk, Blues-Funk, Slow Neo-Funk, and Country Twang), 14 bass engines, 12 bass line styles, 18 keyboard tones, 12 keys rhythm styles, and 12 drum kits—with independent Bass, Keys, and Drums **Fullness** and **Variation** controls.
+- **Real instruments (new in 2.3):** a sampled concert grand (Salamander Grand V3 through the Erik37 piano engine, 4 tones), a modelled tonewheel organ with rotary speaker (3 registrations), a sampled electric and upright bass, a sampled jazz drum kit, and sampled tenor sax and hollowbody guitar leads—added alongside every earlier synth voice.
+- **Drum beats and bass lines that play like a band (new in 2.3):** 20 groove beats with their own kick, snare, hat and ride parts, 2-bar phrases, ghost notes, a crash into each chorus and a choice of fills; 13 riff-based bass lines that walk into every chord change. The 10 distinct pre-2.3 beats and 12 pre-2.3 bass lines are kept as a "Classic" set.
+- **Lead pedalboard (new in 2.3):** two effect slots in series from 15 effects (overdrive, fuzz, compressor, chorus, flanger, phaser, uni-vibe, tremolo, vibrato, rotary, auto-wah, slapback, tempo-synced delay, spring reverb, lo-fi), plus an adjustable **Slide** time from instant to a 1.5 s trombone glide.
 - **Playable lead synth + Easy Mode:** 25 solo voices + 4 Lead Play Styles (`Poly`, `Legato Glide`, `Blues Bend`, `Octave Stack`) across 27 backlit keys, with the current chord's root lit full white and the active blues scale glowing under your fingers (both playing and stopped). Startup Preset 1 defaults to **Alto Sax + Legato Glide + Easy Lead** (`GLO` + `LFO` to toggle) so any unlit out-of-scale key smoothly bends up into the next scale note.
 - **Musical Intros & Next-Measure Outros:** Style-matched 1, 2, or 4-bar **Lead-In Riffs** (`AUTO` by default; press `REC` when stopped to cycle or turn `OFF`) and 5 scripted **Outro Riffs** (`EDIT` when stopped)—including the classic `#I9 -> I9` half-step slide and an instant Beat-1 `STINGER`. Press `REC` or `EDIT` (or stomp your MIDI footswitch) mid-song to trigger the outro on the **very next measure**.
 - **M-VAVE Chocolate & MIDI ready:** Plug-and-play support for the M-VAVE Chocolate 4-switch pedal (`PC 0..3`, `CC 80..83`, `CC 20..23`, `Note 60/62/64/65`) over USB-MIDI or 3.5mm TRS MIDI IN, plus external MIDI Clock sync and MIDI Out (`Ch 2` Bass, `Ch 3` Keys, `Ch 10` Drums).
 - **16 named preset slots:** Hold **`SAVE`** or **`GLO`** and tap any of the 16 white keys to load named factory styles (`1: TEXAS SHUFFLE` … `16: BO DIDDLEY`) or save your own setups (`USER SETTINGS 1` … `USER SETTINGS 16`) in flash.
 
-| Boot Splash | Lead Sheet | Band Mixer | Band Style | Band Feel |
-|---|---|---|---|---|
-| ![Boot Splash](assets/screenshots/splash.jpg) | ![Lead Sheet](assets/screenshots/screen1.jpg) | ![Band Mixer](assets/screenshots/screen2.jpg) | ![Band Style](assets/screenshots/screen3.jpg) | ![Band Feel](assets/screenshots/screen4.jpg) |
+| Boot Splash | Lead Sheet | Band Mixer |
+|---|---|---|
+| ![Boot Splash](assets/screenshots/splash.jpg) | ![Lead Sheet](assets/screenshots/screen1.jpg) | ![Band Mixer](assets/screenshots/screen2.jpg) |
 
 ---
 
@@ -62,16 +64,16 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 ### Knobs
 
-| Knob | Lead Sheet (Screen 1) | Band Mixer (Screen 2) | Band Style (Screen 3) | Band Feel (Screen 4) |
+`SELECT` (groove), `PRESETS` (lead voice; hold `SEL` for the key, `GLO` for the play style), `ALGORITHM` (keys tone) and `MASTER` work on every page. `HOME` cycles six pages; `KNOB1`–`KNOB4` do what the page says, and their second row while `GLO` is held:
+
+| Page | `KNOB1` | `KNOB2` | `KNOB3` | `KNOB4` |
 |---|---|---|---|---|
-| **`MASTER`** | Hardware master volume | Hardware master volume | Hardware master volume | Hardware master volume |
-| **`SELECT`** | Groove Preset (19 grooves)<br>*(Hold `GLO`: Drum Kit, 12 kits)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* | Groove Preset<br>*(Hold `GLO`: Drum Kit)* |
-| **`PRESETS`** | Solo Lead Voice (25 voices)<br>*(Hold `SEL`: Key `C`–`B`, Hold `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* | Solo Lead Voice<br>*(Hold `SEL`: Key, `GLO`: Play Style)* |
-| **`ALGORITHM`** | Backing Keyboard Tone (18 tones) | Backing Keyboard Tone | Backing Keyboard Tone | Backing Keyboard Tone |
-| **`KNOB1`** | Tempo (40–240 BPM)<br>*(Hold `GLO`: Swing 0%–100%)* | Bass Volume<br>*(Hold `GLO`: Reverb Mix)* | Bass Line Style (12 styles)<br>*(Hold `GLO`: Bass Sound, 14)* | Bass Fullness (0%–100%)<br>*(Hold `GLO`: Bass Variation)* |
-| **`KNOB2`** | Band Heat 1–5 (`SIMMER`–`SMOKIN'`)<br>*(Hold `GLO`: Tuning 440/432/442)* | Keys Volume<br>*(Hold `GLO`: Drive / Warmth)* | Keys Rhythm Style (12 styles)<br>*(Hold `GLO`: Drum Kit, 12)* | Keys Fullness (0%–100%)<br>*(Hold `GLO`: Keys Variation)* |
-| **`KNOB3`** | Bass Volume<br>*(Hold `GLO`: Bass Sound)* | Drums Volume<br>*(Hold `GLO`: Swing 0%–100%)* | Drum Beat Pattern (19 patterns)<br>*(Hold `GLO`: Intro Style, 7)* | Drums Fullness (0%–100%)<br>*(Hold `GLO`: Drums Variation)* |
-| **`KNOB4`** | Keys Volume<br>*(Hold `GLO`: Reverb Mix)* | Lead Volume<br>*(Hold `GLO`: Lead Play Style, `SEL`: Easy Lead)* | Blues Form (5 forms)<br>*(Hold `GLO`: Outro Style, 5)* | Master Fullness (all 3)<br>*(Hold `GLO`: Master Variation)* |
+| **1 Lead Sheet** | Tempo *(GLO: Swing)* | Band Heat 1–5 *(GLO: Tuning)* | Bass Volume *(GLO: Bass Sound)* | Keys Volume *(GLO: Reverb)* |
+| **2 Mixer** | Bass Vol *(GLO: Reverb)* | Keys Vol *(GLO: Drive)* | Drums Vol *(GLO: Swing)* | Lead Vol *(GLO: Form)* |
+| **3 Drums** | Beat *(GLO: Volume)* | Kit *(GLO: Swing)* | Fullness *(GLO: Intro)* | Variation *(GLO: Outro)* |
+| **4 Bass** | Line *(GLO: Volume)* | Sound | Fullness | Variation |
+| **5 Keys** | Rhythm *(GLO: Volume)* | Tone | Fullness | Variation (also the chord substitutions) |
+| **6 Lead** | Voice *(GLO: FX1)* | Play Style *(GLO: FX1 Amount; SEL: Easy Lead)* | Slide *(GLO: FX2)* | Volume *(GLO: FX2 Amount)* |
 
 ### Buttons
 
@@ -81,9 +83,9 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **`REC`** | **Stopped:** Cycle **Intro Style** (`OFF`, `AUTO`, `1B V7`, `2B TURN`, `2B FUNK`, `4B BAND`, `1B CLICK`; LED lights when armed).<br>**Playing:** Arm/cancel **Next-Measure Outro** (`OUTRO NEXT BAR`). |
 | **`EDIT`** | **Stopped:** Cycle **Outro Style** (`CLASSIC SLIDE`, `V-bV-IV-I`, `IV-I TURN`, `1B QUICK`, `STINGER`).<br>**Playing:** Arm/cancel **Next-Measure Outro** (`OUTRO NEXT BAR`). |
 | **`OCT-` / `OCT+`** | Shift the 27-key solo keyboard down or up (-2 to +2 octaves). Hold `SEL` + `OCT-`/`OCT+` to nudge tempo ±4 BPM. |
-| **`HOME`** | Cycle screens: **Lead Sheet** → **Band Mixer** → **Band Style** → **Band Feel** → **Lead Sheet**. |
+| **`HOME`** | Cycle pages: **Lead Sheet** → **Mixer** → **Drums** → **Bass** → **Keys** → **Lead** → **Lead Sheet**. |
 | **`SAVE`** | Save your current groove, tempo, key, voices, styles, and mixer levels to flash. |
-| **`GLO`** | Secondary knob layer (bottom half of Mixer & Band Style, plus quick Lead Sheet tweaks). |
+| **`GLO`** | Hold for each page's second row of knobs (the `[G]` rows on screen). |
 | **`ARP`** | Tap Tempo—tap in rhythm to set the BPM. |
 | **`FX`** | **Band Heat Escalation (1–5):** Step Heat UP (`1→2→3→4→5`, clamped at 5). Hold **`GLO` + `FX`** to step Heat DOWN (`5→4→3→2→1`, clamped at 1). |
 | **`ENV`** | Vamp Mode—freeze the progression and loop the current chord. |
@@ -96,11 +98,11 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 ## "How Do I…" Quick Recipes
 
 - **Change the key:** Hold **`SEL`** and turn **`PRESETS`**. Or hold **`SEL`** and tap one of the first 12 silicone keys (`F` through `E`): a single tap queues the key change for the next chorus, and a quick double tap switches right away.
-- **Switch between Major and Minor Blues:** Press **`LFO`** for a one-tap toggle. You can also turn **`KNOB4`** on the **Band Style** screen, or hold **`SEL`** and press Key 22 (Minor) / Key 18 (Major). Minor Blues shows **`KEY:Em (MIN)`** in cyan at the top of the screen and updates all 12 chord boxes (`Em7`, `Am7`, `C7`, `B7`).
-- **Customize Bass, Keys, and Drum patterns separately:** Press **`HOME`** twice to open **Band Style**, then turn **`KNOB1`** (Bass Line), **`KNOB2`** (Keys Rhythm), **`KNOB3`** (Drum Beat), and **`KNOB4`** (Blues Form). Hold **`GLO`** on the same screen for Bass Sound, Drum Kit, Intro Style, and Outro Style.
+- **Switch between Major and Minor Blues:** Press **`LFO`** for a one-tap toggle. You can also hold **`GLO`** and turn **`KNOB4`** on the **Mixer** page, or hold **`SEL`** and press Key 22 (Minor) / Key 18 (Major). Minor Blues shows **`KEY:Em (MIN)`** in cyan at the top of the screen and updates all 12 chord boxes (`Em7`, `Am7`, `C7`, `B7`).
+- **Customize Bass, Keys, and Drums separately:** each has its own page (`HOME` to reach it): `KNOB1` picks the pattern (Beat, Line, Rhythm), `KNOB2` the sound (Kit, Bass Sound, Keys Tone), `KNOB3` Fullness and `KNOB4` Variation.
 - **Make the chords and bass jazzier:** Turn **`KNOB2`** (**Variation**). Low (0–30%) keeps it straight and simple; middle (31–65%) adds 9ths, 13ths, and chromatic bass walk-ups; high (66–100%) adds passing diminished chords, tritone subs, and turnaround chords in Bars 11–12.
 - **Escalate the Jam (5-Level Band Heat):** Press **`FX`** (or turn **`KNOB2`** on the Lead Sheet, or tap **Chocolate Switch D / C**) to step **Band Heat** between `1: SIMMER` (`25%` Fullness, `15%` Variation, `85%` Volume) and `5: SMOKIN'` (`100%` Fullness, `100%` Variation, `115%` Volume), clamped at `1` and `5`. Hold **`GLO` + `FX`** (or tap **Chocolate Switch C**) to step Heat down. The stage footlights, Tweed amp jewel/chord flash, note bursts, and tube glow shift across **Blue → Green → Yellow → Orange → Red** to match.
-- **Dial in sparse vs. full-band energy:** Press **`HOME`** three times to open **Band Feel** for independent Bass/Keys/Drums **Fullness** (`KNOB1–3`) and **Variation** (`GLO + KNOB1–3`), or turn `KNOB4` (**Master Fullness** / `GLO + KNOB4` **Master Variation**). At `<20%` Fullness, Bass plays 1 root note per bar (`20–39%` plays `1–5`) and Drums strip down to rimshot on beats 2 & 4 (`20–44%` adds quarter-note hat + Beat 1 kick + snare, `45–74%` adds full shuffle hat + Beat 3 kick, `75%+` full kit); higher Variation adds chromatic bass walk-ups, 9th/13th/passing chords, ghost snares, and Bar 4/8/12 drum fills.
+- **Dial in sparse vs. full-band energy:** Turn **`KNOB3`** (Fullness) and **`KNOB4`** (Variation) on the Drums, Bass and Keys pages, or step **Band Heat** to move all of them together. At `<20%` Fullness, Bass plays 1 root note per bar (`20–39%` plays `1–5`) and Drums strip down to rimshot on beats 2 & 4 (`20–44%` adds quarter-note hat + Beat 1 kick + snare, `45–74%` adds full shuffle hat + Beat 3 kick, `75%+` full kit); higher Variation adds chromatic bass walk-ups, 9th/13th/passing chords, ghost snares, and Bar 4/8/12 drum fills.
 - **Adjust shuffle feel:** Hold **`GLO`** and turn **`KNOB1`** (**Swing**), or press **`HOME`** to open the Band Mixer and hold **`GLO`** + turn **`KNOB3`**. 0% is straight 8ths, ~67% is a classic triplet shuffle, and 100% is a hard dotted-8th swing.
 - **Play along on the keys:** Just play the 27 silicone keys—they act as a 4-voice polyphonic lead synth with automatic finger vibrato on held notes. While playing, the key LEDs light **full white** on the current chord's root (e.g. `E` on `I`, `A` on `IV`, `B` on `V` in E Blues), **half white** on the rest of the active blues scale (**Minor Blues** in Minor form or on `IV7`/`V7`, **Major Blues** on `I7` in Major forms), and **off** on non-scale notes.
 - **Use a Lead-In Intro & trigger a Next-Measure Outro:** Style-matched **Lead-In Intros (`AUTO`)** are enabled by default on boot (with the `REC` LED lit); press **`REC`** while stopped to cycle through all 7 Intro options (`AUTO`, `1B V7`, `2B TURN`, `2B FUNK`, `4B BAND`, `1B CLICK`, `OFF`), and press **`EDIT`** while stopped to pick your **Outro** (`SLIDE`, `V-bV-IV`, `IV-I TRN`, `1B QUICK`, or `STINGER`). While playing, press **`REC`** or **`EDIT`** (or hold **`SEL`** + Keys `23–26`) during *any* bar to queue **`OUTRO NEXT BAR`**—the band plays a Beat-4 pickup fill, executes the scripted outro on the very next measure, and lands cleanly on a Beat-1 `I9` stinger.
@@ -112,7 +114,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 - **Keys 0–11 (Key Select):** `0=F`, `1=F#`, `2=G`, `3=Ab`, `4=A`, `5=Bb`, `6=B`, `7=C`, `8=C#`, `9=D`, `10=Eb`, `11=E` (single tap = next chorus, double tap = immediate)
 - **Keys 12–17 (Live Cues):** `12` Return to 12-Bar, `13` Vamp Toggle, `14` 4-Bar Stop-Time, `15` Hold Chord, `16` Jump to Turnaround, `17` Accent Stab
 - **Keys 18–22 (Form Variations):** `18` Standard 12-Bar, `19` Quick-Change (IV in Bar 2), `20` 1-4-5 Opening, `21` 8-Bar Blues, `22` Minor Blues
-- **Keys 23–26 (Outros):** `23` Classic Slide, `24` V–bV–IV–I, `25` IV–I Turnaround, `26` 1-Bar Quick Tag *(use `EDIT` or `Band Style` `[G] OUTRO` for `STINGER`)*
+- **Keys 23–26 (Outros):** `23` Classic Slide, `24` V–bV–IV–I, `25` IV–I Turnaround, `26` 1-Bar Quick Tag *(use `EDIT` or the Drums page `[G] OUTRO` for `STINGER`)*
 
 </details>
 
@@ -120,27 +122,26 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 
 ## The Sounds & Styles
 
-- **20 Groove / Drum Beat Patterns (`SELECT`):** 12/8 Slow Blues, Texas Shuffle, Chicago Swing, Rockin' Blues, New Orleans 2nd Line, Memphis Soul, Rhumba Blues, Boogie-Woogie, Purdie Shuffle, Train Beat, Bo Diddley, Jazz Shuffle, Gospel Swing, Delta Stomp, 70s Pocket Funk, NOLA Funk, Swung Blues-Funk, Slow Neo-Funk, Country Twang, Swamp Rock.
-- **18 Keyboard Tones (`ALGORITHM`):** Rhodes FM, Bright FM EP, Wurlitzer 200A, Clean B3 Organ, Dirty Gospel B3, Clavinet D6, Archtop Rhythm Guitar, Blues Horns, Honky-Tonk Piano, Tremolo Suitcase EP, Delta Resonator Guitar, Rotary Leslie Organ, Cajun Accordion, Vibraphone, Farfisa Combo Organ, Mellotron Strings, CP-70 Electric Grand, Harmonium.
-- **25 Solo Lead Voices (`PRESETS`):** Overdriven Blues Guitar, Chicago Blues Harp, Alto Sax, Tenor Sax, Baritone Sax, Muted Blues Trumpet, Brass Section, Jazz Flute, Blues Whistle, Moog Lead, Warm Jazz Hollowbody, Fuzz Octave, Percussive B3 Organ, Screaming Rock B3, Talk-Box Vowel Lead, Slide / Lap Steel Guitar, Auto-Wah Guitar, Telecaster Twang, Blues Fiddle, Banjo / Dobro, Wavefolder Synth, Hard-Sync Analog Lead, SID Chiptune Lead, Steelpan, Theremin.
-- **4 Lead Play Styles (`GLO` + `PRESETS`) + Easy Lead (`GLO` + `LFO`):** Natural Poly, Mono Legato Glide, Blues Scoop/Bend, Octave Stack—plus optional **Easy Lead** mode where unlit non-scale keys bend smoothly up into the next scale note.
-- **14 Bass Engines (`GLO` + `KNOB3`):** Fender P-Bass, Upright Double Bass, Muted Tic-Tac Boogie, Moog Funk Synth, 60s Jazz Bass, Flatwound Motown, Ampeg Tube Growl, Sub Octave, Lately FM Bass, Slap/Pop Bass, Hofner Beatle Bass, Acid 303 Bass, NOLA Tuba, Distorted Pick Bass.
-- **12 Bass Line Styles (`Band Style` `KNOB1`):** Walking 4/4, Shuffle, Boogie Box, Root-5th, Funk Sync, Rumba, Gospel Walk, 12/8 Roll, Motown 8ths, 2nd Line, Funk 16ths, Country 2-Beat.
-- **12 Keys Rhythm Styles (`Band Style` `KNOB2`):** Charleston, Backbeat 2&4, Call & Response, Sparse Pad, Chop 4/4, Stride, Boogie 8ths, Gospel Swell, Rumba Montuno, 12/8 Arpeggio, Funk Clav 16th, Country Chop.
-- **12 Drum Kits (`GLO` + `SELECT`):** Studio Punch, Vintage Brush, Retro 808, Stax Tight, Chicago Room, Dry Vintage, Jazz Club, Heavy Blues-Rock, CR-78 Analog, NOLA Percussion, Linn Gate, Lo-Fi Box.
-
----
+- **30 Drum Beats (Drums page `KNOB1`):** 20 groove beats—12/8 Slow Blues, Texas (double) Shuffle, Chicago Shuffle, Rockin' Blues, New Orleans 2nd Line, Memphis Soul, Rhumba Blues, Boogie-Woogie, Purdie Half-Time Shuffle, Train Beat, Bo Diddley, Jazz Shuffle (ride), Gospel Swing, Delta Stomp, 70s Pocket Funk, NOLA Funk, Swung Blues-Funk, Slow Neo-Funk, Country Twang, Swamp Rock—plus 10 Classic beats (`CL …`) from earlier versions. `SELECT` picks a groove: its beat, bass line, keys rhythm and swing together.
+- **13 Drum Kits:** Studio Punch, Vintage Brush, Retro 808, Stax Tight, Chicago Room, Dry Vintage, Jazz Club, Heavy Blues-Rock, CR-78 Analog, NOLA Percussion, Linn Gate, Lo-Fi Box, **Real Kit** (sampled).
+- **25 Bass Lines (Bass page `KNOB1`):** riff lines Texas Shuffle, Chicago Walk, Lump, Slow Blues, Memphis, Rhumba, Boogie, Rock 8ths, Funk, NOLA, Country, Swamp, Jazz Walk—plus the 12 Classic lines (Walking 4/4 … Country 2-Beat).
+- **16 Bass Sounds:** the 14 synth basses plus **Real Electric** (sampled Jazz bass) and **Real Upright** (sampled double bass).
+- **25 Keys Tones (`ALGORITHM`):** the 18 synth tones plus **Real Grand**, **Studio Grand**, **Vintage Grand**, **Jazz Grand** (sampled piano) and **Tonewheel B3**, **Gospel B3**, **Ballad B3** (modelled drawbar organ with percussion, key click and rotary speaker).
+- **12 Keys Rhythm Styles:** Charleston, Backbeat 2&4, Call & Response, Sparse Pad, Chop 4/4, Stride, Boogie 8ths, Gospel Swell, Rumba Montuno, 12/8 Arpeggio, Funk Clav 16th, Country Chop.
+- **28 Lead Voices (`PRESETS`):** the 25 synth leads plus **Real Tenor** (sampled sax), **Real Guitar** (sampled hollowbody) and **Real Gtr OD** (the same through a tube overdrive).
+- **15 Lead Effects (Lead page, `GLO` + `KNOB1`/`KNOB3`), two in series:** Overdrive, Fuzz, Compressor, Chorus, Flanger, Phaser, Uni-Vibe, Tremolo, Vibrato, Rotary (lower half slow, upper half fast), Auto-Wah, Slapback, Delay (a quarter note at the tempo), Spring Reverb, Lo-Fi.
+- **Slide (Lead page `KNOB3`):** the time a glide, an Easy Lead bend or a Blues Bend scoop takes, the same whatever the interval: from instant to 1.5 s.
 
 ## Display Screens
 
-Press **`HOME`** to cycle through the four screens:
+Press **`HOME`** to cycle through the six pages:
 
-1. **12-Bar Lead Sheet & 8-Bit Stage:** Shows the groove and drum kit at the top, Key + Form (`(MAJ)` or cyan `(MIN)`), BPM, and Variation below it, a condensed 12-bar chord grid with the active bar outlined in amber, and a live **animated 8-bit 3-piece backing band** (Drummer, Bassist/Guitarist, and Keyboardist with stage footlights and note/spark bursts synced to the actual drum, bass, and chord triggers) beside a **Tweed Blues Junior mini-amp** displaying the current chord (which radiates soundwaves whenever you play the lead keys), plus the live playback status banner and `<Solo Lead> * <Keyboard Tone>` footer.
-2. **Band Mixer:** Live controls for `BASS VOL`, `KEYS VOL`, `DRUMS VOL`, `LEAD VOL` (`KNOB1–4`) and `REVERB`, `DRIVE`, `SWING`, `LEAD PLAY` (`GLO` + `KNOB1–4`).
-3. **Band Style:** Direct rhythm & tone editor for `BASS LINE`, `KEYS RHY`, `DRUM BEAT`, and `FORM` (`KNOB1–4`), plus `[G] BASS`, `[G] KIT`, `[G] INTRO`, and `[G] OUTRO` (`GLO` + `KNOB1–4`).
-4. **Band Feel:** Per-instrument `BASS FUL`, `KEYS FUL`, `DRUMS FUL`, `MSTR FUL` (`KNOB1–4`) and `[G]BS VAR`, `[G]KY VAR`, `[G]DR VAR`, `[G]MS VAR` (`GLO` + `KNOB1–4`).
-
----
+1. **12-Bar Lead Sheet & 8-Bit Stage:** groove, kit, key, form, BPM, the chord grid with the current bar outlined, the animated 8-bit band and Tweed amp, the status line and the `<Lead> * <Keys>` footer.
+2. **Mixer:** the four volumes, and `[G]` reverb, drive, swing and form.
+3. **Drums:** beat, kit, fullness, variation, and `[G]` volume, swing, intro and outro.
+4. **Bass:** line, sound, fullness, variation, `[G]` volume.
+5. **Keys:** rhythm, tone, fullness, variation, `[G]` volume.
+6. **Lead:** voice, play style, slide time, volume, and `[G]` the two effects and their amounts.
 
 ## MIDI & Footswitch (M-VAVE Chocolate)
 
@@ -174,6 +175,12 @@ Requires Docker (macOS/Windows) or Linux x86-64 with the JieLi toolchain, plus P
 
 # Run the full host, MIDI, flash, OTA, and C engine unit test suite
 sh tests/run_tests.sh
+
+# Rebuild the sample bank (needs the CC0 libraries in samples-src/, see LICENSING.md)
+python3 -I tools/build_samples.py
+
+# Render the 16 factory presets to build/audition/*.wav to listen to
+python3 tools/audition.py
 ```
 
 <details>
@@ -184,7 +191,10 @@ sh tests/run_tests.sh
 | `firmware/src/dinghy.c` | App entry, audio ISR (`app_audio`), MIDI ring buffer, factory presets, superloop |
 | `firmware/src/blues_harmony.c` | 12-bar / 8-bar / Minor Blues state machine, Lead-In & Next-Measure Outro states |
 | `firmware/src/blues_arranger.c` | Groove templates, bass/keys/drum generators, scripted intro & outro riffs |
-| `firmware/src/dsp_voices.c` | Fixed-point Q15 synth engines, 25 lead voices, mixer, reverb, saturator |
+| `firmware/src/blues_patterns.c` | 2.3 drum beats, fills and riff bass lines, written as readable text patterns |
+| `firmware/src/dsp_voices.c` | Fixed-point Q15 synth engines, lead voices, mixer, reverb, saturator |
+| `firmware/src/sampler.c`, `erk*.c/h` | The sample player (real bass, drums, sax, guitar) and the Erik37 sampled-piano engine |
+| `firmware/src/lead_fx.c` | The lead's two-slot pedalboard |
 | `firmware/src/panel_input.c` | Front-panel scanning, 27-key shortcuts, M-VAVE Chocolate & MIDI IN handler |
 | `firmware/src/ui_screens.c` | 240×240 LCD screens (Lead Sheet + 8-Bit Band Stage, Mixer, Style, Feel) and 8-bit boot splash |
 | `firmware/gen/pixelart_assets.h` | 4-bit indexed RGB565 sprites generated by `tools/gen_pixelart.py` |
@@ -204,6 +214,8 @@ sh tests/run_tests.sh
 
 ## License & Credits
 
-Distributed under the **GNU General Public License v3.0 (GPL-3.0)**. See [LICENSING.md](LICENSING.md) for full per-file attribution and third-party licenses.
+Distributed under the **GNU General Public License v3.0 (GPL-3.0)**; the piano engine files are MPL-2.0. See [LICENSING.md](LICENSING.md) for full per-file attribution and third-party licenses.
+
+**Samples:** piano: "Salamander Grand Piano V3" by Alexander Holm, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) (resampled, trimmed, looped and compressed). Piano engine: [Erik37](https://github.com/genkigenki/erik37) by M. Geisler (MPL-2.0). Bass, drums, sax and guitar: Karoryfer Samples (Growlybass, Meatbass, Black And Green Guitars), Versilian Studios (Virtuosity Drums, VCSL tenor saxophone), all CC0.
 
 Built on [Dinghy](https://github.com/zvenson/dinghy) by **zvenson**, which stands on the work of **Leo Kuroshita (@kurogedelic, Hügelton Instruments)** ([Felucca](https://github.com/hugelton/Felucca)), **isod89** ([SLOOP](https://github.com/isod89/sloop-fm1)), **M. Geisler (genkigenki / makkuro)** ([genkigenki/sloop-fm1](https://github.com/genkigenki/sloop-fm1) — installer, packer, and loader), **illuminus5** ([Skiff](https://github.com/illuminus5/skiff) — update loader screen), and **ChanceTheMaker / keremimo** (Felucca Salt).

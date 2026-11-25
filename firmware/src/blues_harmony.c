@@ -38,7 +38,7 @@ static const BarSlot FORM_RIGHTEOUS_GRID[8] = {
     {DEG_IV7, DEG_IV7, 0},     {DEG_I7, DEG_I7, 0}
 };
 
-static uint8_t harmony_form_bars(FormMode mode) {
+uint8_t harmony_form_bars(FormMode mode) {
     return (mode == FORM_8BAR || mode == FORM_I_bVII_IV) ? 8 : 12;
 }
 

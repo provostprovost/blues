@@ -405,8 +405,8 @@ void test_stage3_dsp(void) {
         dsp_note_on_lead(65 + algo, 115, preset.master_tuning);
 
         // Trigger all 4 drums (Kick, Snare, Hat, Rimshot)
-        uint8_t dvel[4] = { 127, 127, 127, 127 };
-        dsp_trigger_drum(0x0F, dvel, 1);
+        uint8_t dvel[NUM_DRUM_VOICES] = { 127, 127, 127, 127 };
+        dsp_trigger_drum(0x0F, dvel);
 
         int64_t energy_sum = 0;
 
@@ -440,8 +440,8 @@ void test_stage3_dsp(void) {
     // 3. Test dsp_all_notes_off() and smooth reverb decay to zero
     dsp_init();
     dsp_note_on_bass(36, 127, 0);
-    uint8_t dvel[4] = { 127, 127, 127, 127 };
-    dsp_trigger_drum(0x0F, dvel, 0);
+    uint8_t dvel[NUM_DRUM_VOICES] = { 127, 127, 127, 127 };
+    dsp_trigger_drum(0x0F, dvel);
     for (int i = 0; i < 256 * 2; i++) buf[i] = 0;
     dsp_render_block(buf, 256, &preset);
 
@@ -613,7 +613,7 @@ void test_stage5_integration(void) {
                         last_voicing = frame.comp_voicing;
                     }
                     if (frame.drum_mask) {
-                        dsp_trigger_drum(frame.drum_mask, frame.drum_vel, 0);
+                        dsp_trigger_drum(frame.drum_mask, frame.drum_vel);
                     }
                     harmony_tick_subdivision(&hs);
                 }
@@ -683,7 +683,9 @@ void test_stage5_integration(void) {
     fhs.current_beat = 3;
     fhs.current_subdiv = 16; // offbeat_subdiv for swing 67 = 12 + (67*6)/100 = 16
     arranger_generate_frame(&fhs, &fp, &pf, &fv);
-    assert((pf.drum_mask & 0x03) == 0x03);
+    // 2.3: the chorus ends on one of several fills (blues_patterns.c): its last step is a snare or a tom, and no hat
+    assert((pf.drum_mask & ((1u << DV_SNARE) | (1u << DV_TOM_HI) | (1u << DV_TOM_LO))) != 0);
+    assert((pf.drum_mask & (1u << DV_HAT)) == 0);
 
     // Expanded Styles & Sounds verification
     for (uint8_t dp = 0; dp < NUM_DRUM_PATTERNS; dp++) {

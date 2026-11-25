@@ -142,7 +142,7 @@ static void load_from_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8
     *active_preset_idx = slot;
     const PresetConfig *np = &presets[slot];
     hs->root_semitone = np->root_key % 12;
-    hs->form_mode = (FormMode)(np->form_mode % 5);
+    hs->form_mode = (FormMode)(np->form_mode % NUM_FORM_MODES);
     hs->opening_var = (OpeningVar)(np->opening_var % 4);
     hs->outro_type = (OutroType)(np->outro_type % NUM_OUTRO_TYPES);
     hs->heat_level = (np->heat_level >= 1 && np->heat_level <= 5) ? np->heat_level : 3;
@@ -169,12 +169,12 @@ static void load_from_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8
     }
 }
 
-static void set_master_fullness(HarmonyState *hs, PresetConfig *p, uint8_t val) {
+__attribute__((unused)) static void set_master_fullness(HarmonyState *hs, PresetConfig *p, uint8_t val) {
     hs->fullness = val; hs->bass_fullness = val; hs->keys_fullness = val; hs->drums_fullness = val;
     p->fullness  = val; p->bass_fullness  = val; p->keys_fullness  = val; p->drums_fullness  = val;
 }
 
-static void set_master_variation(HarmonyState *hs, PresetConfig *p, uint8_t val) {
+__attribute__((unused)) static void set_master_variation(HarmonyState *hs, PresetConfig *p, uint8_t val) {
     hs->variation = val; hs->bass_variation = val; hs->keys_variation = val; hs->drums_variation = val;
     p->variation  = val; p->bass_variation = val; p->keys_variation = val; p->drums_variation = val;
 }
@@ -354,7 +354,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
     }
     if (btn_edges & (1u << BTN_HOME)) {
         if (ui_screen) {
-            *ui_screen = (uint8_t)((*ui_screen + 1) % 4);
+            *ui_screen = (uint8_t)((*ui_screen + 1) % NUM_UI_SCREENS);
             hs->ui_dirty = 1;
         }
     }
@@ -510,152 +510,133 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         if (glo_held) {
             p->drum_kit = wrap_step_u8(p->drum_kit, delta, NUM_DRUM_KITS);
         } else {
-            uint8_t ng = wrap_step_u8(p->groove_style, delta, NUM_DRUM_PATTERNS);
+            uint8_t ng = wrap_step_u8(p->groove_style % NUM_GROOVES, delta, NUM_GROOVES);
             arranger_apply_groove_defaults(hs, p, (GrooveStyle)ng);
         }
         hs->ui_dirty = 1;
     }
 
-    uint8_t scr = ui_screen ? *ui_screen : 0;
-    uint8_t is_mixer = (scr == 1);
-    uint8_t is_style = (scr == 2);
-    uint8_t is_feel  = (scr == 3);
-
-    // KNOB 1: Lead Sheet (BPM / GLO:Swing) | Mixer (Bass Vol / GLO:Reverb) | Style (Bass Line / GLO:Bass Sound) | Feel (Bass Ful / GLO:Bass Spc)
-    if ((delta = hal_get_encoder_delta(ENC_KNOB1)) != 0) {
-        if (is_feel) {
-            if (glo_held) { hs->bass_variation = clamp_step_u8(hs->bass_variation, delta * 5, 0, 100); p->bass_variation = hs->bass_variation; }
-            else          { hs->bass_fullness = clamp_step_u8(hs->bass_fullness, delta * 5, 0, 100); p->bass_fullness = hs->bass_fullness; }
-        } else if (is_style) {
-            if (glo_held) {
-                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, NUM_BASS_INSTRUMENTS);
-            } else {
-                hs->bass_style = wrap_step_u8(hs->bass_style, delta, NUM_BASS_STYLES);
-                p->bass_style = hs->bass_style;
-            }
-        } else if (is_mixer) {
-            if (glo_held) p->reverb_mix = clamp_step_u8(p->reverb_mix, delta * 4, 0, 127);
-            else          p->bass_vol   = clamp_step_u8(p->bass_vol,   delta * 4, 0, 127);
-        } else {
-            if (glo_held) {
-                p->swing = clamp_step_u8(p->swing, delta * 2, 0, 100);
-                set_toast_val(hs, ms_now, "SWING: ", p->swing, "%");
-            } else {
-                p->bpm = clamp_step_u8(p->bpm, delta * 2, 40, 240);
-            }
-        }
-        hs->ui_dirty = 1;
-        g_save_pending = 1;
-        g_last_param_change_ms = ms_now;
-    }
-
-    // KNOB 2: Lead Sheet (Master Spice / GLO:Tuning) | Mixer (Keys Vol / GLO:Master Spice) | Style (Keys Rhy / GLO:Chord Sound) | Feel (Keys Ful / GLO:Keys Spc)
-    if ((delta = hal_get_encoder_delta(ENC_KNOB2)) != 0) {
-        if (is_feel) {
-            if (glo_held) {
-                hs->keys_variation = clamp_step_u8(hs->keys_variation, delta * 5, 0, 100);
-                p->keys_variation = hs->keys_variation;
-            } else {
-                hs->keys_fullness = clamp_step_u8(hs->keys_fullness, delta * 5, 0, 100);
-                p->keys_fullness = hs->keys_fullness;
-            }
-        } else if (is_style) {
-            if (glo_held) {
-                p->drum_kit = wrap_step_u8(p->drum_kit, delta, NUM_DRUM_KITS);
-            } else {
-                hs->keys_style = wrap_step_u8(hs->keys_style, delta, NUM_KEYS_STYLES);
-                p->keys_style = hs->keys_style;
-            }
-        } else if (is_mixer) {
-            if (glo_held) {
-                p->drive_level = clamp_step_u8(p->drive_level, delta * 4, 0, 127);
-            } else {
-                p->keys_vol = clamp_step_u8(p->keys_vol, delta * 4, 0, 127);
-            }
-        } else {
-            if (glo_held) {
-                p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
-                set_toast(hs, ms_now, TUNE_LABELS[p->master_tuning]);
-            } else {
+    /* The four knobs, by page (HOME cycles them); with GLO held, the page's second row:
+     *   0 LEAD SHEET  tempo / heat / bass vol / keys vol          [GLO] swing / tuning / bass sound / reverb
+     *   1 MIXER       bass / keys / drums / lead volume           [GLO] reverb / drive / swing / form
+     *   2 DRUMS       beat / kit / fullness / variation           [GLO] volume / swing / intro / outro
+     *   3 BASS        line / sound / fullness / variation         [GLO] volume
+     *   4 KEYS        rhythm / tone / fullness / variation        [GLO] volume
+     *   5 LEAD        voice / play style / slide / volume         [GLO] FX1 / FX1 amount / FX2 / FX2 amount */
+    uint8_t scr = ui_screen ? (uint8_t)(*ui_screen % NUM_UI_SCREENS) : 0;
+    for (uint8_t kn = 0; kn < 4; kn++) {
+        static const uint8_t KNOB_ENC[4] = { ENC_KNOB1, ENC_KNOB2, ENC_KNOB3, ENC_KNOB4 };
+        if ((delta = hal_get_encoder_delta(KNOB_ENC[kn])) == 0) continue;
+        uint8_t g = glo_held ? 1u : 0u;
+        switch (scr * 8u + g * 4u + kn) {
+            /* ---- 0: lead sheet ---- */
+            case 0:  p->bpm = clamp_step_u8(p->bpm, delta * 2, 40, 240); break;
+            case 1: {
                 uint8_t cur = (hs->heat_level >= 1 && hs->heat_level <= 5) ? hs->heat_level : 3;
                 uint8_t next = clamp_step_u8(cur, (delta > 0) ? 1 : -1, 1, 5);
-                if (next != cur) {
-                    harmony_set_heat_level(hs, p, next, (next > cur && hs->is_playing) ? 1 : 0);
-                }
+                if (next != cur) harmony_set_heat_level(hs, p, next, (next > cur && hs->is_playing) ? 1 : 0);
                 set_toast(hs, ms_now, HEAT_TOAST_LABELS[next - 1]);
+                break;
             }
-        }
-        hs->ui_dirty = 1;
-        g_save_pending = 1;
-        g_last_param_change_ms = ms_now;
-    }
-
-    // KNOB 3: Lead Sheet (Bass Vol / GLO:Bass Sound) | Mixer (Drums Vol / GLO:Swing) | Style (Drum Beat / GLO:Drum Kit) | Feel (Drums Ful / GLO:Drums Spc)
-    if ((delta = hal_get_encoder_delta(ENC_KNOB3)) != 0) {
-        if (is_feel) {
-            if (glo_held) { hs->drums_variation = clamp_step_u8(hs->drums_variation, delta * 5, 0, 100); p->drums_variation = hs->drums_variation; }
-            else          { hs->drums_fullness = clamp_step_u8(hs->drums_fullness, delta * 5, 0, 100); p->drums_fullness = hs->drums_fullness; }
-        } else if (is_style) {
-            if (glo_held) {
-                hs->count_in_enabled = wrap_step_u8(hs->count_in_enabled, delta, NUM_INTRO_MODES);
-                p->count_in_enabled = hs->count_in_enabled;
-                set_toast(hs, ms_now, INTRO_TOAST_LABELS[hs->count_in_enabled]);
-            } else {
-                hs->drum_pattern = wrap_step_u8(hs->drum_pattern, delta, NUM_DRUM_PATTERNS);
-                p->drum_pattern = hs->drum_pattern;
-            }
-        } else if (is_mixer) {
-            if (glo_held) p->swing     = clamp_step_u8(p->swing,     delta * 4, 0, 100);
-            else          p->drums_vol = clamp_step_u8(p->drums_vol, delta * 4, 0, 127);
-        } else {
-            if (glo_held) {
-                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, NUM_BASS_INSTRUMENTS);
-                set_toast(hs, ms_now, BASS_LABELS[p->bass_instrument]);
-            } else {
+            case 2:
                 p->bass_vol = clamp_step_u8(p->bass_vol, delta * 4, 0, 127);
                 set_toast_val(hs, ms_now, "BASS VOL: ", (int32_t)p->bass_vol * 100 / 127, "%");
-            }
-        }
-        hs->ui_dirty = 1;
-        g_save_pending = 1;
-        g_last_param_change_ms = ms_now;
-    }
-
-    // KNOB 4: Lead Sheet (Keys Vol / GLO:Reverb) | Mixer (Lead Vol / GLO:Master Ful) | Style (Form / GLO:Tuning) | Feel (Master Ful / GLO:Master Spc)
-    if ((delta = hal_get_encoder_delta(ENC_KNOB4)) != 0) {
-        if (is_feel) {
-            if (glo_held) set_master_variation(hs, p, clamp_step_u8(hs->variation, delta * 5, 0, 100));
-            else          set_master_fullness(hs, p, clamp_step_u8(hs->fullness, delta * 5, 0, 100));
-        } else if (is_style) {
-            if (glo_held) {
-                hs->outro_type = (OutroType)wrap_step_u8((uint8_t)hs->outro_type, delta, NUM_OUTRO_TYPES);
-                p->outro_type = (uint8_t)hs->outro_type;
-                set_toast(hs, ms_now, OUTRO_TOAST_LABELS[(uint8_t)hs->outro_type]);
-            } else {
-                hs->form_mode = (FormMode)wrap_step_u8((uint8_t)hs->form_mode, delta, NUM_FORM_MODES);
-                p->form_mode = hs->form_mode;
-            }
-        } else if (is_mixer) {
-            if (sel_held) {
-                hs->easy_lead = !hs->easy_lead;
-                p->easy_lead = hs->easy_lead;
-                GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, p->master_tuning, p->count_in_enabled, hs->easy_lead };
-                hal_settings_save(&gs, sizeof(gs));
-                set_toast(hs, ms_now, hs->easy_lead ? "EASY LEAD: ON (BEND)" : "EASY LEAD: OFF");
-            } else if (glo_held) {
-                p->lead_play_style = wrap_step_u8(p->lead_play_style, delta, NUM_LEAD_PLAY_STYLES);
-                dsp_set_lead_play_style(p->lead_play_style);
-            } else {
-                p->lead_vol = clamp_step_u8(p->lead_vol, delta * 4, 0, 127);
-            }
-        } else {
-            if (glo_held) {
-                p->reverb_mix = clamp_step_u8(p->reverb_mix, delta * 4, 0, 127);
-                set_toast_val(hs, ms_now, "REVERB: ", (int32_t)p->reverb_mix * 100 / 127, "%");
-            } else {
+                break;
+            case 3:
                 p->keys_vol = clamp_step_u8(p->keys_vol, delta * 4, 0, 127);
                 set_toast_val(hs, ms_now, "KEYS VOL: ", (int32_t)p->keys_vol * 100 / 127, "%");
-            }
+                break;
+            case 4:
+                p->swing = clamp_step_u8(p->swing, delta * 2, 0, 100);
+                set_toast_val(hs, ms_now, "SWING: ", p->swing, "%");
+                break;
+            case 5:
+                p->master_tuning = wrap_step_u8(p->master_tuning, delta, 3);
+                set_toast(hs, ms_now, TUNE_LABELS[p->master_tuning]);
+                break;
+            case 6:
+                p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, NUM_BASS_INSTRUMENTS);
+                set_toast(hs, ms_now, BASS_LABELS[p->bass_instrument]);
+                break;
+            case 7:
+                p->reverb_mix = clamp_step_u8(p->reverb_mix, delta * 4, 0, 127);
+                set_toast_val(hs, ms_now, "REVERB: ", (int32_t)p->reverb_mix * 100 / 127, "%");
+                break;
+            /* ---- 1: mixer ---- */
+            case 8:  p->bass_vol  = clamp_step_u8(p->bass_vol,  delta * 4, 0, 127); break;
+            case 9:  p->keys_vol  = clamp_step_u8(p->keys_vol,  delta * 4, 0, 127); break;
+            case 10: p->drums_vol = clamp_step_u8(p->drums_vol, delta * 4, 0, 127); break;
+            case 11: p->lead_vol  = clamp_step_u8(p->lead_vol,  delta * 4, 0, 127); break;
+            case 12: p->reverb_mix  = clamp_step_u8(p->reverb_mix,  delta * 4, 0, 127); break;
+            case 13: p->drive_level = clamp_step_u8(p->drive_level, delta * 4, 0, 127); break;
+            case 14: p->swing       = clamp_step_u8(p->swing,       delta * 4, 0, 100); break;
+            case 15:
+                hs->form_mode = (FormMode)wrap_step_u8((uint8_t)hs->form_mode, delta, NUM_FORM_MODES);
+                p->form_mode = hs->form_mode;
+                break;
+            /* ---- 2: drums ---- */
+            case 16:
+                hs->drum_pattern = wrap_step_u8(hs->drum_pattern, delta, NUM_DRUM_PATTERNS);
+                p->drum_pattern = hs->drum_pattern;
+                break;
+            case 17: p->drum_kit = wrap_step_u8(p->drum_kit, delta, NUM_DRUM_KITS); break;
+            case 18: hs->drums_fullness = clamp_step_u8(hs->drums_fullness, delta * 5, 0, 100); p->drums_fullness = hs->drums_fullness; break;
+            case 19: hs->drums_variation = clamp_step_u8(hs->drums_variation, delta * 5, 0, 100); p->drums_variation = hs->drums_variation; break;
+            case 20: p->drums_vol = clamp_step_u8(p->drums_vol, delta * 4, 0, 127); break;
+            case 21: p->swing = clamp_step_u8(p->swing, delta * 2, 0, 100); break;
+            case 22:
+                hs->count_in_enabled = wrap_step_u8(hs->count_in_enabled, delta, NUM_INTRO_MODES);
+                p->count_in_enabled = hs->count_in_enabled;
+                break;
+            case 23:
+                hs->outro_type = (OutroType)wrap_step_u8((uint8_t)hs->outro_type, delta, NUM_OUTRO_TYPES);
+                p->outro_type = (uint8_t)hs->outro_type;
+                break;
+            /* ---- 3: bass ---- */
+            case 24:
+                hs->bass_style = wrap_step_u8(hs->bass_style, delta, NUM_BASS_STYLES);
+                p->bass_style = hs->bass_style;
+                break;
+            case 25: p->bass_instrument = wrap_step_u8(p->bass_instrument, delta, NUM_BASS_INSTRUMENTS); break;
+            case 26: hs->bass_fullness = clamp_step_u8(hs->bass_fullness, delta * 5, 0, 100); p->bass_fullness = hs->bass_fullness; break;
+            case 27: hs->bass_variation = clamp_step_u8(hs->bass_variation, delta * 5, 0, 100); p->bass_variation = hs->bass_variation; break;
+            case 28: p->bass_vol = clamp_step_u8(p->bass_vol, delta * 4, 0, 127); break;
+            /* ---- 4: keys ---- */
+            case 32:
+                hs->keys_style = wrap_step_u8(hs->keys_style, delta, NUM_KEYS_STYLES);
+                p->keys_style = hs->keys_style;
+                break;
+            case 33: p->ep_tone_algo = wrap_step_u8(p->ep_tone_algo, delta, NUM_KEYS_INSTRUMENTS); break;
+            case 34: hs->keys_fullness = clamp_step_u8(hs->keys_fullness, delta * 5, 0, 100); p->keys_fullness = hs->keys_fullness; break;
+            case 35:
+                /* the keys' variation is also the harmony's: the passing chords and substitutions they play */
+                hs->keys_variation = clamp_step_u8(hs->keys_variation, delta * 5, 0, 100);
+                p->keys_variation = hs->keys_variation;
+                hs->variation = hs->keys_variation;
+                p->variation = hs->variation;
+                break;
+            case 36: p->keys_vol = clamp_step_u8(p->keys_vol, delta * 4, 0, 127); break;
+            /* ---- 5: lead ---- */
+            case 40: p->lead_instrument = wrap_step_u8(p->lead_instrument, delta, NUM_LEAD_INSTRUMENTS); break;
+            case 41:
+                if (sel_held) {
+                    hs->easy_lead = !hs->easy_lead;
+                    p->easy_lead = hs->easy_lead;
+                    GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, p->master_tuning, p->count_in_enabled, hs->easy_lead };
+                    hal_settings_save(&gs, sizeof(gs));
+                    set_toast(hs, ms_now, hs->easy_lead ? "EASY LEAD: ON (BEND)" : "EASY LEAD: OFF");
+                } else {
+                    p->lead_play_style = wrap_step_u8(p->lead_play_style, delta, NUM_LEAD_PLAY_STYLES);
+                    dsp_set_lead_play_style(p->lead_play_style);
+                }
+                break;
+            case 42: p->lead_slide = clamp_step_u8(p->lead_slide, delta * 2, 0, 100); break;
+            case 43: p->lead_vol = clamp_step_u8(p->lead_vol, delta * 4, 0, 127); break;
+            case 44: p->lead_fx1 = wrap_step_u8(p->lead_fx1, delta, NUM_LEAD_FX); break;
+            case 45: p->lead_fx1_amt = clamp_step_u8(p->lead_fx1_amt, delta * 4, 0, 100); break;
+            case 46: p->lead_fx2 = wrap_step_u8(p->lead_fx2, delta, NUM_LEAD_FX); break;
+            case 47: p->lead_fx2_amt = clamp_step_u8(p->lead_fx2_amt, delta * 4, 0, 100); break;
+            default: break;      /* (a spare knob) */
         }
         hs->ui_dirty = 1;
         g_save_pending = 1;

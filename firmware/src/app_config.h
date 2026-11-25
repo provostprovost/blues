@@ -2,7 +2,7 @@
 #define APP_CONFIG_H
 
 #define TB1_VERSION_MAJOR         2
-#define TB1_VERSION_MINOR         2
+#define TB1_VERSION_MINOR         3
 #undef APP_NAME
 #define APP_NAME                  "BLUES BOX"
 #ifndef FELUCCA_ID
@@ -16,7 +16,7 @@
 #define NUM_PRESET_SLOTS          16
 #define PRESET_BLOB_SLOT          0
 #define SETTINGS_MAGIC            0x54423130u /* 'TB10' */
-#define PRESET_MAGIC              0x68u
+#define PRESET_MAGIC              0x69u /* 2.3: new preset layout, the saved slots start over */
 #define AUTOSAVE_DEBOUNCE_MS      2000
 #define DOUBLE_TAP_WINDOW_MS      250
 

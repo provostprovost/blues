@@ -1,5 +1,17 @@
 #include "dsp_voices.h"
 #include "hal_adapter.h"
+#ifdef STANDALONE_TEST
+#include <string.h>
+#endif
+
+/* 2.3: the sample player (real bass, drums, tenor, guitar), the lead's pedalboard, and the sampled grand: Erik37's
+ * piano engine (erk.c, MPL-2.0, M. Geisler) with a Salamander Grand Piano V3 bank (CC BY 3.0, Alexander Holm) */
+#include "sampler.c"
+#include "lead_fx.c"
+#define ERK_VOICES 8
+#define ERK_XF_MAX 4
+#include "erk.c"
+#include "../gen/piano_bank.h"
 
 static const uint32_t G_MIDI_PHASE_INC[128] = {
     796254u, 843601u, 893765u, 946911u, 1003217u, 1062871u,
@@ -34,6 +46,14 @@ typedef struct {
     uint32_t gate_samples;
     uint16_t pluck_samples;
     uint8_t  active;
+    uint8_t  sampled;       /* a real bass: smp plays, the envelope only shapes its decay and release */
+    uint8_t  ghost;         /* a dead note */
+    uint8_t  decay_div;     /* the sampled decay: one step every decay_div samples */
+    uint8_t  decay_cnt;
+    SmpVoice smp;
+    uint32_t smp_step;
+    int32_t  last_out;      /* for the de-click ramp when a note cuts the one before */
+    int32_t  declick;
 } BassVoice;
 
 typedef struct {
@@ -44,6 +64,8 @@ typedef struct {
     int32_t  env_q15;
     uint32_t gate_samples;
     uint8_t  active;
+    int32_t  perc_env;      /* tonewheel organ: the percussion's decaying harmonic */
+    uint16_t age;           /* samples since the key went down (the key click) */
 } KeysVoice;
 
 #define MAX_LEAD_VOICES 4
@@ -61,7 +83,11 @@ typedef struct {
     int32_t  filter_lp;
     uint32_t vib_phase;
     uint16_t vib_delay;
-    uint16_t bend_samples;
+    uint32_t bend_samples;  /* samples left of the glide / bend / scoop */
+    int32_t  bend_step;     /* the phase increment's change a sample over it: a slide of constant time */
+    uint8_t  sampled;       /* a real voice: smp plays at the voice's (bent, vibrato'd) pitch */
+    SmpVoice smp;
+    uint32_t smp_step;
 } LeadVoice;
 
 static BassVoice g_bass;
@@ -73,9 +99,41 @@ static uint8_t   g_mono_stack[8];
 static uint8_t   g_mono_target[8];
 static uint8_t   g_mono_len = 0;
 static int32_t   g_bass_lp = 0;
-static int32_t   g_drum_env[4];
-static uint16_t  g_drum_decay[4] = { 32763, 32756, 32720, 32732 };
-static uint32_t  g_drum_pitch[4];
+/* synthesized kits: an envelope a voice (the open hat shares the closed hat's, with a longer decay) */
+static int32_t   g_drum_env[NUM_DRUM_VOICES];
+static uint16_t  g_drum_decay[NUM_DRUM_VOICES] = { 32763, 32756, 32720, 32732, 32760, 32764, 32766, 32759, 32760 };
+static uint32_t  g_drum_pitch[NUM_DRUM_VOICES];
+/* the real kit: a few sample voices shared by the pieces, so a cymbal rings on under the next stroke */
+#define DRUM_SMP_VOICES 6
+typedef struct {
+    SmpVoice smp;
+    int32_t  gain_q12;
+    uint8_t  piece;
+    uint32_t age;
+} DrumSmpVoice;
+static DrumSmpVoice g_drum_smp[DRUM_SMP_VOICES];
+static uint32_t  g_drum_age = 0;
+
+/* what the last rendered block was set to: a note that starts picks its voice (sampled or not) from these */
+static uint8_t   g_cur_bass_inst = 0, g_cur_keys_inst = 0, g_cur_drum_kit = 0, g_cur_lead_inst = 0;
+static uint32_t  g_lead_slide_samples = 0;
+
+/* the sampled grand */
+static erk_bank  g_erk_bank;
+static uint8_t   g_erk_ok = 0;
+static int32_t   g_erk_buf[ERK_BLOCK * 2];
+static uint32_t  g_erk_pos = ERK_BLOCK;
+static uint8_t   g_erk_tone = 0xFF, g_erk_tuning = 0xFF;
+static uint8_t   g_piano_notes[4], g_piano_count = 0;
+static uint32_t  g_piano_gate = 0;
+
+/* the tonewheel organ's rotary speaker */
+static int16_t   g_rot_line[256];
+static uint32_t  g_rot_w = 0, g_rot_lfo = 0, g_rot_lfo2 = 0;
+static int32_t   g_rot_rate = 0, g_rot_lp = 0;
+
+static inline uint8_t keys_is_piano(uint8_t inst) { return inst >= KEYS_GRAND_CONCERT && inst <= KEYS_GRAND_JAZZ; }
+static inline uint8_t keys_is_tonewheel(uint8_t inst) { return inst >= KEYS_TW_JIMMY && inst <= KEYS_TW_BALLAD; }
 
 // 4-Comb Schroeder Room Reverb Buffers (Prime lengths)
 static int16_t   g_comb_buf0[743];
@@ -92,8 +150,28 @@ void dsp_init(void) {
     g_bass.phase = 0;
     g_bass.env_q15 = 0;
     g_bass.gate_samples = 0;
+    g_bass.sampled = 0;
+    g_bass.smp.on = 0;
+    g_bass.last_out = 0;
+    g_bass.declick = 0;
     g_bass_lp = 0;
     g_eq_lp = 0;
+    lfx_init();
+    for (int d = 0; d < DRUM_SMP_VOICES; d++) g_drum_smp[d].smp.on = 0;
+    g_drum_age = 0;
+    g_cur_bass_inst = g_cur_keys_inst = g_cur_drum_kit = g_cur_lead_inst = 0;
+    g_lead_slide_samples = 0;
+    for (int i = 0; i < 256; i++) g_rot_line[i] = 0;
+    g_rot_w = 0; g_rot_lfo = 0; g_rot_lfo2 = 0; g_rot_rate = 0; g_rot_lp = 0;
+    g_erk_pos = ERK_BLOCK;
+    g_erk_tone = 0xFF; g_erk_tuning = 0xFF;
+    g_piano_count = 0; g_piano_gate = 0;
+    g_erk_ok = (erk_bank_open(&g_erk_bank, g_piano_bank_data) == 0);
+    if (g_erk_ok) {
+        erk_cfg cfg = { .reverb = ERK_REV_OFF, .rev_mix = 0, .res_level = 0, .master = 32767, .rel_level = 9000,
+                        .mode = ERK_SAMPLED, .modal = 0 };
+        erk_init(&g_erk_bank, &cfg);
+    }
     for (int v = 0; v < MAX_LEAD_VOICES; v++) {
         g_lead[v].active = 0;
         g_lead[v].phase = 0;
@@ -106,6 +184,9 @@ void dsp_init(void) {
         g_lead[v].vib_phase = 0;
         g_lead[v].vib_delay = 0;
         g_lead[v].bend_samples = 0;
+        g_lead[v].bend_step = 0;
+        g_lead[v].sampled = 0;
+        g_lead[v].smp.on = 0;
         g_lead[v].midi_note = 0xFF;
     }
     g_mono_len = 0;
@@ -115,8 +196,10 @@ void dsp_init(void) {
         g_keys[k].phase_m = 0;
         g_keys[k].env_q15 = 0;
         g_keys[k].gate_samples = 0;
+        g_keys[k].perc_env = 0;
+        g_keys[k].age = 0;
     }
-    for (int d = 0; d < 4; d++) {
+    for (int d = 0; d < NUM_DRUM_VOICES; d++) {
         g_drum_env[d] = 0;
         g_drum_pitch[d] = 0;
     }
@@ -132,7 +215,11 @@ void dsp_init(void) {
 void dsp_all_notes_off(void) {
     g_bass.active = 0;
     for (int k = 0; k < 4; k++) g_keys[k].active = 0;
-    for (int d = 0; d < 4; d++) g_drum_env[d] = 0;
+    for (int d = 0; d < NUM_DRUM_VOICES; d++) g_drum_env[d] = 0;
+    for (int d = 0; d < DRUM_SMP_VOICES; d++) g_drum_smp[d].smp.on = 0;
+    if (g_erk_ok) erk_all_off();
+    g_piano_count = 0;
+    g_piano_gate = 0;
     g_mono_len = 0;
     for (int v = 0; v < MAX_LEAD_VOICES; v++) {
         g_lead[v].active = 0;
@@ -149,21 +236,59 @@ static inline uint32_t get_scaled_inc(uint8_t midi_note, uint8_t tuning_mode) {
     return ((inc >> 15) * mult) + (((inc & 0x7FFF) * mult) >> 15);
 }
 
-void dsp_note_on_bass(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) {
-    g_bass.phase_inc = get_scaled_inc(midi_note, tuning_mode);
+void dsp_note_on_bass_ex(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode, uint32_t gate_samples, uint8_t ghost) {
+    uint8_t real = (g_cur_bass_inst == BASS_REAL_ELECTRIC || g_cur_bass_inst == BASS_REAL_UPRIGHT);
     g_bass.target_env = (int32_t)velocity * 256;
-    if (!g_bass.active) {
-        g_bass.phase = 0;
-        g_bass.env_q15 = 0;
+    g_bass.ghost = ghost;
+    if (real) {
+        /* the real basses sound where a bass does: an octave under the synthesized ones (E1 up) */
+        uint8_t key = (uint8_t)((midi_note >= 40) ? midi_note - 12 : midi_note);
+        const SmpZone *z = (g_cur_bass_inst == BASS_REAL_UPRIGHT) ? smp_zone(SMP_UBASS, SMP_UBASS_N, key)
+                                                                 : smp_zone(SMP_EBASS, SMP_EBASS_N, key);
+        g_bass.phase_inc = get_scaled_inc(key, tuning_mode);
+        g_bass.declick = g_bass.active ? g_bass.last_out : 0;
+        smp_start(&g_bass.smp, z);
+        g_bass.smp_step = smp_step(z, g_bass.phase_inc);
+        g_bass.env_q15 = g_bass.target_env;
+        g_bass.target_env = 0;
+        g_bass.decay_div = (g_cur_bass_inst == BASS_REAL_UPRIGHT) ? 1 : 3;
+        g_bass.decay_cnt = 0;
+        g_bass.sampled = 1;
     } else {
-        g_bass.env_q15 >>= 1; // Legato tie
+        g_bass.phase_inc = get_scaled_inc(midi_note, tuning_mode);
+        if (!g_bass.active || g_bass.sampled) {
+            g_bass.phase = 0;
+            g_bass.env_q15 = 0;
+        } else {
+            g_bass.env_q15 >>= 1; // Legato tie
+        }
+        g_bass.sampled = 0;
     }
-    g_bass.gate_samples = 17640; // ~400 ms walking bass gate
+    g_bass.gate_samples = gate_samples ? gate_samples : 17640; // ~400 ms walking bass gate
     g_bass.pluck_samples = 2200; // ~50 ms initial pluck snap
     g_bass.active = 1;
 }
 
+void dsp_note_on_bass(uint8_t midi_note, uint8_t velocity, uint8_t tuning_mode) {
+    dsp_note_on_bass_ex(midi_note, velocity, tuning_mode, 0, 0);
+}
+
 void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_mode) {
+    if (keys_is_piano(g_cur_keys_inst) && g_erk_ok) {
+        /* the grand: the chord's keys go down, the ones before come up; the gate lets them go again */
+        for (uint8_t i = 0; i < g_piano_count; i++) erk_note_off(g_piano_notes[i]);
+        g_piano_count = 0;
+        for (uint8_t i = 0; i < voicing->count && i < 4; i++) {
+            uint8_t key = voicing->notes[i];
+            if (key < ERK_KEY0 || key >= ERK_KEY0 + ERK_KEYS) continue;
+            erk_note_on(key, velocity ? velocity : 1);
+            g_piano_notes[g_piano_count++] = key;
+        }
+        g_piano_gate = 11000;
+        for (uint8_t i = 0; i < 4; i++) g_keys[i].active = 0;
+        (void)tuning_mode;
+        return;
+    }
     for (uint8_t i = 0; i < voicing->count && i < 4; i++) {
         g_keys[i].inc_c = get_scaled_inc(voicing->notes[i], tuning_mode);
         g_keys[i].inc_m = g_keys[i].inc_c * 2;
@@ -173,6 +298,8 @@ void dsp_note_on_keys(const Voicing *voicing, uint8_t velocity, uint8_t tuning_m
             g_keys[i].phase_c = 0;
             g_keys[i].phase_m = 0;
         }
+        g_keys[i].perc_env = (int32_t)velocity * 256;
+        g_keys[i].age = 0;
         g_keys[i].active = 1;
     }
     for (uint8_t i = voicing->count; i < 4; i++) {
@@ -185,12 +312,43 @@ void dsp_extend_drone_gate(uint32_t gate_samples) {
     for (int i = 0; i < 4; i++) {
         if (g_keys[i].active) g_keys[i].gate_samples = gate_samples;
     }
+    if (g_piano_count) g_piano_gate = gate_samples;
 }
 
 void dsp_set_lead_play_style(uint8_t play_style) {
     g_lead_play_style = play_style % NUM_LEAD_PLAY_STYLES;
     if (g_lead_play_style != LEAD_PLAY_LEGATO_GLIDE) {
         g_mono_len = 0;
+    }
+}
+
+/* the voice's pitch moves to target over the SLIDE time (LEAD page): the same time whatever the distance, from
+ * at once (0) to a trombone's 1.5 s. Easy Lead's bend into the scale, the Blues Bend scoop and the legato glide all
+ * take it. */
+static void lead_slide_to(LeadVoice *lv, uint32_t target) {
+    lv->target_inc = target;
+    if (g_lead_slide_samples == 0 || lv->phase_inc == target) {
+        lv->phase_inc = target;
+        lv->bend_samples = 0;
+        lv->bend_step = 0;
+        return;
+    }
+    lv->bend_samples = g_lead_slide_samples;
+    lv->bend_step = ((int32_t)target - (int32_t)lv->phase_inc) / (int32_t)g_lead_slide_samples;
+}
+
+/* a real lead voice: the note's zone starts playing; the pitch is the voice's own */
+static void lead_start_sample(LeadVoice *lv, uint8_t note) {
+    if (g_cur_lead_inst == LEAD_REAL_TENOR) {
+        smp_start(&lv->smp, smp_zone(SMP_TENOR, SMP_TENOR_N, note));
+        lv->smp_step = 0;
+        lv->sampled = 1;
+    } else if (g_cur_lead_inst == LEAD_REAL_GUITAR || g_cur_lead_inst == LEAD_REAL_GUITAR_OD) {
+        smp_start(&lv->smp, smp_zone(SMP_GUITAR, SMP_GUITAR_N, note));
+        lv->smp_step = 0;
+        lv->sampled = 1;
+    } else {
+        lv->sampled = 0;
     }
 }
 
@@ -225,7 +383,6 @@ static void lead_trigger_voice(uint8_t key_note, uint8_t target_note, uint8_t ve
     uint32_t inc = get_scaled_inc(target_note, tuning_mode);
     uint32_t start_inc = (key_note != target_note) ? get_scaled_inc(key_note, tuning_mode)
                        : (scoop_bend ? (inc - (inc >> 4) - (inc >> 5)) : inc);
-    uint16_t bend_dur = (key_note != target_note) ? 11025u : (scoop_bend ? 2200u : 0u);
     lv->target_inc = inc;
     lv->midi_note = key_note;
     lv->target_env = (int32_t)velocity * 256;
@@ -236,14 +393,13 @@ static void lead_trigger_voice(uint8_t key_note, uint8_t target_note, uint8_t ve
         lv->vib_delay = 1800; // ~40 ms delay before expressive blues vibrato onset
         lv->vib_phase = 0;
         lv->filter_lp = 0;
-        lv->phase_inc = start_inc;
-        lv->bend_samples = bend_dur;
     } else {
         lv->env_q15 = (lv->env_q15 * 3 + lv->target_env) / 4;
         lv->vib_delay = 1200;
-        lv->phase_inc = start_inc;
-        lv->bend_samples = bend_dur;
     }
+    lv->phase_inc = start_inc;
+    lead_slide_to(lv, inc);
+    lead_start_sample(lv, target_note);
     lv->gate_samples = 44100 * 10;
     lv->active = 1;
 }
@@ -283,16 +439,12 @@ void dsp_note_on_lead_ex(uint8_t key_note, uint8_t target_note, uint8_t velocity
             lv->vib_delay = 1800;
             lv->vib_phase = 0;
             lv->filter_lp = 0;
-            lv->bend_samples = (key_note != target_note) ? 11025u : 0u;
+            lead_slide_to(lv, inc);
+            lead_start_sample(lv, target_note);
         } else {
-            // Legato glide: preserve envelope and slew phase_inc toward target_inc
+            // Legato glide: the note sounding slides on to the new one, its envelope untouched
             lv->vib_delay = 1200;
-            if (key_note != target_note) {
-                lv->phase_inc = get_scaled_inc(key_note, tuning_mode);
-                lv->bend_samples = 11025u;
-            } else {
-                lv->bend_samples = 2800u;
-            }
+            lead_slide_to(lv, inc);
         }
         lv->active = 1;
         return;
@@ -339,8 +491,7 @@ void dsp_note_off_lead(uint8_t midi_note) {
             uint8_t prev_key = g_mono_stack[g_mono_len - 1];
             uint8_t prev_tgt = g_mono_target[g_mono_len - 1];
             g_lead[0].midi_note = prev_key;
-            g_lead[0].target_inc = get_scaled_inc(prev_tgt, g_lead_tuning);
-            g_lead[0].bend_samples = 2800u;
+            lead_slide_to(&g_lead[0], get_scaled_inc(prev_tgt, g_lead_tuning));
         } else {
             g_lead[0].gate_samples = 0;
         }
@@ -358,13 +509,49 @@ void dsp_note_off_lead(uint8_t midi_note) {
     }
 }
 
-void dsp_trigger_drum(uint8_t mask, const uint8_t *drum_vel, uint8_t open_hat) {
-    for (int d = 0; d < 4; d++) {
-        if (mask & (1 << d)) {
-            g_drum_env[d] = (int32_t)drum_vel[d] * 256;
-            g_drum_pitch[d] = 0;
-            if (d == 2) {
-                g_drum_decay[2] = open_hat ? 32760 : 32720;
+void dsp_trigger_drum(uint16_t mask, const uint8_t *drum_vel) {
+    if (g_cur_drum_kit == DRUM_REAL_KIT) {
+        /* the piece's zone and its place in the kit's balance (Q7) */
+        static const uint8_t ZONE[NUM_DRUM_VOICES] = {
+            SMP_DR_KICK, SMP_DR_SNARE, SMP_DR_HAT, SMP_DR_RIM, SMP_DR_HAT_OPEN, SMP_DR_RIDE, SMP_DR_CRASH,
+            SMP_DR_TOM_HI, SMP_DR_TOM_LO
+        };
+        static const uint8_t LEVEL[NUM_DRUM_VOICES] = { 240, 200, 125, 150, 120, 105, 110, 170, 180 };
+        for (uint8_t d = 0; d < NUM_DRUM_VOICES; d++) {
+            if (!(mask & (1u << d))) continue;
+            uint8_t vel = drum_vel[d] ? drum_vel[d] : 1;
+            uint8_t zone = ZONE[d];
+            int32_t gain = ((int32_t)vel * vel * LEVEL[d]) >> 9;     /* velocity squared: 127 -> LEVEL * 31.5 */
+            if (d == DV_SNARE && vel < 70) {                          /* ghost notes: the soft stroke */
+                zone = SMP_DR_SNARE_SOFT;
+                gain = ((int32_t)vel * LEVEL[d] * 3) >> 2;
+            }
+            /* a free voice, or the one that has rung longest; a hat stroke chokes the open hat */
+            int pick = 0;
+            uint32_t oldest = 0xFFFFFFFFu;
+            for (int v = 0; v < DRUM_SMP_VOICES; v++) {
+                if (g_drum_smp[v].smp.on && (d == DV_HAT || d == DV_HAT_OPEN) &&
+                    (g_drum_smp[v].piece == DV_HAT_OPEN || g_drum_smp[v].piece == DV_HAT)) {
+                    pick = v; oldest = 0;
+                    break;
+                }
+                uint32_t age = g_drum_smp[v].smp.on ? g_drum_smp[v].age : 0;
+                if (age < oldest) { oldest = age; pick = v; }
+            }
+            smp_start(&g_drum_smp[pick].smp, &SMP_ZONES[zone]);
+            g_drum_smp[pick].gain_q12 = gain;
+            g_drum_smp[pick].piece = d;
+            g_drum_smp[pick].age = ++g_drum_age;
+        }
+        return;
+    }
+    for (int d = 0; d < NUM_DRUM_VOICES; d++) {
+        if (mask & (1u << d)) {
+            int ch = (d == DV_HAT_OPEN) ? DV_HAT : d;
+            g_drum_env[ch] = (int32_t)drum_vel[d] * 256;
+            g_drum_pitch[ch] = 0;
+            if (ch == DV_HAT) {
+                g_drum_decay[DV_HAT] = (d == DV_HAT_OPEN) ? 32760 : 32720;
             }
         }
     }
@@ -383,7 +570,51 @@ static inline int32_t div4_trunc(int32_t x) {
     return (x >= 0) ? (x >> 2) : -((-x) >> 2);
 }
 
+/* the tonewheel organ's speaker cabinet: a horn and a bass rotor, slow (chorale) or fast (tremolo), taking their
+ * time between the two */
+static int32_t rotary_run(int32_t x, uint8_t fast) {
+    int32_t target = fast ? (int32_t)LFX_HZ(6600) : (int32_t)LFX_HZ(750);
+    if (g_rot_rate == 0) g_rot_rate = target;
+    g_rot_rate += (target - g_rot_rate) >> 15;
+    g_rot_rate += (target > g_rot_rate) ? 1 : (target < g_rot_rate) ? -1 : 0;
+    g_rot_lfo += (uint32_t)g_rot_rate;
+    g_rot_lfo2 += (uint32_t)(g_rot_rate - (g_rot_rate >> 3));
+    g_rot_lp += ((x - g_rot_lp) * 3600) >> 15;
+    int32_t lo = g_rot_lp, hi = x - lo;
+    g_rot_line[g_rot_w & 255u] = (int16_t)(hi > 32767 ? 32767 : hi < -32767 ? -32767 : hi);
+    uint32_t d = (uint32_t)(40 * 256 + ((hal_sine_q15(g_rot_lfo) * 18) >> 7));
+    int32_t s0 = g_rot_line[(g_rot_w - (d >> 8)) & 255u], s1 = g_rot_line[(g_rot_w - (d >> 8) - 1u) & 255u];
+    int32_t horn = s0 + (((s1 - s0) * (int32_t)(d & 255u)) >> 8);
+    g_rot_w++;
+    horn = (horn * (24576 + (hal_sine_q15(g_rot_lfo + 0x40000000u) >> 2))) >> 15;
+    lo = (lo * (27852 + ((hal_sine_q15(g_rot_lfo2) * 4915) >> 15))) >> 15;
+    return horn + lo;
+}
+
 void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *preset) {
+    g_cur_bass_inst = preset->bass_instrument % NUM_BASS_INSTRUMENTS;
+    g_cur_keys_inst = preset->ep_tone_algo % NUM_KEYS_INSTRUMENTS;
+    g_cur_drum_kit  = preset->drum_kit % NUM_DRUM_KITS;
+    g_cur_lead_inst = preset->lead_instrument % NUM_LEAD_INSTRUMENTS;
+    {
+        /* SLIDE 0..100 -> 0..1.5 s, finer at the short end */
+        uint32_t sl = (preset->lead_slide > 100) ? 100u : preset->lead_slide;
+        g_lead_slide_samples = (sl * sl * 6615u) / 1000u;
+    }
+    uint8_t piano = (keys_is_piano(g_cur_keys_inst) && g_erk_ok);
+    if (piano) {
+        uint8_t tone = (uint8_t)(g_cur_keys_inst - KEYS_GRAND_CONCERT);
+        if (tone != g_erk_tone) { erk_set_tone(tone, 16384, 0); g_erk_tone = tone; }
+        if (preset->master_tuning != g_erk_tuning) {
+            g_erk_tuning = preset->master_tuning;
+            erk_bend(g_erk_tuning == 1 ? 64344 : g_erk_tuning == 2 ? 65834 : 65536);     /* 432 / 442 / 440 Hz */
+        }
+    } else if (g_piano_count) {
+        for (uint8_t n = 0; n < g_piano_count; n++) erk_note_off(g_piano_notes[n]);
+        g_piano_count = 0;
+    }
+    uint8_t piano_sounding = (g_erk_ok && (piano || erk_active()));
+
     for (uint32_t i = 0; i < num_frames; i++) {
         int32_t mix = 0;
 
@@ -397,6 +628,13 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
 
             if (g_bass.pluck_samples > 0) g_bass.pluck_samples--;
 
+            if (g_bass.sampled) {
+                /* a real bass: the sample, darker as the note dies away (and dark from the start when muted) */
+                int32_t raw = smp_next(&g_bass.smp, g_bass.smp_step);
+                int32_t coef = g_bass.ghost ? 3500 : 9000 + (g_bass.env_q15 >> 1);
+                g_bass_lp += ((raw - g_bass_lp) * coef) >> 15;
+                b_sample = (g_bass_lp * 11) >> 3;
+            } else
             switch (preset->bass_instrument % NUM_BASS_INSTRUMENTS) {
                 case BASS_UPRIGHT:
                     b_sample = (b_fund * 3 / 4) + (b_harm >> 1) + (b_third >> 2);
@@ -478,6 +716,13 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             else if (b_sample < -20000) b_sample = -20000 + ((b_sample + 20000) >> 2);
 
             int32_t b_env_scaled = (b_sample * g_bass.env_q15) >> 15;
+            if (g_bass.declick) {
+                /* the note before was cut off mid-wave: its last level ramps out over a few ms */
+                b_env_scaled += g_bass.declick;
+                g_bass.declick -= g_bass.declick / 64;
+                if (g_bass.declick > -64 && g_bass.declick < 64) g_bass.declick = 0;
+            }
+            g_bass.last_out = b_env_scaled;
             mix += (b_env_scaled * preset->bass_vol) >> 7; // Uniform (sig * vol) >> 7 law across all 4 mixer sliders
 
             // Attack micro-ramp, then clear target_env so plucked-string decay runs freely
@@ -485,6 +730,12 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 g_bass.env_q15 += (g_bass.target_env - g_bass.env_q15 + 15) >> 4;
                 if (g_bass.env_q15 >= g_bass.target_env - 64) {
                     g_bass.target_env = 0;
+                }
+            } else if (g_bass.gate_samples > 0 && g_bass.sampled) {
+                g_bass.gate_samples--;
+                if (++g_bass.decay_cnt >= g_bass.decay_div) {
+                    g_bass.decay_cnt = 0;
+                    g_bass.env_q15 = (g_bass.env_q15 * 32767) >> 15;      /* the string dying away */
                 }
             } else if (g_bass.gate_samples > 0) {
                 g_bass.gate_samples--;
@@ -502,13 +753,14 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     32763, // HOFNER
                     32764, // ACID 303
                     32765, // TUBA
-                    32766  // PICK ROCK
+                    32766, // PICK ROCK
+                    32766, 32766 // (the real basses: not used here)
                 };
                 g_bass.env_q15 = (g_bass.env_q15 * BASS_DECAYS[preset->bass_instrument % NUM_BASS_INSTRUMENTS]) >> 15;
             } else {
                 g_bass.env_q15 = (g_bass.env_q15 * 32745) >> 15; // Smooth ~22 ms half-life release tail
             }
-            if (g_bass.target_env == 0 && g_bass.env_q15 < 100) g_bass.active = 0;
+            if (g_bass.target_env == 0 && g_bass.env_q15 < 100) { g_bass.active = 0; g_bass.declick = 0; }
         }
 
         // 2. Keys Synth Engine: 4-Voice Polyphony across 18 Instruments
@@ -673,6 +925,37 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                         car = (hal_sine_q15(g_keys[k].phase_c + cp_mod) * 3 / 4) + (hal_sine_q15(g_keys[k].phase_c * 3) >> 3);
                         break;
                     }
+                    case KEYS_TW_JIMMY:
+                    case KEYS_TW_GOSPEL:
+                    case KEYS_TW_BALLAD: {
+                        /* A tonewheel organ is drawbars of sine waves, so it is built the way the organ is: the
+                         * 16' and 5 1/3' from a phase an octave down, the rest from the note's own. Then the
+                         * percussion (a harmonic that dies away) and the key click. */
+                        uint8_t reg = preset->ep_tone_algo % NUM_KEYS_INSTRUMENTS;
+                        g_keys[k].phase_c += g_keys[k].inc_c;
+                        g_keys[k].phase_m += g_keys[k].inc_c >> 1;
+                        int32_t tw = hal_sine_q15(g_keys[k].phase_m) + hal_sine_q15(g_keys[k].phase_c);
+                        if (reg == KEYS_TW_BALLAD) {
+                            tw += hal_sine_q15(g_keys[k].phase_c * 8);                               /* 80 8000 008 */
+                        } else {
+                            tw += hal_sine_q15(g_keys[k].phase_m * 3);                               /* 88 8000 000 */
+                            if (reg == KEYS_TW_GOSPEL) {                                             /* 88 8800 006 */
+                                tw += hal_sine_q15(g_keys[k].phase_c * 2) + ((hal_sine_q15(g_keys[k].phase_c * 8) * 3) >> 2);
+                            }
+                        }
+                        if (reg == KEYS_TW_JIMMY && g_keys[k].perc_env > 64) {
+                            tw += (hal_sine_q15(g_keys[k].phase_c * 3) * (g_keys[k].perc_env >> 1)) >> 13;
+                            g_keys[k].perc_env = (g_keys[k].perc_env * 32758) >> 15;
+                        }
+                        if (g_keys[k].age < 260) {
+                            g_keys[k].age++;
+                            g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
+                            tw += (int16_t)(g_lfsr & 0x3FFF) - 0x2000;
+                        }
+                        tw = (reg == KEYS_TW_GOSPEL) ? (tw * 3) >> 3 : tw >> 1;
+                        car = (int16_t)(tw > 32767 ? 32767 : tw < -32767 ? -32767 : tw);
+                        break;
+                    }
                     case KEYS_HARMONIUM: // 17: Woody Pump Organ / Harmonium
                     default: {
                         g_keys[k].phase_c += g_keys[k].inc_c;
@@ -692,6 +975,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     if (k_algo == KEYS_CLAVINET || k_algo == KEYS_ARCHTOP_GUITAR || k_algo == KEYS_RESONATOR) {
                         g_keys[k].env_q15 = (g_keys[k].env_q15 * 32760) >> 15;
                     } else if (k_algo != KEYS_B3_CLEAN && k_algo != KEYS_B3_DIRTY && k_algo != KEYS_LESLIE_ORGAN &&
+                               !keys_is_tonewheel(k_algo) &&
                                k_algo != KEYS_ACCORDION && k_algo != KEYS_FARFISA && k_algo != KEYS_MELLOTRON && k_algo != KEYS_HARMONIUM) {
                         g_keys[k].env_q15 = (g_keys[k].env_q15 * 32765) >> 15;
                     }
@@ -701,24 +985,75 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 if (g_keys[k].env_q15 < 100) g_keys[k].active = 0;
             }
         }
+        if (keys_is_tonewheel(g_cur_keys_inst)) {
+            /* into the cabinet: the gospel registration overdrives it and spins fast */
+            if (g_cur_keys_inst == KEYS_TW_GOSPEL) {
+                int32_t v = keys_sum * 2;
+                v = v > 32767 ? 32767 : v < -32767 ? -32767 : v;
+                int32_t v3 = (((v * v) >> 15) * v) >> 15;
+                keys_sum = ((v + ((v - v3) >> 1)) * 5) >> 3;
+            }
+            keys_sum = rotary_run(keys_sum, g_cur_keys_inst == KEYS_TW_GOSPEL);
+        }
+        if (piano_sounding) {
+            /* the grand renders in blocks of its own; its keys come up when the comping gate runs out */
+            if (g_piano_gate > 0 && --g_piano_gate == 0) {
+                for (uint8_t n = 0; n < g_piano_count; n++) erk_note_off(g_piano_notes[n]);
+                g_piano_count = 0;
+            }
+            if (g_erk_pos >= ERK_BLOCK) {
+                erk_render(g_erk_buf, ERK_BLOCK);
+                g_erk_pos = 0;
+            }
+            keys_sum += (g_erk_buf[g_erk_pos * 2u] + g_erk_buf[g_erk_pos * 2u + 1u]) >> 8;
+            g_erk_pos++;
+        }
         if (keys_sum > 20000) keys_sum = 20000 + ((keys_sum - 20000) >> 2);
         else if (keys_sum < -20000) keys_sum = -20000 + ((keys_sum + 20000) >> 2);
         mix += (keys_sum * preset->keys_vol) >> 7; // Exact same (sig * vol) >> 7 law as Bass, Drums, and Lead!
 
         // 3. Synthesized Drums (12 Selectable Kits)
-        static const uint32_t KICK_BASE_INC[NUM_DRUM_KITS] = {
+        static const uint32_t KICK_BASE_INC[NUM_SYNTH_DRUM_KITS] = {
             7500000u, 6800000u, 5800000u, 8200000u,
             7200000u, 7800000u, 7000000u, 7000000u,
             6200000u, 6600000u, 8000000u, 5400000u
         };
-        static const uint32_t KICK_SWEEP_MUL[NUM_DRUM_KITS] = {
+        static const uint32_t KICK_SWEEP_MUL[NUM_SYNTH_DRUM_KITS] = {
             420u, 320u, 480u, 440u,
             390u, 360u, 340u, 520u,
             350u, 400u, 500u, 300u
         };
-        uint8_t dkit = preset->drum_kit % NUM_DRUM_KITS;
+        uint8_t dkit = preset->drum_kit % NUM_SYNTH_DRUM_KITS;
 
         int32_t drums_sum = 0;
+        /* The real kit: its strokes ring out even after the kit knob has moved on */
+        for (int dv = 0; dv < DRUM_SMP_VOICES; dv++) {
+            if (g_drum_smp[dv].smp.on) {
+                drums_sum += (smp_next(&g_drum_smp[dv].smp, g_drum_smp[dv].smp.z->k) * g_drum_smp[dv].gain_q12) >> 13;
+            }
+        }
+        /* Ride, crash and toms of the synthesized kits (2.3: the groove beats use them) */
+        if (g_drum_env[DV_RIDE] > 0) {
+            g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
+            g_drum_pitch[DV_RIDE] += 506000000u;                                   /* a 5.2 kHz ring under the wash */
+            int32_t ring = hal_sine_q15(g_drum_pitch[DV_RIDE]) ^ hal_sine_q15(g_drum_pitch[DV_RIDE] * 3u + 0x30000000u);
+            int32_t r_sample = ((int16_t)(g_lfsr & 0xFFFF) >> 1) + (ring >> 2);
+            drums_sum += (r_sample * (g_drum_env[DV_RIDE] >> 1)) >> 16;
+            g_drum_env[DV_RIDE] = (g_drum_env[DV_RIDE] * g_drum_decay[DV_RIDE]) >> 15;
+        }
+        if (g_drum_env[DV_CRASH] > 0) {
+            g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
+            drums_sum += ((int16_t)(g_lfsr & 0xFFFF) * (g_drum_env[DV_CRASH] >> 1)) >> 15;
+            g_drum_env[DV_CRASH] = (g_drum_env[DV_CRASH] * g_drum_decay[DV_CRASH]) >> 15;
+        }
+        for (int tm = DV_TOM_HI; tm <= DV_TOM_LO; tm++) {
+            if (g_drum_env[tm] > 0) {
+                uint32_t base = (tm == DV_TOM_HI) ? KICK_BASE_INC[dkit] * 3u : KICK_BASE_INC[dkit] * 2u;
+                g_drum_pitch[tm] += base + (uint32_t)g_drum_env[tm] * (KICK_SWEEP_MUL[dkit] / 2u);
+                drums_sum += (hal_sine_q15(g_drum_pitch[tm]) * g_drum_env[tm]) >> 15;
+                g_drum_env[tm] = (g_drum_env[tm] * g_drum_decay[tm]) >> 15;
+            }
+        }
         // Kick (0)
         if (g_drum_env[0] > 0) {
             uint32_t kick_inc = KICK_BASE_INC[dkit] + (uint32_t)g_drum_env[0] * KICK_SWEEP_MUL[dkit];
@@ -736,7 +1071,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
             g_lfsr = (g_lfsr >> 1) ^ (-(g_lfsr & 1u) & 0xB400u);
             int16_t noise_sample = (int16_t)(g_lfsr & 0x7FFF);
             int16_t s_sample;
-            static const uint32_t SNARE_BODY_INC[NUM_DRUM_KITS] = {
+            static const uint32_t SNARE_BODY_INC[NUM_SYNTH_DRUM_KITS] = {
                 17540000u, 15000000u, 22000000u, 19500000u,
                 16200000u, 18400000u, 21000000u, 15800000u,
                 20000000u, 19000000u, 17000000u, 14500000u
@@ -771,7 +1106,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
 
         // Rimshot (3)
         if (g_drum_env[3] > 0) {
-            static const uint32_t RIM_INC[NUM_DRUM_KITS] = {
+            static const uint32_t RIM_INC[NUM_SYNTH_DRUM_KITS] = {
                 12000000u, 8500000u, 16000000u, 13000000u,
                 11000000u, 10500000u, 14500000u, 12500000u,
                 14000000u, 15500000u, 13500000u, 9000000u
@@ -794,9 +1129,7 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 if (g_lead[v].env_q15 > 2000) lead_sounding = 1;
                 if (g_lead[v].bend_samples > 0) {
                     g_lead[v].bend_samples--;
-                    int32_t diff = (int32_t)g_lead[v].target_inc - (int32_t)g_lead[v].phase_inc;
-                    uint8_t shift = (g_lead[v].bend_samples > 3600u) ? 12u : 9u;
-                    g_lead[v].phase_inc = (uint32_t)((int32_t)g_lead[v].phase_inc + (diff >> shift));
+                    g_lead[v].phase_inc = (uint32_t)((int32_t)g_lead[v].phase_inc + g_lead[v].bend_step);
                     if (g_lead[v].bend_samples == 0) {
                         g_lead[v].phase_inc = g_lead[v].target_inc;
                     }
@@ -814,6 +1147,18 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                 g_lead[v].phase += cur_inc;
 
                 int32_t lead_sample = 0;
+                if (g_lead[v].sampled) {
+                    /* a real voice at the note's pitch as it is right now (the step follows it a few times a ms) */
+                    if ((i & 7u) == 0 || g_lead[v].smp_step == 0) g_lead[v].smp_step = smp_step(g_lead[v].smp.z, cur_inc);
+                    lead_sample = (smp_next(&g_lead[v].smp, g_lead[v].smp_step) * (g_cur_lead_inst == LEAD_REAL_TENOR ? 5 : 6)) >> 2;
+                    if (g_cur_lead_inst == LEAD_REAL_GUITAR_OD) {
+                        int32_t dv = lead_sample * 5;
+                        dv = dv > 32767 ? 32767 : dv < -32767 ? -32767 : dv;
+                        int32_t dv3 = (((dv * dv) >> 15) * dv) >> 15;
+                        g_lead[v].filter_lp += (((dv + ((dv - dv3) >> 1)) - g_lead[v].filter_lp) * 13000) >> 15;
+                        lead_sample = (g_lead[v].filter_lp * 11) >> 4;
+                    }
+                } else
                 switch (preset->lead_instrument % NUM_LEAD_INSTRUMENTS) {
                     case LEAD_BLUES_GUITAR: { // 0: Overdriven Blues Guitar
                         int16_t w1 = hal_sine_q15(g_lead[v].phase);
@@ -1061,7 +1406,11 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
                     if (g_lead[v].gate_samples > 1) g_lead[v].gate_samples--;
                     uint8_t li = preset->lead_instrument % NUM_LEAD_INSTRUMENTS;
                     uint32_t age = (44100u * 10u) - g_lead[v].gate_samples;
-                    if (li == LEAD_BANJO && age > 600u) {
+                    if (g_lead[v].sampled && li != LEAD_REAL_TENOR) {
+                        /* a plucked string: it rings while the key is held, and dies away */
+                        if (g_lead[v].env_q15 < g_lead[v].target_env && age < 64u) g_lead[v].env_q15 = g_lead[v].target_env;
+                        else if ((age & (li == LEAD_REAL_GUITAR_OD ? 7u : 3u)) == 0) g_lead[v].env_q15 = (g_lead[v].env_q15 * 32767) >> 15;
+                    } else if (li == LEAD_BANJO && age > 600u) {
                         g_lead[v].env_q15 = (g_lead[v].env_q15 * 32748) >> 15; // Fast percussive banjo decay
                     } else if ((li == LEAD_TELE_TWANG || li == LEAD_STEELPAN) && age > 1200u) {
                         g_lead[v].env_q15 = (g_lead[v].env_q15 * 32762) >> 15; // Natural plucked string decay
@@ -1078,6 +1427,9 @@ void dsp_render_block(int32_t *buf, uint32_t num_frames, const PresetConfig *pre
 
         if (lead_mix > 24000) lead_mix = 24000 + ((lead_mix - 24000) >> 2);
         else if (lead_mix < -24000) lead_mix = -24000 + ((lead_mix + 24000) >> 2);
+        lead_mix = lfx_run(lead_mix, preset, lead_sounding);
+        if (lead_mix > 28000) lead_mix = 28000 + ((lead_mix - 28000) >> 2);
+        else if (lead_mix < -28000) lead_mix = -28000 + ((lead_mix + 28000) >> 2);
         if (lead_sounding) {
             mix = (mix * 3) >> 2; // 25% backing-band duck while soloing so lead always cuts through
         }

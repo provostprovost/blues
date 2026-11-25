@@ -114,7 +114,24 @@ typedef enum {
     GROOVE_SWAMP_ROCK
 } GrooveStyle;
 
-#define NUM_DRUM_PATTERNS 20
+#define NUM_GROOVES 20
+/* Drum beats: the 20 groove beats, then the "Classic" (pre-2.3) beats, condensed to the ones that differ */
+typedef enum {
+    DPAT_CL_12_8 = NUM_GROOVES,
+    DPAT_CL_SHUFFLE,
+    DPAT_CL_STRAIGHT_8,
+    DPAT_CL_STRAIGHT_16,
+    DPAT_CL_FUNK_16,
+    DPAT_CL_FUNK_SHUFFLE,
+    DPAT_CL_TRAIN,
+    DPAT_CL_RHUMBA,
+    DPAT_CL_STOMP,
+    DPAT_CL_JAZZ_RIDE
+} ClassicDrumPattern;
+#define NUM_DRUM_PATTERNS 30
+
+/* Drum voices (bit index in PerformanceFrame.drum_mask, index into drum_vel) */
+enum { DV_KICK = 0, DV_SNARE, DV_HAT, DV_RIM, DV_HAT_OPEN, DV_RIDE, DV_CRASH, DV_TOM_HI, DV_TOM_LO, NUM_DRUM_VOICES };
 
 typedef enum {
     BASS_P_BASS = 0,
@@ -130,10 +147,12 @@ typedef enum {
     BASS_HOFNER,
     BASS_ACID_303,
     BASS_TUBA,
-    BASS_PICK_ROCK
+    BASS_PICK_ROCK,
+    BASS_REAL_ELECTRIC,      // sampled Jazz bass (Karoryfer Growlybass, CC0)
+    BASS_REAL_UPRIGHT        // sampled double bass (Karoryfer Meatbass, CC0)
 } BassInstrument;
 
-#define NUM_BASS_INSTRUMENTS 14
+#define NUM_BASS_INSTRUMENTS 16
 
 typedef enum {
     BASS_STYLE_WALKING = 0,
@@ -147,10 +166,25 @@ typedef enum {
     BASS_STYLE_MOTOWN,
     BASS_STYLE_SECOND_LINE,
     BASS_STYLE_FUNK_16,
-    BASS_STYLE_COUNTRY_2
+    BASS_STYLE_COUNTRY_2,
+    /* 2.3 riff lines (blues_patterns.c): 2-bar shapes, approach notes into every change */
+    BASS_RIFF_TX_SHUFFLE,
+    BASS_RIFF_CHI_WALK,
+    BASS_RIFF_LUMP,
+    BASS_RIFF_SLOW_BLUES,
+    BASS_RIFF_MEMPHIS,
+    BASS_RIFF_RHUMBA,
+    BASS_RIFF_BOOGIE,
+    BASS_RIFF_ROCK_8,
+    BASS_RIFF_FUNK,
+    BASS_RIFF_NOLA,
+    BASS_RIFF_COUNTRY,
+    BASS_RIFF_SWAMP,
+    BASS_RIFF_JAZZ_WALK
 } BassStyle;
 
-#define NUM_BASS_STYLES 12
+#define NUM_CLASSIC_BASS_STYLES 12
+#define NUM_BASS_STYLES 25
 
 typedef enum {
     KEYS_STYLE_CHARLESTON = 0,
@@ -187,10 +221,17 @@ typedef enum {
     KEYS_FARFISA,
     KEYS_MELLOTRON,
     KEYS_CP70,
-    KEYS_HARMONIUM
+    KEYS_HARMONIUM,
+    KEYS_GRAND_CONCERT,      // sampled grand (Salamander V3, CC BY 3.0) through the Erik37 engine
+    KEYS_GRAND_STUDIO,
+    KEYS_GRAND_VINTAGE,
+    KEYS_GRAND_JAZZ,
+    KEYS_TW_JIMMY,           // modelled tonewheel organ: 88 8000 000 + percussion, slow rotary
+    KEYS_TW_GOSPEL,          // 88 8888 888, fast rotary
+    KEYS_TW_BALLAD           // 80 8000 008 whistle, slow rotary
 } ChordInstrument;
 
-#define NUM_KEYS_INSTRUMENTS 18
+#define NUM_KEYS_INSTRUMENTS 25
 
 typedef enum {
     DRUM_STUDIO = 0,
@@ -204,10 +245,12 @@ typedef enum {
     DRUM_CR78,
     DRUM_NEW_ORLEANS,
     DRUM_LINN_GATE,
-    DRUM_LOFI_BOX
+    DRUM_LOFI_BOX,
+    DRUM_REAL_KIT            // sampled jazz kit (Virtuosity Drums, CC0)
 } DrumKit;
 
-#define NUM_DRUM_KITS 12
+#define NUM_SYNTH_DRUM_KITS 12
+#define NUM_DRUM_KITS 13
 
 typedef enum {
     LEAD_BLUES_GUITAR = 0,
@@ -234,10 +277,13 @@ typedef enum {
     LEAD_HARD_SYNC,
     LEAD_SID_CHIP,
     LEAD_STEELPAN,
-    LEAD_THEREMIN
+    LEAD_THEREMIN,
+    LEAD_REAL_TENOR,         // sampled tenor sax (VCSL, CC0)
+    LEAD_REAL_GUITAR,        // sampled hollowbody guitar (Karoryfer Black And Green Guitars, CC0)
+    LEAD_REAL_GUITAR_OD      // the same through a tube overdrive
 } LeadInstrument;
 
-#define NUM_LEAD_INSTRUMENTS 25
+#define NUM_LEAD_INSTRUMENTS 28
 
 typedef enum {
     LEAD_PLAY_POLY = 0,
@@ -247,6 +293,28 @@ typedef enum {
 } LeadPlayStyle;
 
 #define NUM_LEAD_PLAY_STYLES 4
+
+typedef enum {
+    LFX_OFF = 0,
+    LFX_OVERDRIVE,
+    LFX_FUZZ,
+    LFX_COMPRESSOR,
+    LFX_CHORUS,
+    LFX_FLANGER,
+    LFX_PHASER,
+    LFX_UNIVIBE,
+    LFX_TREMOLO,
+    LFX_VIBRATO,
+    LFX_ROTARY,
+    LFX_AUTOWAH,
+    LFX_SLAPBACK,
+    LFX_DELAY,
+    LFX_SPRING_REVERB,
+    LFX_LOFI
+} LeadFxType;
+
+#define NUM_LEAD_FX 16
+#define NUM_UI_SCREENS 6
 
 typedef struct {
     ScaleDegree  degree;
@@ -360,6 +428,11 @@ typedef struct {
     uint8_t  lead_play_style;
     uint8_t  easy_lead;
     uint8_t  heat_level;
+    uint8_t  lead_fx1;        // LeadFxType
+    uint8_t  lead_fx1_amt;    // 0..100
+    uint8_t  lead_fx2;
+    uint8_t  lead_fx2_amt;
+    uint8_t  lead_slide;      // 0..100: glide / bend time, 0 instant .. 100 = 1.5 s
 } PresetConfig;
 
 typedef struct {

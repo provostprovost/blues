@@ -87,7 +87,9 @@ static void app_audio(int32_t *out, uint32_t n) {
             arranger_generate_frame(&g_harmony, preset, &frame, &g_last_voicing);
 
             if (frame.bass_trigger) {
-                dsp_note_on_bass(frame.bass_note, frame.bass_vel, preset->master_tuning);
+                /* a riff line says how long its note is (in 1/24 beats); the classic lines take the default gate */
+                uint32_t gate = frame.bass_gate_ticks ? ((uint32_t)frame.bass_gate_ticks * 110250u) / bpm_valid : 0u;
+                dsp_note_on_bass_ex(frame.bass_note, frame.bass_vel, preset->master_tuning, gate, frame.bass_ghost);
                 midi_tx_push(0x91, frame.bass_note, frame.bass_vel); // Ch 2 Bass
                 g_harmony.vis_bass_pulse = 3;
             }
@@ -107,14 +109,13 @@ static void app_audio(int32_t *out, uint32_t n) {
             }
 
             if (frame.drum_mask) {
-                uint8_t open_hat = (frame.drum_mask & 0x04) && (g_harmony.variation > 75);
-                dsp_trigger_drum(frame.drum_mask, frame.drum_vel, open_hat);
-
-                if (frame.drum_mask & 0x01) midi_tx_push(0x99, 36, frame.drum_vel[0]); // Kick
-                if (frame.drum_mask & 0x02) midi_tx_push(0x99, 38, frame.drum_vel[1]); // Snare
-                if (frame.drum_mask & 0x04) midi_tx_push(0x99, open_hat ? 46 : 42, frame.drum_vel[2]); // Hat
-                if (frame.drum_mask & 0x08) midi_tx_push(0x99, 37, frame.drum_vel[3]); // Rimshot
-                if (frame.drum_mask & 0x0B) g_harmony.vis_drum_pulse = 3;
+                /* General MIDI keys: kick, snare, closed hat, side stick, open hat, ride, crash, high and low tom */
+                static const uint8_t GM_DRUM[NUM_DRUM_VOICES] = { 36, 38, 42, 37, 46, 51, 49, 48, 45 };
+                dsp_trigger_drum(frame.drum_mask, frame.drum_vel);
+                for (uint8_t d = 0; d < NUM_DRUM_VOICES; d++) {
+                    if (frame.drum_mask & (1u << d)) midi_tx_push(0x99, GM_DRUM[d], frame.drum_vel[d]);
+                }
+                if (frame.drum_mask & ~((1u << DV_HAT) | (1u << DV_RIDE))) g_harmony.vis_drum_pulse = 3;
                 else if (g_harmony.vis_drum_pulse == 0) g_harmony.vis_drum_pulse = 2;
             }
 
@@ -137,30 +138,42 @@ static void copy_preset_name(char *dst, const char *src) {
     dst[i] = '\0';
 }
 
+/* The 16 factory presets (2.3: built on the real voices, the groove beats and the riff bass lines). A preset's bass
+ * line, keys rhythm, drum beat and swing come from its groove (arranger_apply_groove_defaults). */
+typedef struct {
+    const char *name;
+    uint8_t key, groove, bpm, variation, form;
+    uint8_t keys, bass, kit, lead, play, easy;
+    uint8_t fx1, fx1_amt, fx2, fx2_amt, slide;
+} FactoryPreset;
+
+static const FactoryPreset FACTORY[NUM_PRESET_SLOTS] = {
+    /* name                key groove                 bpm var form               keys                 bass                kit            lead                 play                    easy fx1                amt fx2                amt slide */
+    { "1: TEXAS SHUFFLE",  4, GROOVE_TEXAS_SHUFFLE,   118, 60, FORM_MINOR_BLUES,  KEYS_GRAND_STUDIO,   BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_TENOR,     LEAD_PLAY_LEGATO_GLIDE, 1,   LFX_SPRING_REVERB, 35, LFX_OFF,            0, 30 },
+    { "2: SLOW 12/8",      9, GROOVE_SLOW_12_8,        62, 50, FORM_12BAR,        KEYS_TW_JIMMY,       BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_GUITAR,    LEAD_PLAY_BLUES_BEND,   0,   LFX_OVERDRIVE,     45, LFX_SPRING_REVERB, 45, 34 },
+    { "3: CHICAGO SHUFL",  9, GROOVE_CHICAGO_SWING,   126, 55, FORM_QUICK_CHANGE, KEYS_GRAND_JAZZ,     BASS_REAL_UPRIGHT,  DRUM_REAL_KIT, LEAD_HARMONICA,      LEAD_PLAY_BLUES_BEND,   0,   LFX_OVERDRIVE,     30, LFX_SLAPBACK,      40, 26 },
+    { "4: ROCKIN 8S",      4, GROOVE_STRAIGHT_ROCK,   138, 45, FORM_12BAR,        KEYS_GRAND_STUDIO,   BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_GUITAR_OD, LEAD_PLAY_POLY,         0,   LFX_DELAY,         30, LFX_OFF,            0, 20 },
+    { "5: NOLA 2ND LINE",  7, GROOVE_SECOND_LINE,      96, 65, FORM_12BAR,        KEYS_GRAND_VINTAGE,  BASS_TUBA,          DRUM_REAL_KIT, LEAD_HORN_SECT,      LEAD_PLAY_POLY,         0,   LFX_SPRING_REVERB, 30, LFX_OFF,            0, 20 },
+    { "6: MINOR BLUES",    0, GROOVE_SLOW_12_8,        76, 55, FORM_MINOR_BLUES,  KEYS_TW_BALLAD,      BASS_REAL_UPRIGHT,  DRUM_REAL_KIT, LEAD_REAL_TENOR,     LEAD_PLAY_LEGATO_GLIDE, 0,   LFX_SPRING_REVERB, 50, LFX_OFF,            0, 40 },
+    { "7: MEMPHIS SOUL",   5, GROOVE_MEMPHIS_SOUL,    104, 50, FORM_12BAR,        KEYS_TW_JIMMY,       BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_GUITAR,    LEAD_PLAY_POLY,         0,   LFX_TREMOLO,       45, LFX_SPRING_REVERB, 35, 20 },
+    { "8: RHUMBA BLUES",   2, GROOVE_RHUMBA_BLUES,    118, 50, FORM_12BAR,        KEYS_GRAND_VINTAGE,  BASS_REAL_UPRIGHT,  DRUM_REAL_KIT, LEAD_MUTED_TRUMPET,  LEAD_PLAY_BLUES_BEND,   0,   LFX_SPRING_REVERB, 40, LFX_OFF,            0, 26 },
+    { "9: BOOGIE WOOGIE",  0, GROOVE_BOOGIE_WOOGIE,   156, 55, FORM_12BAR,        KEYS_GRAND_STUDIO,   BASS_REAL_UPRIGHT,  DRUM_REAL_KIT, LEAD_REAL_TENOR,     LEAD_PLAY_POLY,         0,   LFX_SLAPBACK,      35, LFX_OFF,            0, 16 },
+    { "10: POCKET FUNK",   4, GROOVE_POCKET_FUNK,     100, 65, FORM_12BAR,        KEYS_CLAVINET,       BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_GUITAR,    LEAD_PLAY_POLY,         0,   LFX_COMPRESSOR,    50, LFX_AUTOWAH,       70, 16 },
+    { "11: NOLA FUNK",     7, GROOVE_NOLA_FUNK,        94, 65, FORM_12BAR,        KEYS_WURLI,          BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_HORN_SECT,      LEAD_PLAY_POLY,         0,   LFX_SLAPBACK,      30, LFX_OFF,            0, 20 },
+    { "12: BLUES FUNK",    9, GROOVE_BLUES_FUNK,       98, 60, FORM_12BAR,        KEYS_TW_GOSPEL,      BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_GUITAR_OD, LEAD_PLAY_BLUES_BEND,   0,   LFX_UNIVIBE,       45, LFX_SPRING_REVERB, 30, 26 },
+    { "13: SLOW NEOFUNK",  5, GROOVE_SLOW_NEO_FUNK,    78, 60, FORM_MINOR_BLUES,  KEYS_RHODES,         BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_TENOR,     LEAD_PLAY_LEGATO_GLIDE, 0,   LFX_CHORUS,        45, LFX_DELAY,         35, 45 },
+    { "14: COUNTRY TWNG",  7, GROOVE_COUNTRY_TWANG,   128, 50, FORM_12BAR,        KEYS_GRAND_VINTAGE,  BASS_REAL_UPRIGHT,  DRUM_REAL_KIT, LEAD_TELE_TWANG,     LEAD_PLAY_BLUES_BEND,   0,   LFX_COMPRESSOR,    40, LFX_SLAPBACK,      45, 22 },
+    { "15: PURDIE SHUF",  10, GROOVE_PURDIE_SHUFFLE,   96, 65, FORM_QUICK_CHANGE, KEYS_TREMOLO_EP,     BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_GUITAR,    LEAD_PLAY_POLY,         0,   LFX_PHASER,        40, LFX_SPRING_REVERB, 30, 20 },
+    { "16: BO DIDDLEY",    4, GROOVE_BO_DIDDLEY,      122, 55, FORM_12BAR,        KEYS_GRAND_STUDIO,   BASS_REAL_ELECTRIC, DRUM_REAL_KIT, LEAD_REAL_GUITAR_OD, LEAD_PLAY_POLY,         0,   LFX_TREMOLO,       70, LFX_OFF,            0, 16 }
+};
+
 static void init_factory_presets(void) {
-    static const char *FACTORY_NAMES[NUM_PRESET_SLOTS] = {
-        "1: TEXAS SHUFFLE",
-        "2: SLOW 12/8",
-        "3: CHICAGO SWING",
-        "4: ROCKIN 8S",
-        "5: NOLA 2ND LINE",
-        "6: MINOR BLUES",
-        "7: MEMPHIS SOUL",
-        "8: RHUMBA BLUES",
-        "9: BOOGIE WOOGIE",
-        "10: POCKET FUNK",
-        "11: NOLA FUNK",
-        "12: BLUES FUNK",
-        "13: SLOW NEOFUNK",
-        "14: COUNTRY TWNG",
-        "15: PURDIE SHUF",
-        "16: BO DIDDLEY"
-    };
     for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
+        const FactoryPreset *f = &FACTORY[i];
         PresetConfig *p = &g_presets[i];
         p->magic = PRESET_MAGIC;
         p->preset_id = i;
-        copy_preset_name(p->name, FACTORY_NAMES[i]);
+        copy_preset_name(p->name, f->name);
         p->master_tuning = 0; // 440 Hz
         p->bass_vol = 96;
         p->keys_vol = 88;
@@ -173,215 +186,26 @@ static void init_factory_presets(void) {
         p->fullness = 65;
         p->opening_var = VAR_FLAT_FOUR;
         p->outro_type = OUTRO_CLASSIC_SLIDE;
-        p->bass_instrument = (uint8_t)(i % 4);
-        p->drum_kit = (uint8_t)(i % 3);
-        p->lead_instrument = (uint8_t)(i % 4);
-        p->lead_play_style = LEAD_PLAY_POLY;
-        p->easy_lead = 0;
         p->heat_level = 3;
-
-        switch (i) {
-            case 0: // 1: Texas Shuffle
-                p->root_key = 4; // E
-                p->groove_style = GROOVE_TEXAS_SHUFFLE;
-                p->bpm = 112;
-                p->variation = 65;
-                p->swing = 67;
-                p->ep_tone_algo = KEYS_RHODES;
-                p->bass_instrument = BASS_P_BASS;
-                p->drum_kit = DRUM_STUDIO;
-                p->lead_instrument = LEAD_ALTO_SAX;
-                p->lead_play_style = LEAD_PLAY_LEGATO_GLIDE;
-                p->easy_lead = 1;
-                p->form_mode = FORM_MINOR_BLUES;
-                break;
-            case 1: // 2: Slow 12/8 Blues
-                p->root_key = 4; // E
-                p->groove_style = GROOVE_SLOW_12_8;
-                p->bpm = 68;
-                p->variation = 50;
-                p->swing = 67;
-                p->ep_tone_algo = KEYS_B3_DIRTY;
-                p->bass_instrument = BASS_UPRIGHT;
-                p->drum_kit = DRUM_BRUSH;
-                p->lead_instrument = LEAD_HARMONICA;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 2: // 3: Chicago Swing
-                p->root_key = 9; // A
-                p->groove_style = GROOVE_CHICAGO_SWING;
-                p->bpm = 130;
-                p->variation = 55;
-                p->swing = 67;
-                p->ep_tone_algo = KEYS_BRIGHT_EP;
-                p->bass_instrument = BASS_UPRIGHT;
-                p->drum_kit = DRUM_STUDIO;
-                p->lead_instrument = LEAD_TENOR_SAX;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 3: // 4: Rockin' 8s
-                p->root_key = 4; // E
-                p->groove_style = GROOVE_STRAIGHT_ROCK;
-                p->bpm = 140;
-                p->variation = 40;
-                p->swing = 0;
-                p->ep_tone_algo = KEYS_CLAVINET;
-                p->bass_instrument = BASS_MUTED_TICTAC;
-                p->drum_kit = DRUM_STUDIO;
-                p->lead_instrument = LEAD_BLUES_GUITAR;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 4: // 5: New Orleans 2nd Line
-                p->root_key = 7; // G
-                p->groove_style = GROOVE_SECOND_LINE;
-                p->bpm = 96;
-                p->variation = 70;
-                p->swing = 0;
-                p->ep_tone_algo = KEYS_WURLI;
-                p->bass_instrument = BASS_MOOG_FUNK;
-                p->drum_kit = DRUM_RETRO_808;
-                p->lead_instrument = LEAD_MOOG_LEAD;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 5: // 6: Minor Blues
-                p->root_key = 0; // Cm
-                p->groove_style = GROOVE_SLOW_12_8;
-                p->bpm = 84;
-                p->variation = 60;
-                p->swing = 67;
-                p->ep_tone_algo = KEYS_B3_CLEAN;
-                p->bass_instrument = BASS_UPRIGHT;
-                p->drum_kit = DRUM_BRUSH;
-                p->lead_instrument = LEAD_HARMONICA;
-                p->form_mode = FORM_MINOR_BLUES;
-                break;
-            case 6: // 7: Memphis Soul
-                p->root_key = 5; // F
-                p->groove_style = GROOVE_MEMPHIS_SOUL;
-                p->bpm = 104;
-                p->variation = 55;
-                p->swing = 0;
-                p->ep_tone_algo = KEYS_TREMOLO_EP;
-                p->bass_instrument = BASS_P_BASS;
-                p->drum_kit = DRUM_STAX_TIGHT;
-                p->lead_instrument = LEAD_WARM_JAZZ;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 7: // 8: Rhumba Blues
-                p->root_key = 2; // D
-                p->groove_style = GROOVE_RHUMBA_BLUES;
-                p->bpm = 118;
-                p->variation = 50;
-                p->swing = 0;
-                p->ep_tone_algo = KEYS_RESONATOR;
-                p->bass_instrument = BASS_P_BASS;
-                p->drum_kit = DRUM_STUDIO;
-                p->lead_instrument = LEAD_MUTED_TRUMPET;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 8: // 9: Boogie Woogie
-                p->root_key = 0; // C
-                p->groove_style = GROOVE_BOOGIE_WOOGIE;
-                p->bpm = 158;
-                p->variation = 60;
-                p->swing = 67;
-                p->ep_tone_algo = KEYS_HONKY_TONK;
-                p->bass_instrument = BASS_MUTED_TICTAC;
-                p->drum_kit = DRUM_STUDIO;
-                p->lead_instrument = LEAD_PERC_ORGAN;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 9: // 10: 70s Pocket Funk
-                p->root_key = 4; // E
-                p->groove_style = GROOVE_POCKET_FUNK;
-                p->bpm = 102;
-                p->variation = 70;
-                p->swing = 0;
-                p->ep_tone_algo = KEYS_CLAVINET;
-                p->bass_instrument = BASS_SLAP_POP;
-                p->drum_kit = DRUM_STAX_TIGHT;
-                p->lead_instrument = LEAD_TALKBOX;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 10: // 11: NOLA Meters Funk
-                p->root_key = 7; // G
-                p->groove_style = GROOVE_NOLA_FUNK;
-                p->bpm = 94;
-                p->variation = 70;
-                p->swing = 0;
-                p->ep_tone_algo = KEYS_WURLI;
-                p->bass_instrument = BASS_MOOG_FUNK;
-                p->drum_kit = DRUM_NEW_ORLEANS;
-                p->lead_instrument = LEAD_HORN_SECT;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 11: // 12: Swung Blues-Funk
-                p->root_key = 9; // A
-                p->groove_style = GROOVE_BLUES_FUNK;
-                p->bpm = 98;
-                p->variation = 65;
-                p->swing = 67;
-                p->ep_tone_algo = KEYS_B3_DIRTY;
-                p->bass_instrument = BASS_P_BASS;
-                p->drum_kit = DRUM_DRY_VINTAGE;
-                p->lead_instrument = LEAD_WAH_GUITAR;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 12: // 13: Slow Neo-Funk
-                p->root_key = 5; // Fm
-                p->groove_style = GROOVE_SLOW_NEO_FUNK;
-                p->bpm = 78;
-                p->variation = 65;
-                p->swing = 0;
-                p->ep_tone_algo = KEYS_RHODES;
-                p->bass_instrument = BASS_SUB_OCTAVE;
-                p->drum_kit = DRUM_LOFI_BOX;
-                p->lead_instrument = LEAD_JAZZ_FLUTE;
-                p->form_mode = FORM_MINOR_BLUES;
-                break;
-            case 13: // 14: Country Twang
-                p->root_key = 7; // G
-                p->groove_style = GROOVE_COUNTRY_TWANG;
-                p->bpm = 128;
-                p->variation = 55;
-                p->swing = 67;
-                p->ep_tone_algo = KEYS_HONKY_TONK;
-                p->bass_instrument = BASS_MUTED_TICTAC;
-                p->drum_kit = DRUM_STUDIO;
-                p->lead_instrument = LEAD_TELE_TWANG;
-                p->form_mode = FORM_12BAR;
-                break;
-            case 14: // 15: Purdie Half-Time Shuffle
-                p->root_key = 10; // Bb
-                p->groove_style = GROOVE_PURDIE_SHUFFLE;
-                p->bpm = 108;
-                p->variation = 65;
-                p->swing = 67;
-                p->ep_tone_algo = KEYS_BRIGHT_EP;
-                p->bass_instrument = BASS_JAZZ_60S;
-                p->drum_kit = DRUM_STUDIO;
-                p->lead_instrument = LEAD_PERC_ORGAN;
-                p->form_mode = FORM_QUICK_CHANGE;
-                break;
-            case 15: // 16: Bo Diddley Clave
-            default:
-                p->root_key = 4; // E
-                p->groove_style = GROOVE_BO_DIDDLEY;
-                p->bpm = 124;
-                p->variation = 60;
-                p->swing = 0;
-                p->ep_tone_algo = KEYS_TREMOLO_EP;
-                p->bass_instrument = BASS_AMPEG_GROWL;
-                p->drum_kit = DRUM_CHICAGO_ROOM;
-                p->lead_instrument = LEAD_FUZZ_OCTAVE;
-                p->form_mode = FORM_12BAR;
-                break;
-        }
+        p->root_key = f->key;
+        p->groove_style = f->groove;
+        p->bpm = f->bpm;
+        p->variation = f->variation;
+        p->form_mode = f->form;
+        p->ep_tone_algo = f->keys;
+        p->bass_instrument = f->bass;
+        p->drum_kit = f->kit;
+        p->lead_instrument = f->lead;
+        p->lead_play_style = f->play;
+        p->easy_lead = f->easy;
+        p->lead_fx1 = f->fx1;
+        p->lead_fx1_amt = f->fx1_amt;
+        p->lead_fx2 = f->fx2;
+        p->lead_fx2_amt = f->fx2_amt;
+        p->lead_slide = f->slide;
         {
-            uint8_t saved_swing = p->swing;
             HarmonyState tmp_hs;
             arranger_apply_groove_defaults(&tmp_hs, p, (GrooveStyle)p->groove_style);
-            p->swing = saved_swing;
         }
         p->bass_fullness = p->fullness;
         p->keys_fullness = p->fullness;

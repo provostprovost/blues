@@ -7,33 +7,44 @@ static const char *NOTE_NAMES[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G",
 static const char *GROOVE_NAMES[NUM_DRUM_PATTERNS] = {
     "12/8 SLOW", "TX SHUFFLE", "CHI SWING", "ROCK BLUES", "2ND LINE", "MEMPHIS SOUL", "RHUMBA BLUES", "BOOGIE WOOGIE",
     "PURDIE SHUF", "TRAIN BEAT", "BO DIDDLEY", "JAZZ SHUFFLE", "GOSPEL SWING", "DELTA STOMP",
-    "POCKET FUNK", "NOLA FUNK", "BLUES FUNK", "SLOW NEOFUNK", "COUNTRY TWANG", "SWAMP ROCK"
+    "POCKET FUNK", "NOLA FUNK", "BLUES FUNK", "SLOW NEOFUNK", "COUNTRY TWANG", "SWAMP ROCK",
+    /* the classic (pre-2.3) beats */
+    "CL 12/8", "CL SHUFFLE", "CL STRAIGHT 8", "CL STRAIGHT 16", "CL FUNK 16", "CL FUNK SHUF", "CL TRAIN",
+    "CL RHUMBA", "CL STOMP", "CL JAZZ RIDE"
 };
 static const char *ALGO_NAMES[NUM_KEYS_INSTRUMENTS] = {
     "RHODES FM", "BRIGHT EP", "WURLI 200A", "B3 CLEAN", "B3 DIRTY", "CLAVINET",
     "ARCHTOP GTR", "BLUES HORNS", "HONKY-TONK", "TREMOLO EP", "RESONATOR", "LESLIE ORGAN",
-    "ACCORDION", "VIBRAPHONE", "FARFISA", "MELLOTRON", "CP-70 GRAND", "HARMONIUM"
+    "ACCORDION", "VIBRAPHONE", "FARFISA", "MELLOTRON", "CP-70 GRAND", "HARMONIUM",
+    "REAL GRAND", "STUDIO GRAND", "VINTAGE GRAND", "JAZZ GRAND", "TONEWHEEL B3", "GOSPEL B3", "BALLAD B3"
 };
 static const char *DRUM_NAMES[NUM_DRUM_KITS] = {
     "STUDIO", "BRUSH", "RETRO 808", "STAX TIGHT", "CHI ROOM", "DRY VINT", "JAZZ CLUB", "BLUES ROCK",
-    "CR-78 ANLG", "NOLA PERC", "LINN GATE", "LOFI BOX"
+    "CR-78 ANLG", "NOLA PERC", "LINN GATE", "LOFI BOX", "REAL KIT"
 };
 static const char *LEAD_NAMES[NUM_LEAD_INSTRUMENTS] = {
     "BLUES GTR", "HARP", "ALTO SAX", "TENOR SAX", "BARI SAX", "MUTED TRPT", "HORN SECT", "JAZZ FLUTE",
     "WHISTLE", "MOOG LEAD", "WARM JAZZ", "FUZZ OCTAVE", "PERC ORGAN", "ROCK B3", "TALK-BOX",
     "SLIDE GTR", "WAH GUITAR", "TELE TWANG", "FIDDLE", "BANJO", "WAVEFOLDER", "HARD SYNC",
-    "SID CHIP", "STEELPAN", "THEREMIN"
+    "SID CHIP", "STEELPAN", "THEREMIN", "REAL TENOR", "REAL GUITAR", "REAL GTR OD"
+};
+static const char *LEAD_FX_NAMES[NUM_LEAD_FX] = {
+    "OFF", "OVERDRIVE", "FUZZ", "COMPRESSOR", "CHORUS", "FLANGER", "PHASER", "UNI-VIBE", "TREMOLO", "VIBRATO",
+    "ROTARY", "AUTO-WAH", "SLAPBACK", "DELAY", "SPRING REVERB", "LO-FI"
 };
 static const char *LEAD_PLAY_BADGES[NUM_LEAD_PLAY_STYLES] = { "", " [GLD]", " [BND]", " [OCT]" };
 static const char *LEAD_PLAY_NAMES[NUM_LEAD_PLAY_STYLES] = { "POLY", "LEGATO GLIDE", "BLUES BEND", "OCTAVE STACK" };
 static const char *BASS_NAMES[NUM_BASS_INSTRUMENTS] = {
     "P-BASS", "UPRIGHT", "MUTED BOOGIE", "MOOG FUNK", "60S JAZZ", "FLATWOUND", "AMPEG TUBE", "SUB OCTAVE",
-    "LATELY FM", "SLAP POP", "HOFNER", "ACID 303", "TUBA", "PICK ROCK"
+    "LATELY FM", "SLAP POP", "HOFNER", "ACID 303", "TUBA", "PICK ROCK", "REAL ELECTRIC", "REAL UPRIGHT"
 };
 static const char *BASS_STYLE_NAMES[NUM_BASS_STYLES] = {
     "WALKING 4/4", "SHUFFLE", "BOOGIE BOX", "ROOT-5TH", "FUNK SYNC",
     "RUMBA", "GOSPEL WALK", "12/8 ROLL", "MOTOWN 8TH", "2ND LINE",
-    "FUNK 16TH", "COUNTRY 2"
+    "FUNK 16TH", "COUNTRY 2",
+    /* the 2.3 riff lines; the twelve above are the classic ones */
+    "TX SHUFFLE", "CHICAGO WALK", "LUMP", "SLOW BLUES", "MEMPHIS", "RHUMBA", "BOOGIE", "ROCK 8THS", "FUNK",
+    "NOLA", "COUNTRY", "SWAMP", "JAZZ WALK"
 };
 static const char *KEYS_STYLE_NAMES[NUM_KEYS_STYLES] = {
     "CHARLESTON", "BACKBEAT 2&4", "CALL & RESP", "SPARSE PAD", "CHOP 4/4",
@@ -86,32 +97,8 @@ static uint8_t g_last_stage_lead  = 0xFF;
 static uint8_t g_last_stage_amp   = 0xFF;
 static uint8_t g_last_heat        = 0xFF;
 
-static uint8_t g_last_m_bass_vol = 0xFF;
-static uint8_t g_last_m_keys_vol = 0xFF;
-static uint8_t g_last_m_drums_vol = 0xFF;
-static uint8_t g_last_m_lead_vol = 0xFF;
-static uint8_t g_last_m_reverb = 0xFF;
-static uint8_t g_last_m_drive = 0xFF;
-static uint8_t g_last_m_swing = 0xFF;
-static uint8_t g_last_m_lead_play = 0xFF;
 
-static uint8_t g_last_s_bstyle = 0xFF;
-static uint8_t g_last_s_kstyle = 0xFF;
-static uint8_t g_last_s_dpat = 0xFF;
-static uint8_t g_last_s_form = 0xFF;
-static uint8_t g_last_s_bass = 0xFF;
-static uint8_t g_last_s_keys = 0xFF;
-static uint8_t g_last_s_drum = 0xFF;
-static uint8_t g_last_s_tune = 0xFF;
 
-static uint8_t g_last_f_bful = 0xFF;
-static uint8_t g_last_f_kful = 0xFF;
-static uint8_t g_last_f_dful = 0xFF;
-static uint8_t g_last_f_mful = 0xFF;
-static uint8_t g_last_f_bspc = 0xFF;
-static uint8_t g_last_f_kspc = 0xFF;
-static uint8_t g_last_f_dspc = 0xFF;
-static uint8_t g_last_f_mspc = 0xFF;
 
 void ui_init(void) {
     g_last_bar = 0xFF;
@@ -150,30 +137,6 @@ void ui_init(void) {
     g_last_stage_amp   = 0xFF;
     g_last_heat        = 0xFF;
 
-    g_last_m_bass_vol = 0xFF;
-    g_last_m_keys_vol = 0xFF;
-    g_last_m_drums_vol = 0xFF;
-    g_last_m_lead_vol = 0xFF;
-    g_last_m_reverb = 0xFF;
-    g_last_m_drive = 0xFF;
-    g_last_m_swing = 0xFF;
-    g_last_m_lead_play = 0xFF;
-    g_last_s_bstyle = 0xFF;
-    g_last_s_kstyle = 0xFF;
-    g_last_s_dpat = 0xFF;
-    g_last_s_form = 0xFF;
-    g_last_s_bass = 0xFF;
-    g_last_s_keys = 0xFF;
-    g_last_s_drum = 0xFF;
-    g_last_s_tune = 0xFF;
-    g_last_f_bful = 0xFF;
-    g_last_f_kful = 0xFF;
-    g_last_f_dful = 0xFF;
-    g_last_f_mful = 0xFF;
-    g_last_f_bspc = 0xFF;
-    g_last_f_kspc = 0xFF;
-    g_last_f_dspc = 0xFF;
-    g_last_f_mspc = 0xFF;
 }
 
 static void format_chord_str(char *buf, uint8_t root_key, ScaleDegree deg) {
@@ -451,7 +414,7 @@ static void render_header(const HarmonyState *hs, const PresetConfig *preset, ui
 
     // Header Title: Groove Style & Drum Kit
     char header[36];
-    const char *gname = GROOVE_NAMES[preset->groove_style % NUM_DRUM_PATTERNS];
+    const char *gname = GROOVE_NAMES[preset->groove_style % NUM_GROOVES];
     const char *dname = DRUM_NAMES[preset->drum_kit % NUM_DRUM_KITS];
     int hlen = 0;
     while (*gname && hlen < 16) header[hlen++] = *gname++;
@@ -620,116 +583,122 @@ static void render_status_and_footer(const HarmonyState *hs, const PresetConfig 
     hal_draw_text_box(0, 224, 240, 0, footer, hs->easy_lead ? RGB(100, 235, 180) : RGB(140, 140, 140), 1);
 }
 
-static void render_meter(int y, const char *label, uint8_t val, uint8_t max_val, uint16_t color, uint8_t full_redraw, uint8_t *last_val) {
-    if (full_redraw) {
-        hal_draw_text_box(10, y, 85, 0, label, RGB(200, 200, 200), 0);
-        hal_fill_rect(98, y + 2, 132, 10, RGB(35, 35, 35));
+/* The pages after the lead sheet: eight rows, the four knobs and the four knobs with GLO held. A row is a meter
+ * (a value of a range) or a name. Every row keeps what it last drew, so only a row that changed is drawn again. */
+static uint16_t g_page_last[8];
+
+static void page_frame(const char *title, const char *knobs, const char *glo, const char *hint) {
+    hal_fill_rect(0, 0, 240, 240, C_BLACK);
+    hal_draw_text_box(0, 6, 240, 0, title, RGB(255, 190, 0), 1);
+    hal_draw_text_box(0, 180, 240, 0, knobs, RGB(0, 220, 255), 1);
+    hal_draw_text_box(0, 198, 240, 0, glo, RGB(255, 180, 0), 1);
+    hal_draw_text_box(0, 216, 240, 0, hint, RGB(140, 140, 140), 1);
+    for (int i = 0; i < 8; i++) g_page_last[i] = 0xFFFF;
+}
+
+static void page_meter(uint8_t row, const char *label, uint8_t val, uint8_t max_val, uint16_t color, uint8_t full) {
+    int y = 24 + 19 * row;
+    if (full) hal_draw_text_box(10, y, 85, 0, label, RGB(200, 200, 200), 0);
+    if (full || g_page_last[row] != val) {
         int fill_w = ((int)val * 132) / max_val;
         if (fill_w > 132) fill_w = 132;
-        if (fill_w > 0) {
-            hal_fill_rect(98, y + 2, fill_w, 10, color);
-        }
-        *last_val = val;
-    } else if (val != *last_val) {
         hal_fill_rect(98, y + 2, 132, 10, RGB(35, 35, 35));
-        int fill_w = ((int)val * 132) / max_val;
-        if (fill_w > 132) fill_w = 132;
-        if (fill_w > 0) {
-            hal_fill_rect(98, y + 2, fill_w, 10, color);
-        }
-        *last_val = val;
+        if (fill_w > 0) hal_fill_rect(98, y + 2, fill_w, 10, color);
+        g_page_last[row] = val;
     }
 }
 
-static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t preset_idx, uint8_t full_redraw) {
-    (void)preset_idx;
-    if (full_redraw) {
-        hal_fill_rect(0, 0, 240, 240, C_BLACK);
-        hal_draw_text_box(0, 6, 240, 0, "BLUES BOX MIXER", RGB(255, 190, 0), 1);
-        hal_draw_text_box(0, 180, 240, 0, "K1:BAS K2:KEY K3:DRM K4:LD", RGB(0, 220, 255), 1);
-        hal_draw_text_box(0, 198, 240, 0, "[GLO]: REV/DRV/SWG/PLAY", RGB(255, 180, 0), 1);
-        hal_draw_text_box(0, 216, 240, 0, "[SEL+K4/GLO+LFO]: EASY LEAD", RGB(140, 140, 140), 1);
-    }
-
-    uint8_t l_vol = preset->lead_vol;
-    uint8_t lp = preset->lead_play_style % NUM_LEAD_PLAY_STYLES;
-    uint8_t ez = hs->easy_lead ? 1 : 0;
-    uint8_t lp_comb = (uint8_t)((ez << 4) | lp);
-    render_meter(24,  "BASS VOL",  preset->bass_vol,   127, RGB(80, 160, 255), full_redraw, &g_last_m_bass_vol);
-    render_meter(43,  "KEYS VOL",  preset->keys_vol,   127, RGB(255, 180, 40), full_redraw, &g_last_m_keys_vol);
-    render_meter(62,  "DRUMS VOL", preset->drums_vol,  127, RGB(255, 80, 80), full_redraw, &g_last_m_drums_vol);
-    render_meter(81,  "LEAD VOL",  l_vol,              127, RGB(240, 120, 255), full_redraw, &g_last_m_lead_vol);
-    render_meter(100, "REVERB",    preset->reverb_mix, 127, RGB(180, 100, 255), full_redraw, &g_last_m_reverb);
-    render_meter(119, "DRIVE",     preset->drive_level,127, RGB(255, 130, 50), full_redraw, &g_last_m_drive);
-    render_meter(138, "SWING",     preset->swing,      100, RGB(80, 240, 120), full_redraw, &g_last_m_swing);
-    if (full_redraw) hal_draw_text_box(10, 157, 85, 0, "LEAD PLAY", RGB(200, 200, 200), 0);
-    if (full_redraw || lp_comb != g_last_m_lead_play) {
-        static const char *LP_EZ_NAMES[NUM_LEAD_PLAY_STYLES] = {
-            "POLY [EASY]", "GLIDE [EASY]", "BEND [EASY]", "OCTAVE [EASY]"
-        };
-        const char *lp_str = ez ? LP_EZ_NAMES[lp] : LEAD_PLAY_NAMES[lp];
-        hal_fill_rect(100, 157, 130, 16, RGB(24, 24, 24));
-        hal_draw_text_box(104, 157, 124, 0, lp_str, ez ? RGB(100, 255, 180) : RGB(240, 160, 255), 0);
-        g_last_m_lead_play = lp_comb;
-    }
-}
-
-static void render_style_row(int y, const char *label, const char *val, uint16_t color, uint8_t full_redraw, uint8_t cur_idx, uint8_t *last_idx) {
-    if (full_redraw) {
-        hal_draw_text_box(8, y, 88, 0, label, RGB(180, 180, 180), 0);
-    }
-    if (full_redraw || cur_idx != *last_idx) {
+static void page_name(uint8_t row, const char *label, const char *val, uint16_t key, uint16_t color, uint8_t full) {
+    int y = 24 + 19 * row;
+    if (full) hal_draw_text_box(8, y, 88, 0, label, RGB(180, 180, 180), 0);
+    if (full || g_page_last[row] != key) {
         hal_fill_rect(98, y, 134, 16, RGB(24, 24, 24));
         hal_draw_text_box(102, y, 128, 0, val, color, 0);
-        *last_idx = cur_idx;
+        g_page_last[row] = key;
     }
 }
 
-static void render_style_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t full_redraw) {
-    if (full_redraw) {
-        hal_fill_rect(0, 0, 240, 240, C_BLACK);
-        hal_draw_text_box(0, 6, 240, 0, "BLUES BOX STYLE", RGB(255, 190, 0), 1);
-        hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:FRM", RGB(0, 220, 255), 1);
-        hal_draw_text_box(0, 198, 240, 0, "[GLO]: BASS / KIT / INTRO / OUT", RGB(255, 180, 0), 1);
-        hal_draw_text_box(0, 216, 240, 0, "HOME: BAND FEEL VIEW", RGB(140, 140, 140), 1);
-    }
-
-    uint8_t bs = hs->bass_style % NUM_BASS_STYLES;
-    uint8_t ks = hs->keys_style % NUM_KEYS_STYLES;
-    uint8_t dp = hs->drum_pattern % NUM_DRUM_PATTERNS;
+static void render_mixer_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t full) {
     uint8_t fm = (uint8_t)hs->form_mode % NUM_FORM_MODES;
-    uint8_t bi = preset->bass_instrument % NUM_BASS_INSTRUMENTS;
-    uint8_t di = preset->drum_kit % NUM_DRUM_KITS;
-    uint8_t im = hs->count_in_enabled % NUM_INTRO_MODES;
-    uint8_t om = (uint8_t)hs->outro_type % NUM_OUTRO_TYPES;
-
-    render_style_row(24,  "BASS LINE", BASS_STYLE_NAMES[bs], RGB(80, 180, 255),  full_redraw, bs, &g_last_s_bstyle);
-    render_style_row(43,  "KEYS RHY",  KEYS_STYLE_NAMES[ks], RGB(255, 190, 60),  full_redraw, ks, &g_last_s_kstyle);
-    render_style_row(62,  "DRUM BEAT", GROOVE_NAMES[dp],     RGB(255, 95, 95),   full_redraw, dp, &g_last_s_dpat);
-    render_style_row(81,  "FORM",      FORM_NAMES[fm],       RGB(80, 240, 140),  full_redraw, fm, &g_last_s_form);
-    render_style_row(100, "[G] BASS",  BASS_NAMES[bi],       RGB(140, 210, 255), full_redraw, bi, &g_last_s_bass);
-    render_style_row(119, "[G] KIT",   DRUM_NAMES[di],       RGB(255, 150, 150), full_redraw, di, &g_last_s_drum);
-    render_style_row(138, "[G] INTRO", INTRO_SHORT_NAMES[im],RGB(0, 220, 255),   full_redraw, im, &g_last_s_keys);
-    render_style_row(157, "[G] OUTRO", OUTRO_SHORT_NAMES[om],RGB(255, 140, 100), full_redraw, om, &g_last_s_tune);
+    if (full) page_frame("BLUES BOX MIXER", "K1:BAS K2:KEY K3:DRM K4:LD", "[GLO]: REV/DRV/SWING/FORM", "HOME: DRUMS PAGE");
+    page_meter(0, "BASS VOL",  preset->bass_vol,    127, RGB(80, 160, 255),  full);
+    page_meter(1, "KEYS VOL",  preset->keys_vol,    127, RGB(255, 180, 40),  full);
+    page_meter(2, "DRUMS VOL", preset->drums_vol,   127, RGB(255, 80, 80),   full);
+    page_meter(3, "LEAD VOL",  preset->lead_vol,    127, RGB(240, 120, 255), full);
+    page_meter(4, "[G]REVERB", preset->reverb_mix,  127, RGB(180, 100, 255), full);
+    page_meter(5, "[G]DRIVE",  preset->drive_level, 127, RGB(255, 130, 50),  full);
+    page_meter(6, "[G]SWING",  preset->swing,       100, RGB(80, 240, 120),  full);
+    page_name(7, "[G] FORM", FORM_NAMES[fm], fm, RGB(80, 240, 140), full);
 }
 
-static void render_feel_view(const HarmonyState *hs, uint8_t full_redraw) {
-    if (full_redraw) {
-        hal_fill_rect(0, 0, 240, 240, C_BLACK);
-        hal_draw_text_box(0, 6, 240, 0, "BLUES BOX FEEL", RGB(255, 190, 0), 1);
-        hal_draw_text_box(0, 180, 240, 0, "K1:BS K2:KY K3:DR K4:ALL", RGB(0, 220, 255), 1);
-        hal_draw_text_box(0, 198, 240, 0, "[GLO]: TRACK VARIATION", RGB(255, 180, 0), 1);
-        hal_draw_text_box(0, 216, 240, 0, "HOME: LEAD SHEET VIEW", RGB(140, 140, 140), 1);
-    }
+static void render_drums_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t full) {
+    uint8_t dp = hs->drum_pattern % NUM_DRUM_PATTERNS, di = preset->drum_kit % NUM_DRUM_KITS;
+    uint8_t im = hs->count_in_enabled % NUM_INTRO_MODES, om = (uint8_t)hs->outro_type % NUM_OUTRO_TYPES;
+    if (full) page_frame("DRUMS", "K1:BEAT K2:KIT K3:FUL K4:VAR", "[GLO]: VOL/SWING/INTRO/OUT", "HOME: BASS PAGE");
+    page_name(0, "BEAT", GROOVE_NAMES[dp], dp, RGB(255, 95, 95), full);
+    page_name(1, "KIT", DRUM_NAMES[di], di, RGB(255, 150, 150), full);
+    page_meter(2, "FULLNESS",  hs->drums_fullness,  100, RGB(255, 80, 80),   full);
+    page_meter(3, "VARIATION", hs->drums_variation, 100, RGB(255, 140, 140), full);
+    page_meter(4, "[G]VOLUME", preset->drums_vol,   127, RGB(255, 80, 80),   full);
+    page_meter(5, "[G]SWING",  preset->swing,       100, RGB(80, 240, 120),  full);
+    page_name(6, "[G] INTRO", INTRO_SHORT_NAMES[im], im, RGB(0, 220, 255), full);
+    page_name(7, "[G] OUTRO", OUTRO_SHORT_NAMES[om], om, RGB(255, 140, 100), full);
+}
 
-    render_meter(24,  "BASS FUL",  hs->bass_fullness,  100, RGB(80, 160, 255),  full_redraw, &g_last_f_bful);
-    render_meter(43,  "KEYS FUL",  hs->keys_fullness,  100, RGB(255, 180, 40),  full_redraw, &g_last_f_kful);
-    render_meter(62,  "DRUMS FUL", hs->drums_fullness, 100, RGB(255, 80, 80),   full_redraw, &g_last_f_dful);
-    render_meter(81,  "MSTR FUL",  hs->fullness,       100, RGB(0, 220, 255),   full_redraw, &g_last_f_mful);
-    render_meter(100, "[G]BS VAR", hs->bass_variation, 100, RGB(140, 200, 255), full_redraw, &g_last_f_bspc);
-    render_meter(119, "[G]KY VAR", hs->keys_variation, 100, RGB(255, 220, 100), full_redraw, &g_last_f_kspc);
-    render_meter(138, "[G]DR VAR", hs->drums_variation,100, RGB(255, 140, 140), full_redraw, &g_last_f_dspc);
-    render_meter(157, "[G]MS VAR", hs->variation,      100, RGB(200, 140, 255), full_redraw, &g_last_f_mspc);
+static void render_bass_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t full) {
+    uint8_t bs = hs->bass_style % NUM_BASS_STYLES, bi = preset->bass_instrument % NUM_BASS_INSTRUMENTS;
+    if (full) page_frame("BASS", "K1:LINE K2:SND K3:FUL K4:VAR", "[GLO] K1: VOLUME", "HOME: KEYS PAGE");
+    page_name(0, "LINE", BASS_STYLE_NAMES[bs], bs, RGB(80, 180, 255), full);
+    page_name(1, "SOUND", BASS_NAMES[bi], bi, RGB(140, 210, 255), full);
+    page_meter(2, "FULLNESS",  hs->bass_fullness,  100, RGB(80, 160, 255),  full);
+    page_meter(3, "VARIATION", hs->bass_variation, 100, RGB(140, 200, 255), full);
+    page_meter(4, "[G]VOLUME", preset->bass_vol,   127, RGB(80, 160, 255),  full);
+}
+
+static void render_keys_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t full) {
+    uint8_t ks = hs->keys_style % NUM_KEYS_STYLES, ki = preset->ep_tone_algo % NUM_KEYS_INSTRUMENTS;
+    if (full) page_frame("KEYS", "K1:RHY K2:TONE K3:FUL K4:VAR", "[GLO] K1: VOLUME", "HOME: LEAD PAGE");
+    page_name(0, "RHYTHM", KEYS_STYLE_NAMES[ks], ks, RGB(255, 190, 60), full);
+    page_name(1, "TONE", ALGO_NAMES[ki], ki, RGB(255, 220, 100), full);
+    page_meter(2, "FULLNESS",  hs->keys_fullness,  100, RGB(255, 180, 40),  full);
+    page_meter(3, "VARIATION", hs->keys_variation, 100, RGB(255, 220, 100), full);
+    page_meter(4, "[G]VOLUME", preset->keys_vol,   127, RGB(255, 180, 40),  full);
+}
+
+static void render_lead_view(const HarmonyState *hs, const PresetConfig *preset, uint8_t full) {
+    static const char *LP_EZ_NAMES[NUM_LEAD_PLAY_STYLES] = { "POLY [EASY]", "GLIDE [EASY]", "BEND [EASY]", "OCTAVE [EASY]" };
+    uint8_t li = preset->lead_instrument % NUM_LEAD_INSTRUMENTS, lp = preset->lead_play_style % NUM_LEAD_PLAY_STYLES;
+    uint8_t ez = hs->easy_lead ? 1 : 0;
+    uint8_t f1 = preset->lead_fx1 % NUM_LEAD_FX, f2 = preset->lead_fx2 % NUM_LEAD_FX;
+    uint8_t sl = (preset->lead_slide > 100) ? 100 : preset->lead_slide;
+    if (full) page_frame("LEAD", "K1:VOICE K2:STY K3:SLD K4:VOL", "[GLO]: FX1/AMT/FX2/AMT", "SEL+K2: EASY LEAD");
+    page_name(0, "VOICE", LEAD_NAMES[li], li, RGB(240, 160, 255), full);
+    page_name(1, "STYLE", ez ? LP_EZ_NAMES[lp] : LEAD_PLAY_NAMES[lp], (uint16_t)((ez << 4) | lp),
+              ez ? RGB(100, 255, 180) : RGB(240, 160, 255), full);
+    {
+        /* the slide as its time: "OFF", "135 MS", "1.50 S" */
+        char buf[12];
+        uint32_t ms = ((uint32_t)sl * sl * 15u) / 100u;
+        int n = 0;
+        if (ms == 0) { buf[n++] = 'O'; buf[n++] = 'F'; buf[n++] = 'F'; }
+        else if (ms < 1000) {
+            if (ms >= 100) buf[n++] = (char)('0' + ms / 100);
+            if (ms >= 10) buf[n++] = (char)('0' + (ms / 10) % 10);
+            buf[n++] = (char)('0' + ms % 10);
+            buf[n++] = ' '; buf[n++] = 'M'; buf[n++] = 'S';
+        } else {
+            buf[n++] = (char)('0' + ms / 1000); buf[n++] = '.';
+            buf[n++] = (char)('0' + (ms / 100) % 10); buf[n++] = (char)('0' + (ms / 10) % 10);
+            buf[n++] = ' '; buf[n++] = 'S';
+        }
+        buf[n] = '\0';
+        page_name(2, "SLIDE", buf, sl, RGB(120, 220, 255), full);
+    }
+    page_meter(3, "VOLUME", preset->lead_vol, 127, RGB(240, 120, 255), full);
+    page_name(4, "[G] FX1", LEAD_FX_NAMES[f1], f1, RGB(255, 170, 80), full);
+    page_meter(5, "[G]FX1 AMT", preset->lead_fx1_amt, 100, RGB(255, 170, 80), full);
+    page_name(6, "[G] FX2", LEAD_FX_NAMES[f2], f2, RGB(120, 230, 160), full);
+    page_meter(7, "[G]FX2 AMT", preset->lead_fx2_amt, 100, RGB(120, 230, 160), full);
 }
 
 void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t preset_idx, uint8_t screen_id, uint8_t force_redraw) {
@@ -806,11 +775,15 @@ void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t 
         g_last_outro_type = (uint8_t)hs->outro_type;
         g_last_intro_bars = hs->count_in_bars_remaining;
     } else if (screen_id == 1) {
-        render_mixer_view(hs, preset, preset_idx, screen_switched || force_redraw);
+        render_mixer_view(hs, preset, screen_switched || force_redraw);
     } else if (screen_id == 2) {
-        render_style_view(hs, preset, screen_switched || force_redraw);
+        render_drums_view(hs, preset, screen_switched || force_redraw);
+    } else if (screen_id == 3) {
+        render_bass_view(hs, preset, screen_switched || force_redraw);
+    } else if (screen_id == 4) {
+        render_keys_view(hs, preset, screen_switched || force_redraw);
     } else {
-        render_feel_view(hs, screen_switched || force_redraw);
+        render_lead_view(hs, preset, screen_switched || force_redraw);
     }
 
     g_last_bar = hs->current_bar;
@@ -834,5 +807,5 @@ void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t 
 void ui_render_splash(void) {
     hal_blit_sprite_2x(0, 0, SPLASH_ART_W, SPLASH_ART_H, SPLASH_ART_PAL, SPLASH_ART_DATA);
     hal_fill_rect(0, 220, 240, 20, RGB(12, 12, 18));
-    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.2.3", RGB(240, 195, 90), 1);
+    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.3.0", RGB(240, 195, 90), 1);
 }
