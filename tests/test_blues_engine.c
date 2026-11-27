@@ -695,15 +695,16 @@ void test_stage5_integration(void) {
         assert(pf.drum_mask != 0);
     }
 
-    int32_t test_buf[64];
+    int32_t test_buf[64 * 2];   /* 64 stereo frames; dsp_render_block adds into the buffer */
     for (uint8_t li = 0; li < NUM_LEAD_INSTRUMENTS; li++) {
         fp.lead_instrument = li;
         fp.lead_play_style = (uint8_t)(li % NUM_LEAD_PLAY_STYLES);
         dsp_set_lead_play_style(fp.lead_play_style);
         dsp_note_on_lead(69, 110, 0);
+        for (int i = 0; i < 64 * 2; i++) test_buf[i] = 0;
         dsp_render_block(test_buf, 64, &fp);
         int32_t energy = 0;
-        for (int i = 0; i < 64; i++) energy += (test_buf[i] < 0) ? -test_buf[i] : test_buf[i];
+        for (int i = 0; i < 64 * 2; i++) energy += (test_buf[i] < 0) ? -test_buf[i] : test_buf[i];
         assert(energy > 0);
         dsp_note_off_lead(69);
     }
