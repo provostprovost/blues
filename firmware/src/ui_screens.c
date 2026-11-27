@@ -671,7 +671,37 @@ static void render_lead_view(const HarmonyState *hs, const PresetConfig *preset,
     uint8_t ez = hs->easy_lead ? 1 : 0;
     uint8_t f1 = preset->lead_fx1 % NUM_LEAD_FX, f2 = preset->lead_fx2 % NUM_LEAD_FX;
     uint8_t sl = (preset->lead_slide > 100) ? 100 : preset->lead_slide;
-    if (full) page_frame("LEAD", "K1:VOICE K2:STY K3:SLD K4:VOL", "[GLO]: FX1/AMT/FX2/AMT", "SEL+K2: EASY LEAD");
+    static uint16_t last_title = 0xFFFF;
+    if (full) {
+        page_frame("LEAD", "K1:VOICE K2:STY K3:SLD K4:VOL", "[GLO]: FX1/AMT/FX2/AMT", "SEL: K1 KEY K2 EASY K3 TRANSP");
+        last_title = 0xFFFF;
+    }
+    {
+        /* the title shows the Play-in key and the transpose when they are set: "LEAD  IN E  +2" */
+        uint8_t home = (hs->lead_home <= 12) ? hs->lead_home : 0;
+        int tr = hs->lead_transpose;
+        uint16_t key = (uint16_t)((home << 8) | (uint8_t)(tr + 12));
+        if (key != last_title) {
+            static const char *PN[12] = { "C", "C#", "D", "EB", "E", "F", "F#", "G", "AB", "A", "BB", "B" };
+            char t[24] = "LEAD";
+            int n = 4;
+            if (home) {
+                const char *q = PN[home - 1];
+                t[n++] = ' '; t[n++] = ' '; t[n++] = 'I'; t[n++] = 'N'; t[n++] = ' ';
+                while (*q) t[n++] = *q++;
+            }
+            if (tr) {
+                int a = (tr < 0) ? -tr : tr;
+                t[n++] = ' '; t[n++] = ' '; t[n++] = (tr < 0) ? '-' : '+';
+                if (a >= 10) t[n++] = (char)('0' + a / 10);
+                t[n++] = (char)('0' + a % 10);
+            }
+            t[n] = '\0';
+            hal_fill_rect(0, 4, 240, 16, C_BLACK);
+            hal_draw_text_box(0, 6, 240, 0, t, RGB(255, 190, 0), 1);
+            last_title = key;
+        }
+    }
     page_name(0, "VOICE", LEAD_NAMES[li], li, RGB(240, 160, 255), full);
     page_name(1, "STYLE", ez ? LP_EZ_NAMES[lp] : LEAD_PLAY_NAMES[lp], (uint16_t)((ez << 4) | lp),
               ez ? RGB(100, 255, 180) : RGB(240, 160, 255), full);
@@ -807,5 +837,5 @@ void ui_render(const HarmonyState *hs_live, const PresetConfig *preset, uint8_t 
 void ui_render_splash(void) {
     hal_blit_sprite_2x(0, 0, SPLASH_ART_W, SPLASH_ART_H, SPLASH_ART_PAL, SPLASH_ART_DATA);
     hal_fill_rect(0, 220, 240, 20, RGB(12, 12, 18));
-    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.3.0", RGB(240, 195, 90), 1);
+    hal_draw_text_box(0, 222, 240, 0, "BRIAN PROVOST  *  V2.3.1", RGB(240, 195, 90), 1);
 }

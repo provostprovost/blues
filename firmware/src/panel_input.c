@@ -26,6 +26,50 @@ static int8_t white_key_to_slot(uint8_t k) {
     return -1;
 }
 
+/* the global settings (the active slot, tuning, count-in, Easy Lead, the lead's home key and transpose) */
+static GlobalSettings g_pending_gs;
+static uint8_t  g_gs_pending = 0;
+static uint32_t g_gs_changed_ms = 0;
+
+static GlobalSettings make_globals(const HarmonyState *hs, uint8_t slot, uint8_t tuning, uint8_t count_in) {
+    GlobalSettings gs = { SETTINGS_MAGIC, slot, tuning, count_in, hs->easy_lead, hs->lead_home, hs->lead_transpose };
+    return gs;
+}
+
+static void save_globals(const HarmonyState *hs, uint8_t slot, uint8_t tuning, uint8_t count_in) {
+    GlobalSettings gs = make_globals(hs, slot, tuning, count_in);
+    hal_settings_save(&gs, sizeof(gs));
+    g_gs_pending = 0;
+}
+
+/* a knob turned: save once it has rested (a flash erase each detent would wear the flash and stall the loop) */
+static void save_globals_later(const HarmonyState *hs, uint8_t slot, uint8_t tuning, uint8_t count_in, uint32_t ms_now) {
+    g_pending_gs = make_globals(hs, slot, tuning, count_in);
+    g_gs_pending = 1;
+    g_gs_changed_ms = ms_now;
+}
+
+/* Play-in key and transpose: how far the lead keyboard is shifted. With a home key (say E) the keys play as if the
+ * song were in E, whatever key it is in: the shift is the nearest way from E to the song's key (-6..+5), so the root
+ * and Easy Lead's scale stay under the same fingers, through a key change too. The transpose adds to it. */
+static int lead_shift(const HarmonyState *hs) {
+    int sh = hs->lead_transpose;
+    if (hs->lead_home >= 1 && hs->lead_home <= 12) {
+        int d = ((int)(hs->root_semitone % 12) - (int)(hs->lead_home - 1) + 12) % 12;
+        if (d > 5) d -= 12;
+        sh += d;
+    }
+    return sh;
+}
+
+/* the note key k of the lead keyboard sounds (before Easy Lead) */
+static uint8_t lead_key_note(const HarmonyState *hs, uint8_t k) {
+    int n = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k + lead_shift(hs);
+    return (uint8_t)((n < 0) ? 0 : (n > 127) ? 127 : n);
+}
+
+static uint8_t g_lead_sounding[27];   /* the note each held key started, to stop the same one if the shift moved */
+
 static void set_toast(HarmonyState *hs, uint32_t ms_now, const char *msg) {
     int i = 0;
     while (msg[i] && i < 27) {
@@ -131,8 +175,7 @@ static void save_to_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8_t
     *active_preset_idx = slot % NUM_PRESET_SLOTS;
     format_user_preset_name(dst->name, (uint8_t)((*active_preset_idx) + 1));
     hal_blob_save(0, presets, sizeof(PresetConfig) * NUM_PRESET_SLOTS);
-    GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, dst->master_tuning, dst->count_in_enabled, hs->easy_lead };
-    hal_settings_save(&gs, sizeof(gs));
+    save_globals(hs, *active_preset_idx, dst->master_tuning, dst->count_in_enabled);
     g_save_pending = 0;
     set_toast(hs, ms_now, dst->name);
 }
@@ -159,8 +202,7 @@ static void load_from_preset_slot(HarmonyState *hs, PresetConfig *presets, uint8
     hs->drum_pattern = np->drum_pattern;
     hs->count_in_enabled = np->count_in_enabled;
     dsp_set_lead_play_style(np->lead_play_style);
-    GlobalSettings gs = { SETTINGS_MAGIC, slot, np->master_tuning, np->count_in_enabled, hs->easy_lead };
-    hal_settings_save(&gs, sizeof(gs));
+    save_globals(hs, slot, np->master_tuning, np->count_in_enabled);
     hs->ui_dirty = 1;
     if (np->name[0] != '\0') {
         set_toast(hs, ms_now, np->name);
@@ -191,6 +233,10 @@ void panel_init(void) {
 }
 
 uint8_t panel_check_autosave_needed(uint32_t ms_now) {
+    if (g_gs_pending && (ms_now - g_gs_changed_ms >= 1500u)) {
+        hal_settings_save(&g_pending_gs, sizeof(g_pending_gs));
+        g_gs_pending = 0;
+    }
     if (g_save_pending && (ms_now - g_last_param_change_ms >= AUTOSAVE_DEBOUNCE_MS)) {
         return 1;
     }
@@ -448,8 +494,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
             // Quick flip anywhere: GLO + LFO (or SEL + LFO) toggles Easy Lead Scale-Lock Mode
             hs->easy_lead = !hs->easy_lead;
             p->easy_lead = hs->easy_lead;
-            GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, p->master_tuning, p->count_in_enabled, hs->easy_lead };
-            hal_settings_save(&gs, sizeof(gs));
+            save_globals(hs, *active_preset_idx, p->master_tuning, p->count_in_enabled);
             set_toast(hs, ms_now, hs->easy_lead ? "EASY LEAD: ON (BEND)" : "EASY LEAD: OFF");
         } else {
             // Toggle Minor Blues Form
@@ -617,20 +662,47 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
                 break;
             case 36: p->keys_vol = clamp_step_u8(p->keys_vol, delta * 4, 0, 127); break;
             /* ---- 5: lead ---- */
-            case 40: p->lead_instrument = wrap_step_u8(p->lead_instrument, delta, NUM_LEAD_INSTRUMENTS); break;
+            case 40:
+                if (sel_held) {
+                    /* SEL + K1: play in (OFF, C .. B) */
+                    hs->lead_home = wrap_step_u8(hs->lead_home, delta, 13);
+                    if (hs->lead_home == 0) set_toast(hs, ms_now, "PLAY IN: OFF");
+                    else {
+                        static const char *PN[12] = { "C", "C#", "D", "EB", "E", "F", "F#", "G", "AB", "A", "BB", "B" };
+                        char t[16] = "PLAY IN: ";
+                        const char *q = PN[hs->lead_home - 1];
+                        int i = 9;
+                        while (*q) t[i++] = *q++;
+                        t[i] = '\0';
+                        set_toast(hs, ms_now, t);
+                    }
+                    save_globals_later(hs, *active_preset_idx, p->master_tuning, p->count_in_enabled, ms_now);
+                } else {
+                    p->lead_instrument = wrap_step_u8(p->lead_instrument, delta, NUM_LEAD_INSTRUMENTS);
+                }
+                break;
             case 41:
                 if (sel_held) {
                     hs->easy_lead = !hs->easy_lead;
                     p->easy_lead = hs->easy_lead;
-                    GlobalSettings gs = { SETTINGS_MAGIC, *active_preset_idx, p->master_tuning, p->count_in_enabled, hs->easy_lead };
-                    hal_settings_save(&gs, sizeof(gs));
+                    save_globals(hs, *active_preset_idx, p->master_tuning, p->count_in_enabled);
                     set_toast(hs, ms_now, hs->easy_lead ? "EASY LEAD: ON (BEND)" : "EASY LEAD: OFF");
                 } else {
                     p->lead_play_style = wrap_step_u8(p->lead_play_style, delta, NUM_LEAD_PLAY_STYLES);
                     dsp_set_lead_play_style(p->lead_play_style);
                 }
                 break;
-            case 42: p->lead_slide = clamp_step_u8(p->lead_slide, delta * 2, 0, 100); break;
+            case 42:
+                if (sel_held) {
+                    /* SEL + K3: transpose, -12..+12 semitones */
+                    int t = (int)hs->lead_transpose + delta;
+                    hs->lead_transpose = (int8_t)((t < -12) ? -12 : (t > 12) ? 12 : t);
+                    set_toast_val(hs, ms_now, (hs->lead_transpose > 0) ? "TRANSPOSE: +" : "TRANSPOSE: ", hs->lead_transpose, "");
+                    save_globals_later(hs, *active_preset_idx, p->master_tuning, p->count_in_enabled, ms_now);
+                } else {
+                    p->lead_slide = clamp_step_u8(p->lead_slide, delta * 2, 0, 100);
+                }
+                break;
             case 43: p->lead_vol = clamp_step_u8(p->lead_vol, delta * 4, 0, 127); break;
             case 44: p->lead_fx1 = wrap_step_u8(p->lead_fx1, delta, NUM_LEAD_FX); break;
             case 45: p->lead_fx1_amt = clamp_step_u8(p->lead_fx1_amt, delta * 4, 0, 100); break;
@@ -682,10 +754,8 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         if (pressed) {
             for (uint8_t k = 0; k < 27; k++) {
                 if (pressed & (1u << k)) {
-                    int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
-                    if (note_val < 0) note_val = 0;
-                    if (note_val > 127) note_val = 127;
-                    uint8_t key_note = (uint8_t)note_val;
+                    uint8_t key_note = lead_key_note(hs, k);
+                    g_lead_sounding[k] = key_note;
                     uint8_t target_note = hs->easy_lead ? resolve_easy_lead_note(hs, key_note) : key_note;
                     dsp_note_on_lead_ex(key_note, target_note, 115, p->master_tuning);
                 }
@@ -694,10 +764,7 @@ void panel_poll_inputs(HarmonyState *hs, PresetConfig *presets, uint8_t *active_
         if (released) {
             for (uint8_t k = 0; k < 27; k++) {
                 if (released & (1u << k)) {
-                    int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
-                    if (note_val < 0) note_val = 0;
-                    if (note_val > 127) note_val = 127;
-                    dsp_note_off_lead((uint8_t)note_val);
+                    dsp_note_off_lead(g_lead_sounding[k]);
                 }
             }
         }
@@ -829,8 +896,7 @@ void panel_update_leds(const HarmonyState *hs, uint8_t active_preset_idx) {
         compute_scale_context(hs, &chord_root, &scale);
 
         for (uint8_t k = 0; k < 27; k++) {
-            int note_val = (int)KEY_LEAD_BASE + (g_lead_octave_shift * 12) + k;
-            uint8_t note = (uint8_t)((note_val < 0) ? 0 : (note_val > 127) ? 127 : note_val);
+            uint8_t note = lead_key_note(hs, k);
             uint8_t note_pc = (uint8_t)(note % 12);
             uint8_t interval = (uint8_t)((note + 12 - (hs->root_semitone % 12)) % 12);
 

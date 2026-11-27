@@ -73,7 +73,7 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 | **3 Drums** | Beat *(GLO: Volume)* | Kit *(GLO: Swing)* | Fullness *(GLO: Intro)* | Variation *(GLO: Outro)* |
 | **4 Bass** | Line *(GLO: Volume)* | Sound | Fullness | Variation |
 | **5 Keys** | Rhythm *(GLO: Volume)* | Tone | Fullness | Variation (also the chord substitutions) |
-| **6 Lead** | Voice *(GLO: FX1)* | Play Style *(GLO: FX1 Amount; SEL: Easy Lead)* | Slide *(GLO: FX2)* | Volume *(GLO: FX2 Amount)* |
+| **6 Lead** | Voice *(GLO: FX1; SEL: Play In key)* | Play Style *(GLO: FX1 Amount; SEL: Easy Lead)* | Slide *(GLO: FX2; SEL: Transpose)* | Volume *(GLO: FX2 Amount)* |
 
 ### Buttons
 
@@ -130,6 +130,8 @@ Turn your **M-VAVE FM-1** into an always-ready blues rhythm section—drums, wal
 - **12 Keys Rhythm Styles:** Charleston, Backbeat 2&4, Call & Response, Sparse Pad, Chop 4/4, Stride, Boogie 8ths, Gospel Swell, Rumba Montuno, 12/8 Arpeggio, Funk Clav 16th, Country Chop.
 - **28 Lead Voices (`PRESETS`):** the 25 synth leads plus **Real Tenor** (sampled sax), **Real Guitar** (sampled hollowbody) and **Real Gtr OD** (the same through a tube overdrive).
 - **15 Lead Effects (Lead page, `GLO` + `KNOB1`/`KNOB3`), two in series:** Overdrive, Fuzz, Compressor, Chorus, Flanger, Phaser, Uni-Vibe, Tremolo, Vibrato, Rotary (lower half slow, upper half fast), Auto-Wah, Slapback, Delay (a quarter note at the tempo), Spring Reverb, Lo-Fi.
+- **Play In (Lead page `SEL` + `KNOB1`):** pick the key you like to play in (say E, or Off). The lead keyboard then always plays as if the song were in that key and sounds in the song's real key, so the root and Easy Lead's scale stay under the same fingers whatever key the band is in, through key changes too. It shifts the nearest way (up to a tritone up or down). The Lead page title shows it, e.g. `LEAD  IN E`.
+- **Transpose (Lead page `SEL` + `KNOB3`):** shift the lead keyboard −12..+12 semitones, on its own or on top of Play In. Play In and Transpose are saved with the global settings, not per preset.
 - **Slide (Lead page `KNOB3`):** the time a glide, an Easy Lead bend or a Blues Bend scoop takes, the same whatever the interval: from instant to 1.5 s.
 
 ## Display Screens

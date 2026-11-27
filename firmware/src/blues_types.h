@@ -383,6 +383,8 @@ typedef struct {
     uint8_t     drum_pattern;
     uint8_t     easy_lead;
     uint8_t     heat_level;
+    uint8_t     lead_home;      // 0: off; 1..12: the lead keyboard plays as if in this key (pitch class + 1)
+    int8_t      lead_transpose; // -12..+12 semitones, on top of lead_home
     volatile uint8_t vis_bass_pulse;
     volatile uint8_t vis_keys_pulse;
     volatile uint8_t vis_drum_pulse;
@@ -441,6 +443,9 @@ typedef struct {
     uint8_t  master_tuning;
     uint8_t  count_in_enabled;
     uint8_t  easy_lead;
+    uint8_t  lead_home;       // (2.4) HarmonyState.lead_home
+    int8_t   lead_transpose;  // (2.4) HarmonyState.lead_transpose
 } GlobalSettings;
+#define GLOBAL_SETTINGS_V1_SIZE 8u   /* 2.3 and before: no lead_home / lead_transpose */
 
 #endif // BLUES_TYPES_H

@@ -69,6 +69,8 @@ void harmony_init(HarmonyState *hs) {
     hs->keys_style = KEYS_STYLE_CHARLESTON;
     hs->drum_pattern = 0;
     hs->easy_lead = 0;
+    hs->lead_home = 0;
+    hs->lead_transpose = 0;
     hs->heat_level = 3;
     hs->vis_bass_pulse = 0;
     hs->vis_keys_pulse = 0;

@@ -230,11 +230,20 @@ static void app_main(void) {
         }
     }
 
-    uint8_t saved_easy_lead = 0;
+    uint8_t saved_easy_lead = 0, saved_lead_home = 0;
+    int8_t saved_lead_transpose = 0;
     GlobalSettings gs;
-    if (hal_settings_load(&gs, sizeof(gs)) == 0 && gs.magic == SETTINGS_MAGIC) {
+    int gs_ok = (hal_settings_load(&gs, sizeof(gs)) == 0);
+    if (!gs_ok && hal_settings_load(&gs, GLOBAL_SETTINGS_V1_SIZE) == 0) {   /* saved by 2.3 or before */
+        gs.lead_home = 0;
+        gs.lead_transpose = 0;
+        gs_ok = 1;
+    }
+    if (gs_ok && gs.magic == SETTINGS_MAGIC) {
         g_active_preset = gs.active_preset % NUM_PRESET_SLOTS;
         saved_easy_lead = gs.easy_lead ? 1 : 0;
+        saved_lead_home = (gs.lead_home <= 12) ? gs.lead_home : 0;
+        saved_lead_transpose = (gs.lead_transpose >= -12 && gs.lead_transpose <= 12) ? gs.lead_transpose : 0;
     }
 
     // 3. Initialize Harmony engine (defaults to STOPPED on boot)
@@ -255,6 +264,8 @@ static void app_main(void) {
     g_harmony.count_in_enabled = g_presets[g_active_preset].count_in_enabled;
     g_harmony.form_mode = (FormMode)g_presets[g_active_preset].form_mode;
     g_harmony.easy_lead = saved_easy_lead ? 1 : g_presets[g_active_preset].easy_lead;
+    g_harmony.lead_home = saved_lead_home;
+    g_harmony.lead_transpose = saved_lead_transpose;
     uint8_t hl = g_presets[g_active_preset].heat_level;
     g_harmony.heat_level = (hl >= 1 && hl <= 5) ? hl : 3;
     g_last_voicing.count = 0;
